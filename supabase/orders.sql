@@ -1,0 +1,2 @@
+-- AJR FULL setup — also creates PRODUCTS + MESSAGES. See supabase/schema.sql
+-- (this file kept for backwards-compat; run schema.sql instead)
