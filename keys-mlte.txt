@@ -1,0 +1,475 @@
+0. Workspace
+1. Visit your store
+2. See the customer experience
+3. Open navigation
+4. Private workspace
+5. unread
+6. Administrator settings
+7. Login failed. Please check your email and password.
+8. This email is not confirmed yet. Check your email for the confirmation link.
+9. Login failed. Please try again.
+10. We source generous, delicious dry fruits and nuts that bring authentic nourishment to your daily routine. Every handful starts with careful selection at peak harvest, honest ingredients, and zero artificial processing.
+11. AJR Everyday Goodness campaign artwork
+12. for
+13. My
+14. Your orders are stored with your account. Sign in to see them.
+15. Loading your orders…
+16. Could not load your orders.
+17. total
+18. Excluding cancelled orders
+19. Customer inquiries
+20. Performance
+21. Revenue at a glance
+22. Last 12 months
+23. A well-stocked store
+24. Inventory health
+25. Fresh from your store
+26. Online and in-store orders will appear here.
+27. A personal touch
+28. orders awaiting fulfilment
+29. Thoughtfully managed. Naturally AJR.
+30. Customer Inbox
+31. all inquiries
+32. Unread
+33. awaiting your reply
+34. Read
+35. opened inquiries
+36. Mark all read
+37. Loading messages…
+38. No messages here
+39. Customer inquiries from the contact page will appear here instantly.
+40. Reply by email
+41. Select a message
+42. Choose a conversation from the list to read the full inquiry.
+43. Offline order
+44. Order
+45. Loading inventory…
+46. Inventory is empty
+47. Promise
+48. Prices are always per kg — the shop scales them to the gram size the customer picks.
+49. No varieties yet — every pack size will use the price above.
+50. AJR Essence of Nature
+51. Rich in healthy monounsaturated fats, dietary fiber, plant protein, and essential micronutrients.
+52. Mon–Sat, 9:30am–6:30pm IST
+53. Royal Wooden Chest
+54. Festive Gold Foil Box
+55. Eco Jute Pouch
+56. Card
+57. Netbanking
+58. Your
+59. A ceremonial opening
+60. Always Just Royal
+61. A royal harvest awaits.
+62. AJR Essence of Nature Studio
+63. Mon – Sat: 10:00 AM – 7:00 PM IST
+64. Served daily 11:30 AM – 5:00 PM
+65. Mangalore, India
+66. Kerman, Iran
+67. Kashmir, India
+68. Wisconsin, USA
+69. New Zealand
+70. Ladakh, India
+71. Kandahar, Afghanistan
+72. Nashik, India
+73. Saudi Arabia
+74. Kerala, India
+75. Ratnagiri, India
+76. Maharashtra, India
+77. Turkey
+78. Bolivia
+79. Madhya Pradesh, India
+80. Austria
+81. Karnataka, India
+82. Rajasthan, India
+83. Gujarat, India
+84. Tamil Nadu, India
+85. Sri Lanka
+86. Vitamin E
+87. Plant Protein
+88. Magnesium
+89. Healthy Fats
+90. Zinc
+91. Copper
+92. Lutein
+93. Potassium
+94. Omega-3 (ALA)
+95. Polyphenols
+96. B-Vitamins
+97. Vitamin A
+98. Iron
+99. Dietary Fiber
+100. Calcium
+101. Natural Fiber
+102. Vitamin K
+103. Manganese
+104. Bromelain
+105. Folate
+106. Anthocyanins
+107. Lignans
+108. Selenium
+109. Omega-3
+110. Cooling
+111. Plant Based
+112. Whole Spice
+113. Fresh Aroma
+114. Kitchen Essential
+115. Pungent Aroma
+116. Warm Aroma
+117. Festive Essential
+118. Sweet Aroma
+119. Baking Essential
+120. Tea Essential
+121. Chai Essential
+122. Pantry Essential
+123. Masala Essential
+124. Earthy Aroma
+125. Herbal Aroma
+126. Biryani Essential
+127. Bold Aroma
+128. Robust Aroma
+129. Tempering Essential
+130. Toasty Aroma
+131. Whole California almonds — plain, blanched or dry-roasted — with a clean, buttery crunch.
+132. Creamy whole cashews in W180, W240, W320 and split grades, roasted to order.
+133. Premium pistachios with a vivid green kernel and exceptional crunch — salted or plain.
+134. Hand-broken snow-white walnut halves with zero bitterness and a naturally buttery bite — Kashmiri and Chilean grades.
+135. Plump dried cranberries with a bright, tangy bite — perfect for snacking and bakes.
+136. Tangy-sweet dried kiwi slices, slow-dried to keep their vivid colour and vitamin C.
+137. Soft, naturally sweet sun-dried apricot halves with a rich golden flavour.
+138. Naturally sun-dried figs with a sweet chew and crunchy seeds — regular and bold grades.
+139. Plump, naturally sun-dried raisins — golden Narthol and sweet black — in clean, seedless clusters.
+140. Naturally sweet dates — wet, deseeded, Mebroom and Medjool — soft, caramel-like and full of fiber.
+141. Soft, naturally sweet dried plums with a deep caramel bite — a rich source of fibre and potassium for everyday gut-friendly snacking.
+142. Golden rings of sun-ripened pineapple, slow-dried to a chewy, tangy-sweet bite with zero added sugar.
+143. Alphonso mango slices dried at low heat to keep their vivid colour and rich, honeyed tropical flavour.
+144. Whole strawberries dried to an intense sweet-tart chew, packed with antioxidants and natural fruit sugars.
+145. Deep ruby dried cherries with a bold sweet-tart punch, perfect for desserts, granola and cheese boards.
+146. Omega-3 rich chia seeds that gel beautifully in water, ideal for puddings, smoothies and everyday fibre.
+147. Cold-cleaned flax seeds with a nutty finish, a plant-based powerhouse of ALA omega-3 and lignans.
+148. Plump, hulled pumpkin seeds (pepitas) with a buttery crunch and a generous dose of magnesium and zinc.
+149. Jumbo sunflower kernels, lightly roasted for a mellow nutty flavour and a satisfying everyday crunch.
+150. Hand-sorted watermelon seeds with a delicate, mildly sweet kernel, a traditional source of iron and protein.
+151. Hulled white sesame seeds with a clean, delicately nutty taste, rich in calcium and healthy fats.
+152. Bold black sesame seeds with a deep roasted aroma, prized in Asian cooking and traditional wellness.
+153. Sabja basil seeds that swell into a cooling gel in seconds, a natural way to stay hydrated and refreshed.
+154. Creamy white poppy seeds with a gentle nutty sweetness, a classic finish for curries, bakes and breads.
+155. Creamy muskmelon seed kernels, hand-sorted and hulled, for a mild, milky crunch in snacks and sweets.
+156. Pale cucumber seed kernels with a soft, nutty bite — a cooling traditional snack in regular and bold grades.
+157. Garden cress (halim/aliv) seeds that swell into a gel, traditionally eaten for iron and everyday strength.
+158. Amber almond gum crystals that bloom into a cooling jelly — the classic badam pisin for summer drinks.
+159. Clean, aromatic white peppercorns with a bright, gentle heat for creamy sauces, soups and delicate curries.
+160. Bold, sun-dried black peppercorns in small, medium and bold grades, selected for deep aroma and warmth.
+161. Delicate amber mace blades with a warm, floral character for biryanis, pulaos and festive dishes.
+162. Whole nutmeg with a sweet, woody fragrance that adds depth to bakes, desserts and savoury dishes.
+163. Beautiful whole star anise with a naturally sweet licorice note for teas, broths and spice blends.
+164. Robust cassia bark with a warm, sweet-spiced profile for chai, curries, rice dishes and desserts.
+165. Fragrant cinnamon quills with a mellow sweetness, ready for chai, baking and slow-cooked recipes.
+166. Plump whole cloves with an intense, warming aroma for masalas, curries, chai and festive bakes.
+167. Vibrant green cardamom pods with a sweet, cooling fragrance — 7 mm bold and 8 mm jumbo grades.
+168. Kalpasi stone flower with a deep, earthy-woodsy aroma — the secret note in Chettinad and Kolhapuri masalas.
+169. Dried birinji leaves with a warm, herbal fragrance, used whole to perfume biryanis, pulaos and kurmas.
+170. Fragrant whole ajwain with its signature warm, thyme-like aroma for breads, snacks and everyday tempering.
+171. Clean nigella seeds with a lightly peppery, onion-like flavour for pickles, breads and vegetable dishes.
+172. Whole mustard seeds with a sharp, earthy character for tempering, pickles, curries and homemade sauces.
+173. Golden fenugreek seeds with a pleasantly bitter, maple-like note for curries, pickles and spice blends.
+174. Sweet, bright green fennel seeds selected for a refreshing finish in teas, desserts and savoury cooking.
+175. Aromatic whole cumin with a warm, earthy flavour for curries, dals, rice and everyday masala blends.
+176. AJR store workspace
+177. Rooted in good things
+178. A little care.
+179. A flourishing
+180. business.
+181. Your products, your people, your progress.
+182. A thoughtful space to bring it all together.
+183. THE AJR WORKSPACE
+184. Made for everyday growth.
+185. Your store, thoughtfully managed
+186. Sign in with your administrator account to tend to your store.
+187. Enter your password
+188. Back to the store
+189. Continue your healthy snacking journey with premium farm-picked dry fruits, wellness blends, and thoughtful gifting.
+190. Fresh sourcing • Small batch roasting
+191. Member Login
+192. Sign in to manage your orders and nutrition preferences.
+193. Please wait...
+194. or
+195. New to AJR?
+196. Create an account
+197. Harvest · 100% Organic
+198. Goodness worth sharing.
+199. Goodness
+200. worth sharing.
+201. Handpicked California almonds, jumbo golden cashews, Medjool dates and Kashmiri walnuts — curated for daily wellness and royal gifting.
+202. Good food is
+203. always
+204. Customer Voices
+205. Loved by
+206. good company.
+207. 4.95 / 5 Average Rating (1,400+ Reviews)
+208. AJR support library
+209. Questions,
+210. answered.
+211. Everything you might wonder before your first handful arrives.
+212. Need a hand choosing, gifting, or ordering in bulk?
+213. Write to us
+214. Find your answer
+215. common questions
+216. Search AJR frequently asked questions
+217. Search questions (e.g. freshness, organic, bulk)...
+218. Clear FAQ search
+219. No answers match that search just yet.
+220. Ask the AJR team
+221. Still curious?
+222. Our people love a thoughtful question.
+223. Talk to us
+224. Remove item
+225. Add to wishlist
+226. Variety
+227. From
+228. Add
+229. Find your
+230. everyday
+231. superfoods.
+232. 100% natural, Grade A almonds, cashews, walnuts, dates, and festive hampers packed for peak freshness.
+233. Directly sourced · Packed in small batches
+234. Search the collection
+235. Clear product search
+236. in
+237. Sort products
+238. Product results
+239. AJR / NATURAL HARVEST
+240. verified reviews
+241. Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.
+242. Essence of nature.
+243. Pure dry fruits, nuts, and handcrafted hampers made for everyday living.
+244. Our Story
+245. Shop All
+246. Contact Us
+247. Join the table for private harvest releases.
+248. Crafted with intention & care
+249. Privacy · Terms
+250. Join our community for better nutrition, curated product selections, pantry planning, and beautiful seasonal harvest gifts.
+251. Member savings • Gift collections
+252. Healthy habits start here
+253. Sign up
+254. Build your wellness pantry and save your favorites.
+255. Creating account...
+256. What is your health focus today? Pick a goal to discover nutrients tailored to your body.
+257. Today's ritual
+258. View Details
+259. Checking session…
+260. Skip to workspace
+261. STORE WORKSPACE
+262. Admin
+263. A little overview. A bigger picture.
+264. Good things are
+265. Welcome back. Here’s how your store is doing.
+266. Total revenue
+267. Total orders
+268. Updating your store overview…
+269. Gathering your sales…
+270. Online sales
+271. Offline sales
+272. Pending fulfilments
+273. Workspace access
+274. Signed-in administrator
+275. Administrator access list
+276. Order detail
+277. Customer:
+278. Channel:
+279. Items:
+280. Status:
+281. A sale from your store
+282. Add Offline Order
+283. Customer name *
+284. Email (optional)
+285. Product sold *
+286. Select a shop product…
+287. Paid
+288. Note (optional)
+289. Product name *
+290. Type / category
+291. Price per kg (₹) *
+292. Pack sizes in the gram dropdown
+293. Varieties (price per kg)
+294. Description
+295. Product image
+296. Stock
+297. Status
+298. Origin
+299. Nutrients (comma separated)
+300. Show this product in the shop
+301. From Grove to Table
+302. finds you.
+303. Culinary Inspiration
+304. Simple ways to enjoy everyday superfoods
+305. Stay Connected
+306. First taste of something good.
+307. 01 / Heritage
+308. The AJR Founding Story
+309. There is magic in an honest handful.
+310. “The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”
+311. — The AJR Family Table
+312. Uncompromising Standards
+313. 6 Purity Commitments
+314. From harvest selection to eco packaging, we keep our standards non-negotiable.
+315. Our Sourcing Journey
+316. The Family Table
+317. Founded in Virudhunagar, Tamil Nadu with a simple commitment to source clean, unbleached California almonds and dates for friends & family.
+318. Kashmir & Iran Direct
+319. Partnered with Shopian walnut growers and Kerman pistachio orchards for direct single-origin harvest imports.
+320. Zero-Plastic Initiative
+321. Eliminated single-use plastics by introducing woven jute pouches, reusable glass jars, and laser-engraved wooden boxes.
+322. 28,000+ Happy Homes
+323. Now delivering fresh harvest dry fruits and custom festive hampers to over 28,000 households across India.
+324. Master Taster Guarantee
+325. “If it isn't crisp, sweet, and pure, it never leaves our door.”
+326. Bring Goodness Home
+327. to hear from you.
+328. A personal reply, never an automated queue.
+329. WhatsApp Support
+330. Instant support for order tracking, gift guidance & quick recommendations.
+331. Email Desk
+332. For custom hampers, corporate gifting decks, and retail wholesale inquiries.
+333. Studio Call Desk
+334. Prefer a human voice? Call our Virudhunagar flagship studio directly.
+335. AJR Live Enquiry Desk
+336. Tell us what
+337. Choose your enquiry type.
+338. Share the details that matter.
+339. Receive a personal reply within business hours.
+340. Private, secure, and read by a real AJR team member.
+341. Direct Contact Information
+342. Wholesale & Bulk Orders
+343. Custom corporate gifts and retail partnerships.
+344. Flagship Studio
+345. Human Support Promise
+346. LIVE ENQUIRY
+347. How can we help?
+348. Sent directly to our team
+349. Message Received!
+350. Thank you for reaching out. A real person is reviewing your inquiry — we will be in touch within 1 working day.
+351. Send Inquiry
+352. © 2026 AJR Essence of Nature. All rights reserved.
+353. Cost Estimator
+354. 1. Choose Gift Box Style
+355. 2. Select Order Quantity:
+356. 10 units
+357. 50 units (10% OFF)
+358. 100 units (15% OFF)
+359. 250+ units (20% OFF)
+360. 3. Select Custom Branding Add-ons
+361. Instant Quote Estimate
+362. Base Tier Price
+363. Selected Add-ons
+364. Volume Discount
+365. Effective Cost per Unit
+366. Interactive Hamper Studio
+367. Build Your Custom
+368. Pick up to 4 premium dry fruits, choose your pack size, and select signature packaging.
+369. Step 1
+370. Select 2 to 4 Dry Fruits & Nuts
+371. Step 2
+372. Choose Pack Quantity
+373. Step 3
+374. Select Packaging Finish
+375. Your Signature Creation
+376. Custom Harvest Hamper
+377. Custom Box Subtotal
+378. Summary
+379. Quality Benchmark
+380. Generic Market Brands
+381. 100% Taste & Freshness Money-Back Guarantee
+382. Virudhunagar Flagship
+383. Studio & Tasting Counter
+384. Complimentary Saffron Almond Milk
+385. Find us in Virudhunagar
+386. Open the map for directions to our studio and tasting counter.
+387. Almonds
+388. Cashews
+389. Pistachios
+390. Walnuts
+391. Dried Blueberries
+392. Dried Cranberries
+393. Dried Kiwi
+394. Dried Apricots
+395. Figs
+396. Raisins
+397. Dates
+398. Premium Dried Prunes
+399. Dried Pineapple
+400. Dried Mango
+401. Dried Strawberry
+402. Dried Cherry
+403. Premium Chia Seeds
+404. Golden Flax Seeds
+405. Green Pumpkin Seeds
+406. Sunflower Seeds
+407. Watermelon Seeds
+408. White Sesame Seeds
+409. Black Sesame Seeds
+410. Basil Seeds (Sabja)
+411. Poppy Seeds
+412. Melon Seeds
+413. Cucumber Seeds
+414. Halim Seeds
+415. Almond Gum (Badam Pisin)
+416. White Pepper
+417. Black Pepper
+418. Mace
+419. Nutmeg
+420. Star Anise
+421. Cassia
+422. Cinnamon
+423. Cloves
+424. Cardamom
+425. Stone Flower (Dagad Phool)
+426. Birinji Leaves
+427. Carom (Ajwain)
+428. Nigella (Kalonji)
+429. Mustard
+430. Fenugreek
+431. Fennel Seeds
+432. Cumin (Jeera)
+433. California, USA
+434. Protein
+435. Antioxidants
+436. Vitamin C
+437. Fiber
+438. Blanched Almonds
+439. Roasted Almonds
+440. Cashew W180
+441. Cashew W240
+442. Cashew W320
+443. Cashew Jumbo Splits
+444. Cashew Splits
+445. Roasted Cashews
+446. Chilli Cashews
+447. Pepper Cashews
+448. Salted Cashews
+449. BBQ Cashews
+450. Chilli Garlic Cashews
+451. Cheese Cashews
+452. Tangy Tomato Cashews
+453. Mint Cashews
+454. Peri Peri Cashews
+455. Salted Pistachios
+456. Plain Pistachios
+457. Kashmiri Walnut
+458. Chilean Walnut
+459. Figs Bold
+460. Narthol Raisins
+461. Black Raisins
+462. Wet Dates
+463. Deseeded Wet Dates
+464. Mebroom Dates
+465. Medjool Dates
+466. Sabja Seeds
+467. Cucumber Seeds Bold
+468. Pepper Small
+469. Pepper Medium
+470. Pepper Bold
+471. Cardamom 7mm (Bold)
+472. Cardamom 8mm (Jumbo)
+473. Stone Flower
+474. Sweet-tart whole dried blueberries packed with antioxidants and natural fruit sugars.

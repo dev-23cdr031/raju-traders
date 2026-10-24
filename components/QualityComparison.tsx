@@ -1,6 +1,7 @@
 'use client'
 
 import { Check, X, ShieldCheck, Sparkles, Award } from 'lucide-react'
+import { useLanguage } from './LanguageProvider'
 
 const COMPARISONS = [
   {
@@ -42,15 +43,16 @@ const COMPARISONS = [
 ]
 
 export default function QualityComparison() {
+  const { t } = useLanguage()
   return (
     <div className="quality-comparison-section">
       <div className="section-head text-center">
         <div>
           <p className="eyebrow justify-center">
-            <Award size={14} /> The AJR Difference
+            <Award size={14} /> {t('The AJR Difference')}
           </p>
           <h2>
-            Why Pure Sourcing <em>Matters</em>
+            {t('Why Pure Sourcing')} <em>{t('Matters')}</em>
           </h2>
         </div>
         <p className="section-intro text-center">
@@ -62,27 +64,27 @@ export default function QualityComparison() {
         <table className="comparison-table">
           <thead>
             <tr>
-              <th className="feature-col">Quality Benchmark</th>
+              <th className="feature-col">{t('Quality Benchmark')}</th>
               <th className="ajr-col">
                 <div className="col-header-badge">
-                  <Sparkles size={14} /> AJR Pure Sourcing
+                  <Sparkles size={14} /> {t('AJR Pure Sourcing')}
                 </div>
               </th>
-              <th className="market-col">Generic Market Brands</th>
+              <th className="market-col">{t('Generic Market Brands')}</th>
             </tr>
           </thead>
           <tbody>
             {COMPARISONS.map((c, idx) => (
               <tr key={idx} className={idx % 2 === 0 ? 'even-row' : ''}>
                 <td className="feature-cell">
-                  <strong>{c.feature}</strong>
+                  <strong>{t(c.feature)}</strong>
                 </td>
                 <td className="ajr-cell">
                   <div className="cell-content">
                     <span className="icon-badge-good">
                       <Check size={14} />
                     </span>
-                    <span>{c.ajr}</span>
+                    <span>{t(c.ajr)}</span>
                   </div>
                 </td>
                 <td className="market-cell">
@@ -90,7 +92,7 @@ export default function QualityComparison() {
                     <span className="icon-badge-bad">
                       <X size={14} />
                     </span>
-                    <span>{c.market}</span>
+                    <span>{t(c.market)}</span>
                   </div>
                 </td>
               </tr>
@@ -104,7 +106,7 @@ export default function QualityComparison() {
           <ShieldCheck size={28} />
         </div>
         <div>
-          <h4>100% Taste &amp; Freshness Money-Back Guarantee</h4>
+          <h4>{t('100% Taste & Freshness Money-Back Guarantee')}</h4>
           <p>
             If any pack of AJR dry fruits or nuts does not meet your expectations in size, crunch, or flavor, we will replace it or refund your order with zero questions asked.
           </p>

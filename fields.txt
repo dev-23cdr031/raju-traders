@@ -1,0 +1,71 @@
+app\admin\AdminDashboard.tsx:120 | varieties: (p.varieties || []).map((v) => ({ name: v.name, price: String(v.price) })),
+app\admin\AdminDashboard.tsx:753 | .map((v) => ({ name: v.name.trim(), price: Number(v.price) }))
+app\admin\AdminDashboard.tsx:794 | if (!confirm(`Delete ${product.name}? It will leave the shop.`)) return
+app\admin\AdminDashboard.tsx:1170 | <p className="message-list-snippet">{m.detail}</p>
+app\admin\AdminDashboard.tsx:1190 | <div className="message-detail-body"><p>{selectedMessage.detail}</p></div>
+app\admin\AdminDashboard.tsx:1240 | <td className="order-items-cell">{(order.items || []).map((item: any) => <div key={`${item.id}-${item.name}`}>{item.quantity} × {item.name}</div>)}</td>
+app\admin\AdminDashboard.tsx:1272 | <span className="product-admin-image">{product.image ? <img src={product.image} alt={product.name} /> : <Image size={22} />}</span>
+app\admin\AdminDashboard.tsx:1273 | <div className="product-admin-info"><strong>{product.name}</strong><span>{product.category} · ₹{product.varieties?.[0]?.price ?? product.price * 4}/kg</span><span>{produc
+app\admin\AdminDashboard.tsx:1293 | <div className="stock-row-left"><span className="stock-image">{product.image ? <img src={product.image} alt={product.name} /> : <Image size={20} />}</span><div className=
+app\admin\AdminDashboard.tsx:1326 | <li key={String(i.id) + i.name}>{i.quantity} × {i.name} — ₹{i.price}</li>
+app\admin\AdminDashboard.tsx:1404 | <option key={p.id} value={String(p.id)}>{p.name} — ₹{p.price}</option>
+app\admin\AdminDashboard.tsx:1450 | patch({ varieties: draft.varieties.map((v, i) => (i === index ? { ...v, ...part } : v)) })
+app\admin\AdminDashboard.tsx:1456 | <input value={draft.name} onChange={(e) => patch({ name: e.target.value })} placeholder="e.g. Premium Almonds" required />
+app\admin\AdminDashboard.tsx:1461 | <input list="admin-product-types" value={draft.type} onChange={(e) => patch({ type: e.target.value })} placeholder="e.g. Almonds" />
+app\admin\AdminDashboard.tsx:1521 | onClick={() => patch({ varieties: [...draft.varieties, { name: '', price: draft.perKg }] })}
+app\admin\AdminDashboard.tsx:1523 | <Plus size={13} /> Add variety
+app\admin\AdminDashboard.tsx:1530 | <div className="variety-row" key={i}>
+app\admin\AdminDashboard.tsx:1531 | <input value={v.name} onChange={(e) => setVariety(i, { name: e.target.value })} placeholder="Variety name" />
+app\admin\AdminDashboard.tsx:1537 | onClick={() => patch({ varieties: draft.varieties.filter((_, idx) => idx !== i) })}
+app\admin\AdminDashboard.tsx:1548 | <textarea rows={3} value={draft.detail} onChange={(e) => patch({ detail: e.target.value })} placeholder="Short description shown on the product page" />
+app\admin\AdminDashboard.tsx:1595 | <input value={draft.origin} onChange={(e) => patch({ origin: e.target.value })} placeholder="e.g. California, USA" />
+app\admin\AdminDashboard.tsx:1599 | <input value={draft.nutrients} onChange={(e) => patch({ nutrients: e.target.value })} placeholder="Vitamin E, Magnesium" />
+app\page.tsx:191 | .map((v: any) => ({ name: String(v?.name ?? '').trim(), price: Number(v?.price ?? 0) }))
+app\page.tsx:1048 | `${product?.id}|${product?.selectedWeight || '250 g'}|${product?.selectedVariety || ''}`
+app\page.tsx:1410 | allTypes={Array.from(new Set(products.map((p) => p.type)))}
+app\page.tsx:2090 | <Reveal key={testimonial.name} delay={i * 100}>
+app\page.tsx:2095 | <strong>{testimonial.name}</strong>
+app\page.tsx:2244 | <button type="button" className="product-card-link" onClick={() => onSelect(selectedProduct)} aria-label={`${t('View details')}: ${t(product.name)}`} />
+app\page.tsx:2246 | <img src={selectedProduct.image} alt={t(product.name)} />
+app\page.tsx:2254 | aria-label={wished ? `${t('Remove item')}: ${t(product.name)}` : `${t('Add to wishlist')}: ${t(product.name)}`}
+app\page.tsx:2259 | <span className="product-tag">{t(product.type)}</span>
+app\page.tsx:2265 | <h3 className="product-name">{t(product.name)}</h3>
+app\page.tsx:2271 | <span className="product-weight">{weight}</span>
+app\page.tsx:2277 | value={variety}
+app\page.tsx:2280 | aria-label={`${t('Variety')}: ${t(product.name)}`}
+app\page.tsx:2282 | {product.varieties.map((option) => <option key={option.name} value={option.name}>{t(option.name)}</option>)}
+app\page.tsx:2289 | value={weight}
+app\page.tsx:2292 | aria-label={`${t('Pack size')}: ${t(product.name)}`}
+app\page.tsx:2706 | <img src={weightedProduct.image} alt={t(product.name)} />
+app\page.tsx:2710 | <p className="eyebrow">{t(product.type)} · {productOriginForDisplay(product, language, t)}</p>
+app\page.tsx:2712 | <h1>{t(product.name)}</h1>
+app\page.tsx:2732 | <span>{t('Price for')} {product.varieties?.length ? `${t(variety)} · ` : ''}{weight}</span>
+app\page.tsx:2737 | <select value={variety} onChange={(event) => setVariety(event.target.value)} aria-label={`${t('Variety')}: ${t(product.name)}`}>
+app\page.tsx:2738 | {product.varieties.map((option: Variety) => <option key={option.name} value={option.name}>{t(option.name)}</option>)}
+app\page.tsx:2744 | <select value={weight} onChange={(event) => setWeight(event.target.value as Weight)} aria-label={`${t('Pack size')}: ${t(product.name)}`}>
+app\page.tsx:3203 | (item) => `${item.id}|${item.selectedWeight || '250 g'}|${item.variety || ''}`
+app\page.tsx:3210 | `${line.product.id}|${line.product.selectedWeight || '250 g'}|${line.product.selectedVariety || ''}`
+app\page.tsx:3272 | <div className="cart-item" key={`${item.product.id}-${item.product.selectedWeight || '250 g'}-${item.product.selectedVariety || ''}`}>
+app\page.tsx:3273 | <img src={item.product.image} alt={t(item.product.name)} />
+app\page.tsx:3275 | <h3>{t(item.product.name)}</h3>
+app\page.tsx:3276 | <p>{t(item.product.type)}{item.product.selectedVariety ? ` · ${t(item.product.selectedVariety)}` : ''} · {item.product.selectedWeight || '250 g'}</p>
+components\CorporateEstimator.tsx:81 | <strong className="block text-sm">{tier.name}</strong>
+components\CorporateEstimator.tsx:146 | <h3>{activeTier.name}</h3>
+components\CustomBoxBuilder.tsx:64 | detail: `Custom hamper containing: ${selectedItems.map((i) => i.name).join(', ')}. Packed in ${BOX_STYLES[boxStyleIdx].label}.`,
+components\CustomBoxBuilder.tsx:93 | key={item.name}
+components\CustomBoxBuilder.tsx:99 | <img src={item.image} alt={item.name} />
+components\CustomBoxBuilder.tsx:108 | <strong className="item-title">{item.name}</strong>
+components\CustomBoxBuilder.tsx:125 | className={`weight-btn ${weightIdx === idx ? 'active' : ''}`}
+components\CustomBoxBuilder.tsx:167 | <div key={item.name} className={`preview-item-slot slot-${idx}`}>
+components\CustomBoxBuilder.tsx:168 | <img src={item.image} alt={item.name} />
+components\CustomBoxBuilder.tsx:169 | <span>{item.type}</span>
+components\CustomBoxBuilder.tsx:183 | <li key={item.name}>
+components\CustomBoxBuilder.tsx:185 | <span>{item.name}</span>
+components\MyOrders.tsx:195 | <img src={item.image} alt={t(item.name)} />
+components\MyOrders.tsx:200 | <strong>{t(item.name)}</strong>
+components\MyOrders.tsx:201 | <span>{[item.variety ? t(item.variety) : '', item.selectedWeight].filter(Boolean).join(' · ') || t(item.type || '')}</span>
+components\NutritionMatch.tsx:166 | <div key={item.name} className="rec-product-card">
+components\NutritionMatch.tsx:168 | <img src={item.image} alt={t(item.name)} />
+components\NutritionMatch.tsx:171 | <span className="rec-tag">{t(item.type)}</span>
+components\NutritionMatch.tsx:172 | <h5>{t(item.name)}</h5>
+lib\supabase.ts:189 | .map((v: any) => ({ name: String(v?.name ?? '').trim(), price: Number(v?.price ?? v?.perKg ?? 0) }))

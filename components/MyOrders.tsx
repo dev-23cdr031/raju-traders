@@ -192,13 +192,13 @@ function OrderCard({ order, open, onToggle }: { order: MyOrderRow; open: boolean
         {(order.items || []).map((item, index) => (
           <div className="order-line" key={`${String(item.id)}-${index}`}>
             {item.image ? (
-              <img src={item.image} alt={item.name} />
+              <img src={item.image} alt={t(item.name)} />
             ) : (
               <span className="order-line-thumb" aria-hidden="true" />
             )}
             <div className="order-line-copy">
-              <strong>{item.name}</strong>
-              <span>{[item.variety, item.selectedWeight].filter(Boolean).join(' · ') || item.type || ''}</span>
+              <strong>{t(item.name)}</strong>
+              <span>{[item.variety ? t(item.variety) : '', item.selectedWeight].filter(Boolean).join(' · ') || t(item.type || '')}</span>
             </div>
             <span className="order-line-qty">×{item.quantity}</span>
             <span className="order-line-price">₹{Number(item.price) * Number(item.quantity)}</span>

@@ -1,0 +1,72 @@
+app\admin\AdminDashboard.tsx:594 | , body: Record
+app\admin\AdminDashboard.tsx:824 | AJR
+app\admin\AdminDashboard.tsx:1003 | Excluding cancelled orders
+app\admin\AdminDashboard.tsx:1023 | Customer inquiries
+app\admin\AdminDashboard.tsx:1038 | Performance
+app\admin\AdminDashboard.tsx:1039 | Revenue at a glance
+app\admin\AdminDashboard.tsx:1041 | Last 12 months
+app\admin\AdminDashboard.tsx:1072 | A well-stocked store
+app\admin\AdminDashboard.tsx:1073 | Inventory health
+app\admin\AdminDashboard.tsx:1087 | Fresh from your store
+app\admin\AdminDashboard.tsx:1088 | Online and in-store orders will appear here.
+app\admin\AdminDashboard.tsx:1091 | A personal touch
+app\admin\AdminDashboard.tsx:1092 | orders awaiting fulfilment
+app\admin\AdminDashboard.tsx:1095 | Thoughtfully managed. Naturally AJR.
+app\admin\AdminDashboard.tsx:1103 | Customer Inbox
+app\admin\AdminDashboard.tsx:1116 | all inquiries
+app\admin\AdminDashboard.tsx:1119 | Unread
+app\admin\AdminDashboard.tsx:1121 | awaiting your reply
+app\admin\AdminDashboard.tsx:1124 | Read
+app\admin\AdminDashboard.tsx:1126 | opened inquiries
+app\admin\AdminDashboard.tsx:1140 | Mark all read
+app\admin\AdminDashboard.tsx:1146 | Loading messages…
+app\admin\AdminDashboard.tsx:1150 | No messages here
+app\admin\AdminDashboard.tsx:1151 | Customer inquiries from the contact page will appear here instantly.
+app\admin\AdminDashboard.tsx:1192 | Reply by email
+app\admin\AdminDashboard.tsx:1200 | Select a message
+app\admin\AdminDashboard.tsx:1201 | Choose a conversation from the list to read the full inquiry.
+app\admin\AdminDashboard.tsx:1217 | Offline order
+app\admin\AdminDashboard.tsx:1232 | Order
+app\admin\AdminDashboard.tsx:1289 | Loading inventory…
+app\admin\AdminDashboard.tsx:1297 | Inventory is empty
+app\admin\AdminDashboard.tsx:1302 | Workspace access
+app\admin\AdminDashboard.tsx:1321 | Channel:
+app\admin\AdminDashboard.tsx:1391 | A sale from your store
+app\admin\AdminDashboard.tsx:1399 | Email (optional)
+app\admin\AdminDashboard.tsx:1443 | Promise
+app\admin\AdminDashboard.tsx:1471 | Prices are always per kg — the shop scales them to the gram size the customer picks.
+app\admin\AdminDashboard.tsx:1527 | No varieties yet — every pack size will use the price above.
+app\admin\AdminDashboard.tsx:1594 | Origin
+app\admin\AdminDashboard.tsx:1598 | Nutrients (comma separated)
+app\api\dashboard\route.ts:27 | Number(p.stock)
+app\login\page.tsx:68 | AJR Essence of Nature
+app\page.tsx:2190 | Stay Connected
+app\page.tsx:2375 | “The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”
+app\page.tsx:2376 | — The AJR Family Table
+app\page.tsx:2448 | Kashmir & Iran Direct
+app\page.tsx:2458 | 28,000+ Happy Homes
+app\page.tsx:2473 | “If it isn't crisp, sweet, and pure, it never leaves our door.”
+app\page.tsx:2792 | Rich in healthy monounsaturated fats, dietary fiber, plant protein, and essential micronutrients.
+app\page.tsx:2938 | hello@ajrnature.com
+app\page.tsx:2939 | Mon–Sat, 9:30am–6:30pm IST
+app\page.tsx:2942 | Wholesale & Bulk Orders
+app\page.tsx:2943 | trade@ajrnature.com
+app\page.tsx:2947 | Flagship Studio
+app\page.tsx:3087 | Royal Wooden Chest
+app\page.tsx:3089 | Eco Jute Pouch
+app\page.tsx:3401 | UPI
+app\page.tsx:3402 | Card
+app\page.tsx:3403 | Netbanking
+app\page.tsx:3434 | Your
+components\CustomBoxBuilder.tsx:77 | Build Your Custom
+components\CustomBoxBuilder.tsx:85 | Step 1
+components\CustomBoxBuilder.tsx:118 | Step 2
+components\CustomBoxBuilder.tsx:136 | Step 3
+components\CustomBoxBuilder.tsx:176 | Custom Harvest Hamper
+components\RibbonCutIntro.tsx:58 | A ceremonial opening
+components\RibbonCutIntro.tsx:60 | Always Just Royal
+components\RibbonCutIntro.tsx:84 | A royal harvest awaits.
+components\StudioLocation.tsx:15 | = 1 && day
+components\StudioLocation.tsx:51 | AJR Essence of Nature Studio
+components\StudioLocation.tsx:61 | Mon – Sat: 10:00 AM – 7:00 PM IST
+components\StudioLocation.tsx:68 | Served daily 11:30 AM – 5:00 PM

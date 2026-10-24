@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { MapPin, Clock, Navigation, Phone, Check, Coffee } from 'lucide-react'
+import { useLanguage } from './LanguageProvider'
 
 export default function StudioLocation() {
+  const { t } = useLanguage()
   const [isOpen, setIsOpen] = useState(true)
 
   useEffect(() => {
@@ -26,14 +28,14 @@ export default function StudioLocation() {
       <div className="section-head">
         <div>
           <p className="eyebrow">
-            <MapPin size={14} /> Visit Our Studio &amp; Tasting Room
+            <MapPin size={14} /> {t('Visit Our Studio & Tasting Room')}
           </p>
           <h2>
-            Experience the Harvest <em>In Person</em>
+            {t('Experience the Harvest')} <em>{t('In Person')}</em>
           </h2>
         </div>
         <p className="section-intro">
-          Step into our Virudhunagar studio to taste fresh dry fruit batches, inspect royal wooden gift hampers, and consult with our master tasters.
+          {t('Step into our Virudhunagar studio to taste fresh dry fruit batches, inspect royal wooden gift hampers, and consult with our master tasters.')}
         </p>
       </div>
 
@@ -43,12 +45,12 @@ export default function StudioLocation() {
           <div className="studio-status-row">
             <span className={`status-badge ${isOpen ? 'open' : 'closed'}`}>
               <span className="dot" />
-              {isOpen ? 'Studio Open Now (Until 7:00 PM IST)' : 'Studio Currently Closed (Opens 10:00 AM IST)'}
+              {t(isOpen ? 'Studio Open Now (Until 7:00 PM IST)' : 'Studio Currently Closed (Opens 10:00 AM IST)')}
             </span>
-            <span className="city-tag">Virudhunagar Flagship</span>
+            <span className="city-tag">{t('Virudhunagar Flagship')}</span>
           </div>
 
-          <h3>AJR Essence of Nature Studio</h3>
+          <h3>{t('AJR Essence of Nature Studio')}</h3>
           <p className="studio-address">
             <MapPin size={16} /> 14, TC Godown Street, Vadiyan St, Virudhunagar, Tamil Nadu 626001
           </p>
@@ -57,28 +59,28 @@ export default function StudioLocation() {
             <div className="hour-item">
               <Clock size={16} />
               <div>
-                <strong>Studio &amp; Tasting Counter</strong>
-                <span>Mon – Sat: 10:00 AM – 7:00 PM IST</span>
+                <strong>{t('Studio & Tasting Counter')}</strong>
+                <span>{t('Studio hours')}</span>
               </div>
             </div>
             <div className="hour-item">
               <Coffee size={16} />
               <div>
-                <strong>Complimentary Saffron Almond Milk</strong>
-                <span>Served daily 11:30 AM – 5:00 PM</span>
+                <strong>{t('Complimentary Saffron Almond Milk')}</strong>
+                <span>{t('Saffron milk hours')}</span>
               </div>
             </div>
           </div>
 
           <div className="studio-features-list">
             <span>
-              <Check size={13} className="text-emerald-600" /> Free Private Parking
+              <Check size={13} className="text-emerald-600" /> {t('Free Private Parking')}
             </span>
             <span>
-              <Check size={13} className="text-emerald-600" /> Sample Tasting Counter
+              <Check size={13} className="text-emerald-600" /> {t('Sample Tasting Counter')}
             </span>
             <span>
-              <Check size={13} className="text-emerald-600" /> Same-Day Custom Engraving
+              <Check size={13} className="text-emerald-600" /> {t('Same-Day Custom Engraving')}
             </span>
           </div>
 
@@ -89,10 +91,10 @@ export default function StudioLocation() {
               rel="noreferrer"
               className="button button-dark"
             >
-              Get Directions on Google Maps <Navigation size={16} />
+              {t('Get Directions on Google Maps')} <Navigation size={16} />
             </a>
             <a href="tel:+919876543210" className="button button-ghost">
-              Call Studio <Phone size={15} />
+              {t('Call Studio')} <Phone size={15} />
             </a>
           </div>
         </div>
@@ -101,7 +103,7 @@ export default function StudioLocation() {
         <div className="studio-visual-card">
           <iframe
             className="studio-map-frame"
-            title="AJR Essence of Nature studio location in Virudhunagar"
+            title={t('AJR Essence of Nature studio location in Virudhunagar')}
             src="https://www.google.com/maps?q=14%20TC%20Godown%20Street%2C%20Vadiyan%20St%2C%20Virudhunagar%2C%20Tamil%20Nadu%20626001&z=16&output=embed"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
@@ -109,8 +111,8 @@ export default function StudioLocation() {
           <div className="visual-overlay">
             <Navigation size={18} className="text-lime" />
             <div>
-              <strong>Find us in Virudhunagar</strong>
-              <p>Open the map for directions to our studio and tasting counter.</p>
+              <strong>{t('Find us in Virudhunagar')}</strong>
+              <p>{t('Open the map for directions to our studio and tasting counter.')}</p>
             </div>
           </div>
         </div>

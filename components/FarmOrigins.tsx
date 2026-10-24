@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MapPin, Sun, Calendar, Mountain, ArrowRight, ShieldCheck, Award } from 'lucide-react'
+import { useLanguage } from './LanguageProvider'
 
 const ORIGINS = [
   {
@@ -62,6 +63,7 @@ const ORIGINS = [
 ]
 
 export default function FarmOrigins({ go }: { go: (view: any) => void }) {
+  const { t } = useLanguage()
   const [activeId, setActiveId] = useState('kashmir')
   const activeOrigin = ORIGINS.find((o) => o.id === activeId) || ORIGINS[0]
 
@@ -70,14 +72,14 @@ export default function FarmOrigins({ go }: { go: (view: any) => void }) {
       <div className="section-head text-center">
         <div>
           <p className="eyebrow justify-center">
-            <MapPin size={14} /> Global Sourcing Transparency
+            <MapPin size={14} /> {t('Global Sourcing Transparency')}
           </p>
           <h2>
-            Where Every <em>Handful Begins</em>
+            {t('Where Every')} <em>{t('Handful Begins')}</em>
           </h2>
         </div>
         <p className="section-intro text-center">
-          We bypass commodity traders to partner directly with single-origin family orchards across the world’s finest growing micro-climates.
+          {t('We bypass commodity traders to partner directly with single-origin family orchards across the world’s finest growing micro-climates.')}
         </p>
       </div>
 
@@ -91,7 +93,7 @@ export default function FarmOrigins({ go }: { go: (view: any) => void }) {
             onClick={() => setActiveId(o.id)}
           >
             <MapPin size={14} />
-            <span>{o.region.split(',')[0]}</span>
+            <span>{t(o.region.split(',')[0])}</span>
           </button>
         ))}
       </div>
@@ -99,42 +101,42 @@ export default function FarmOrigins({ go }: { go: (view: any) => void }) {
       {/* Origin Display Card */}
       <div className="origin-card-display">
         <div className="origin-visual">
-          <img src={activeOrigin.image} alt={activeOrigin.crop} />
+          <img src={activeOrigin.image} alt={t(activeOrigin.crop)} />
           <span className="crop-tag">
-            <Award size={13} /> {activeOrigin.crop}
+            <Award size={13} /> {t(activeOrigin.crop)}
           </span>
         </div>
 
         <div className="origin-details">
           <div className="region-badge">
-            <MapPin size={14} /> <span>{activeOrigin.region}</span>
+            <MapPin size={14} /> <span>{t(activeOrigin.region)}</span>
           </div>
-          <h3>{activeOrigin.crop}</h3>
+          <h3>{t(activeOrigin.crop)}</h3>
           
           <blockquote className="origin-quote">
-            “{activeOrigin.quote}”
+            “{t(activeOrigin.quote)}”
           </blockquote>
 
           <div className="climate-grid">
             <div className="climate-item">
               <Mountain size={16} />
               <div>
-                <strong>Elevation</strong>
-                <span>{activeOrigin.elevation}</span>
+                <strong>{t('Elevation')}</strong>
+                <span>{t(activeOrigin.elevation)}</span>
               </div>
             </div>
             <div className="climate-item">
               <Sun size={16} />
               <div>
-                <strong>Growing Climate</strong>
-                <span>{activeOrigin.climate}</span>
+                <strong>{t('Growing Climate')}</strong>
+                <span>{t(activeOrigin.climate)}</span>
               </div>
             </div>
             <div className="climate-item">
               <Calendar size={16} />
               <div>
-                <strong>Peak Harvest</strong>
-                <span>{activeOrigin.harvestTime}</span>
+                <strong>{t('Peak Harvest')}</strong>
+                <span>{t(activeOrigin.harvestTime)}</span>
               </div>
             </div>
           </div>
@@ -142,7 +144,7 @@ export default function FarmOrigins({ go }: { go: (view: any) => void }) {
           <div className="highlights-list">
             {activeOrigin.highlights.map((h) => (
               <span key={h} className="highlight-chip">
-                <ShieldCheck size={13} /> {h}
+                <ShieldCheck size={13} /> {t(h)}
               </span>
             ))}
           </div>
@@ -152,7 +154,7 @@ export default function FarmOrigins({ go }: { go: (view: any) => void }) {
             className="button button-dark mt-4"
             onClick={() => go('product')}
           >
-            Taste {activeOrigin.crop.split(' ')[1] || 'Harvest'} <ArrowRight size={16} />
+            {t('Taste Harvest')} <ArrowRight size={16} />
           </button>
         </div>
       </div>

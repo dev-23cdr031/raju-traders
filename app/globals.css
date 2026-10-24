@@ -497,7 +497,7 @@ html[lang='ta'] .letter-reveal {
   white-space: normal;
 }
 
-html[lang='ta'] .letter-reveal-tamil {
+html[lang='ta'] .letter-reveal-script {
   display: inline;
   opacity: 0;
   animation: ajr-letter-rise .65s cubic-bezier(.22, 1, .36, 1) forwards;
@@ -6918,5 +6918,708 @@ html[lang='ta'] .cart-page h1 {
   html[lang='ta'] .section-head,
   html[lang='ta'] .footer-bottom {
     gap: 18px;
+  }
+}
+
+/* ---------- Home: complete responsive containment pass ---------- */
+.home-tight,
+.home-tight section,
+.home-tight .reveal,
+.home-tight .section-head > *,
+.home-tight .wellness-display-card > *,
+.home-tight .product-card,
+.home-tight .product-card-copy,
+.home-tight .rec-info {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.home-tight .letter-heading,
+.home-tight .letter-reveal,
+.home-tight .letter-reveal-script {
+  max-width: 100%;
+}
+
+html[lang='ta'] .home-tight .letter-reveal,
+html[lang='hi'] .home-tight .letter-reveal,
+html[lang='ta'] .home-tight .letter-reveal-script,
+html[lang='hi'] .home-tight .letter-reveal-script {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: balance;
+}
+
+.home-tight .campaign-slider-stage {
+  min-height: 0;
+}
+
+.home-tight .campaign-arrow,
+.home-tight .campaign-dot {
+  position: relative;
+}
+
+.home-tight .campaign-dot::before {
+  position: absolute;
+  inset: -12px -7px;
+  content: '';
+}
+
+.home-tight .wish,
+.home-tight .quick-add,
+.home-tight .text-link,
+.home-tight .faq-panel-link,
+.home-tight .faq-empty-link,
+.home-tight .faq-contact-row button,
+.home-tight .wellness-tab-btn,
+.site-header .mobile-menu,
+.site-header .header-actions button,
+.footer-links button,
+.newsletter button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.home-tight .quick-add,
+.home-tight .text-link,
+.home-tight .faq-panel-link,
+.home-tight .faq-empty-link,
+.home-tight .faq-contact-row button,
+.footer-links button {
+  width: fit-content;
+  padding-block: 10px;
+}
+
+@media (max-width: 1080px) {
+  .site-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 12px;
+    height: 68px;
+    padding-inline: clamp(14px, 4vw, 36px);
+  }
+
+  .site-header .mobile-menu {
+    display: grid;
+    grid-column: 1;
+    justify-self: start;
+    place-items: center;
+    border-radius: 50%;
+  }
+
+  .site-header .brand {
+    position: absolute;
+    left: 50%;
+    grid-column: 2;
+    justify-self: center;
+    transform: translateX(-50%);
+  }
+
+  .site-header .nav {
+    display: none;
+    position: absolute;
+    top: 67px;
+    right: 0;
+    left: 0;
+    z-index: 20;
+    grid-column: 1 / -1;
+    width: auto;
+    max-height: calc(100svh - 67px);
+    margin: 0;
+    padding: 16px clamp(18px, 5vw, 48px) 22px;
+    overflow-y: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    background: var(--cream);
+    box-shadow: 0 18px 34px rgba(18, 48, 31, .12);
+  }
+
+  .site-header .nav.nav-open { display: flex; }
+  .site-header .nav button,
+  .site-header .nav-link { min-height: 44px; justify-content: flex-start; text-align: left; font-size: 15px; }
+  .site-header .header-utilities { grid-column: 3; justify-self: end; gap: 7px; }
+  .site-header .header-actions { gap: 2px; }
+  .site-header .header-actions button { display: grid; padding: 0; place-items: center; }
+  .site-header .shop-language-switcher { min-height: 44px; padding-inline: 9px; }
+}
+
+@media (max-width: 900px) {
+  .home-tight .wellness-display-card { gap: 26px; padding: clamp(24px, 5vw, 38px); }
+  .home-tight .festive-img-card { height: clamp(260px, 62vw, 390px); }
+  .home-tight .faq-garden-note { position: static; margin-top: 32px; }
+  .home-tight .faq-garden-panel { min-height: 0; }
+}
+
+@media (max-width: 680px) {
+  .home-tight .campaign-slider-stage {
+    width: 100%;
+    min-height: clamp(200px, 56.25vw, 383px);
+    aspect-ratio: 16 / 9;
+  }
+
+  .home-tight .campaign-slider-controls { bottom: 10px; min-height: 48px; padding: 5px 8px; }
+  .home-tight .campaign-arrow { width: 44px; height: 44px; }
+  .home-tight .campaign-slider-dots { min-height: 44px; gap: 9px; }
+  .home-tight .nutrition-match-container { padding-inline: clamp(14px, 4.5vw, 28px); }
+  .home-tight .wellness-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-block: 26px 30px; }
+  .home-tight .wellness-tab-btn { width: 100%; justify-content: flex-start; border-radius: 14px; padding: 10px 12px; line-height: 1.3; }
+  .home-tight .wellness-display-card { padding: clamp(18px, 4.5vw, 28px); border-radius: 22px; }
+  .home-tight .display-recommendations { padding: clamp(14px, 4vw, 22px); border-radius: 18px; }
+  .home-tight .goal-stats-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .home-tight .goal-stat-item strong { font-size: clamp(18px, 6vw, 25px); }
+  .home-tight .goal-stat-item span { overflow-wrap: anywhere; font-size: 9px; }
+  .home-tight .festive-banner { gap: 28px; padding-inline: clamp(20px, 6vw, 36px); }
+  .home-tight .festive-copy h2 { font-size: clamp(38px, 12vw, 56px); }
+  .home-tight .festive-img-card { height: clamp(230px, 74vw, 350px); }
+  .home-tight .faq-section { padding-inline: clamp(14px, 4.5vw, 28px); }
+  .home-tight .faq-garden-panel { padding: 28px 22px; }
+  .home-tight .faq-layout h2 { font-size: clamp(40px, 12vw, 58px); }
+  .home-tight .faq-answer-desk { min-width: 0; }
+  .home-tight .cta-newsletter { align-items: stretch; flex-direction: column; }
+  .home-tight .cta-newsletter input,
+  .home-tight .cta-newsletter .button { width: 100%; min-width: 0; }
+  footer { padding-inline: clamp(16px, 5vw, 30px); }
+  .footer-links button { margin-block: -5px; }
+  .newsletter { min-height: 48px; align-items: center; }
+}
+
+@media (max-width: 480px) {
+  .home-tight .section { padding-inline: 18px; }
+  .home-tight .hero { padding-inline: 18px; }
+  .home-tight .hero h1 { max-width: 100%; font-size: clamp(43px, 14vw, 65px); }
+  .home-tight .hero-actions { align-items: stretch; flex-direction: column; }
+  .home-tight .hero-actions .button { width: 100%; }
+  .home-tight .section-head { width: 100%; }
+  .home-tight .section-head .text-link { align-self: flex-start; }
+  .home-tight .product-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .home-tight .product-photo { height: auto; min-height: 0; aspect-ratio: 4 / 3; }
+  .home-tight .product-card--catalogue .wish { width: 44px; height: 44px; }
+  .home-tight .product-card--catalogue .quick-add { min-height: 44px; }
+  .home-tight .rec-product-card { align-items: stretch; flex-direction: column; padding: 12px; }
+  .home-tight .rec-img { width: 100%; height: auto; aspect-ratio: 16 / 8; }
+  .home-tight .rec-action-row { align-items: stretch; flex-direction: column; gap: 4px; }
+  .home-tight .rec-action-row .text-link { align-self: flex-start; }
+  .home-tight .display-copy > .button { width: 100%; }
+  .home-tight .stats-bar { grid-template-columns: 1fr 1fr; gap: 24px 12px; }
+  .home-tight .festive-pills { gap: 8px; }
+  .home-tight .festive-pill { width: 100%; border-radius: 10px; }
+  .home-tight .faq-question-wrap { grid-template-columns: 30px minmax(0, 1fr); }
+  .home-tight .faq-contact-row { grid-template-columns: minmax(0, 1fr); }
+  .home-tight .faq-contact-sprout { display: none; }
+  .home-tight .faq-contact-row button { grid-column: 1; }
+  .footer-links { grid-template-columns: 1fr; }
+  .footer-links > div:last-child { grid-column: auto; }
+}
+
+@media (max-width: 390px) {
+  .site-header { grid-template-columns: 44px minmax(0, 1fr) auto; padding-inline: 8px; }
+  .site-header .brand { position: static; grid-column: 2; justify-self: start; transform: none; }
+  .site-header .brand img { width: 42px; height: 42px; }
+  .site-header .header-utilities { gap: 2px; }
+  .site-header .shop-language-switcher { gap: 0; padding-inline: 5px; }
+  .site-header .shop-language-switcher > svg { display: none; }
+  .site-header .shop-language-switcher select { width: 54px; min-width: 54px; max-width: 60px; }
+  .site-header .header-actions button:first-child { display: none; }
+  .home-tight .wellness-tabs { grid-template-columns: minmax(0, 1fr); }
+  .home-tight .goal-stats-row { grid-template-columns: minmax(0, 1fr); }
+  .home-tight .goal-stat-item { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .home-tight .campaign-slider-controls { transform: translateX(-50%) scale(.9); transform-origin: bottom center; }
+}
+
+@media (max-width: 340px) {
+  .site-header .header-actions { gap: 0; }
+  .site-header .header-actions button { min-width: 40px; width: 40px; }
+  .site-header .shop-language-switcher select { width: 48px; min-width: 48px; }
+  .home-tight .section,
+  .home-tight .hero { padding-inline: 14px; }
+  .home-tight .wellness-display-card,
+  .home-tight .display-recommendations { padding-inline: 12px; }
+  .home-tight .faq-garden-panel { padding-inline: 18px; }
+}
+
+/* Tamil catalogue: inclusive narrow layout and accessible mobile controls. */
+@media (max-width: 430px) {
+  .shop-page .shop-grid,
+  .wishlist-page .product-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 24px;
+  }
+
+  .shop-page .shop-grid > *,
+  .wishlist-page .product-grid > *,
+  .shop-page .product-card--catalogue,
+  .wishlist-page .product-card--catalogue {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .shop-page .product-card--catalogue .wish,
+  .wishlist-page .product-card--catalogue .wish {
+    width: 46px !important;
+    min-width: 46px;
+    height: 46px !important;
+    min-height: 46px;
+  }
+
+  .shop-page .product-card--catalogue .quick-add,
+  .wishlist-page .product-card--catalogue .quick-add,
+  .shop-page .filters button {
+    min-height: 46px !important;
+  }
+
+  .shop-page .product-card--catalogue .quick-add,
+  .wishlist-page .product-card--catalogue .quick-add {
+    padding-block: 10px;
+  }
+
+  .detail-price-row { flex-wrap: wrap; row-gap: 6px; }
+
+  html[lang='ta'] .cart-page .cart-heading,
+  html[lang='ta'] .wishlist-page .cart-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 34px;
+  }
+
+  html[lang='ta'] .cart-page .cart-heading h1,
+  html[lang='ta'] .wishlist-page .cart-heading h1 {
+    width: 100%;
+    max-width: 100%;
+    font-size: clamp(30px, 9vw, 39px) !important;
+    line-height: 1.28;
+    overflow-wrap: normal;
+    word-break: normal;
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  html[lang='ta'] .cart-page .cart-heading h1 br,
+  html[lang='ta'] .wishlist-page .cart-heading h1 br {
+    display: none;
+  }
+
+  html[lang='ta'] .cart-page .cart-heading > span,
+  html[lang='ta'] .wishlist-page .cart-heading > span {
+    align-self: flex-start;
+  }
+}
+
+html[lang='ta'] .home-tight .wellness-tab-btn,
+html[lang='ta'] .home-tight .display-copy p,
+html[lang='ta'] .home-tight .wellness-ritual p,
+html[lang='ta'] .home-tight .rec-nutrient,
+html[lang='ta'] .home-tight .testimonial blockquote,
+html[lang='ta'] .home-tight .testimonial figcaption {
+  line-height: 1.65;
+  letter-spacing: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+html[lang='ta'] .home-tight .display-copy p,
+html[lang='ta'] .home-tight .wellness-ritual p { color: #415840; font-size: 14px; }
+html[lang='ta'] .home-tight .rec-nutrient { color: #315d39; font-size: 12px; }
+html[lang='ta'] .home-tight .goal-stat-item span { color: #536b52; font-size: 10px; }
+html[lang='ta'] .home-tight .testimonial blockquote { font-size: 17px; }
+html[lang='ta'] .home-tight .testimonial figcaption { font-size: 12px; }
+
+@media (max-width: 480px) {
+  html[lang='ta'] .home-tight .display-copy h3 { font-size: clamp(28px, 8.5vw, 38px); line-height: 1.45; }
+  html[lang='ta'] .home-tight .rec-info h5 { font-size: 16px; line-height: 1.5; }
+  html[lang='ta'] .home-tight .wellness-tab-btn { font-size: 13px; }
+}
+
+/* Product localisation and mobile interaction refinements. */
+@media (max-width: 680px) {
+  .home-tight .campaign-dot {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    opacity: 1;
+  }
+
+  .home-tight .campaign-dot::before {
+    inset: 50% auto auto 50%;
+    width: 9px;
+    height: 9px;
+    border: 1px solid rgba(245, 244, 237, .8);
+    border-radius: 50%;
+    background: transparent;
+    transform: translate(-50%, -50%);
+  }
+
+  .home-tight .campaign-dot.is-active { width: 44px; height: 44px; background: transparent; }
+  .home-tight .campaign-dot.is-active::before { width: 25px; border-color: var(--lime); border-radius: 7px; background: var(--lime); }
+}
+
+@media (max-width: 480px) {
+  .site-header .mobile-menu,
+  .site-header .header-actions button { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+  .site-header .shop-language-switcher { position: relative; min-width: 58px; height: 44px; }
+  .site-header .shop-language-switcher select { position: absolute; inset: 0; width: 100%; min-width: 0; height: 100%; min-height: 44px; padding-inline: 6px; }
+  .product-card-copy .pack-select-label select,
+  .detail-pack-selector select { min-height: 44px; }
+  html[lang='ta'] .product-card--catalogue .product-name { min-height: 0; font-size: 14px; line-height: 1.55; white-space: normal; overflow: visible; display: block; }
+  html[lang='ta'] .product-card--catalogue .product-tag { font-size: 10px; line-height: 1.4; letter-spacing: 0; text-transform: none; }
+  html[lang='ta'] .product-card-footer { align-items: stretch; flex-direction: column; gap: 8px; }
+  html[lang='ta'] .product-card-footer .quick-add { width: 100%; justify-content: center; white-space: normal; line-height: 1.45; }
+}
+
+@media (max-width: 340px) {
+  .site-header .header-actions button { width: 44px; min-width: 44px; }
+  html[lang='ta'] .home-tight .faq-layout h2 { max-width: 100%; font-size: 34px; line-height: 1.45; letter-spacing: 0; overflow-wrap: normal; word-break: normal; white-space: normal; text-wrap: balance; }
+  html[lang='ta'] .home-tight .faq-layout h2 em { display: inline; }
+}
+
+/* Malayalam uses different glyph and line-height metrics from the Latin display face. */
+html[lang='ml'] *,
+html[lang='ml'] *::before,
+html[lang='ml'] *::after {
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+html[lang='ml'] body,
+html[lang='ml'] button,
+html[lang='ml'] input,
+html[lang='ml'] select,
+html[lang='ml'] textarea,
+html[lang='ml'] h1,
+html[lang='ml'] h2,
+html[lang='ml'] h3,
+html[lang='ml'] h4,
+html[lang='ml'] h5,
+html[lang='ml'] h6,
+html[lang='ml'] em,
+html[lang='ml'] .font-serif {
+  font-family: 'Noto Sans Malayalam', 'Nirmala UI', Kartika, sans-serif !important;
+  font-kerning: normal;
+  font-variant-ligatures: normal;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+html[lang='ml'] h1,
+html[lang='ml'] h2,
+html[lang='ml'] h3,
+html[lang='ml'] h4,
+html[lang='ml'] h5,
+html[lang='ml'] h6,
+html[lang='ml'] em {
+  font-style: normal;
+  line-height: 1.38;
+}
+
+html[lang='ml'] .hero h1,
+html[lang='ml'] .about-page h1,
+html[lang='ml'] .shop-page h1,
+html[lang='ml'] .contact-page h1,
+html[lang='ml'] .wishlist-page h1,
+html[lang='ml'] .cart-page h1 {
+  max-width: 100%;
+  font-size: clamp(36px, 5.4vw, 68px) !important;
+  line-height: 1.32 !important;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: balance;
+}
+
+html[lang='ml'] .home-tight .hero h1 {
+  max-width: 100%;
+  font-size: clamp(38px, 5vw, 70px) !important;
+  line-height: 1.3 !important;
+}
+
+html[lang='ml'] .letter-reveal,
+html[lang='ml'] .letter-reveal-char,
+html[lang='ml'] .letter-reveal-script {
+  display: inline;
+  opacity: 1;
+  transform: none;
+  white-space: normal;
+  animation: none;
+}
+
+html[lang='ml'] .button,
+html[lang='ml'] .nav button,
+html[lang='ml'] .nav-link,
+html[lang='ml'] .filters button,
+html[lang='ml'] .contact-tab-btn,
+html[lang='ml'] .wellness-tab-btn,
+html[lang='ml'] .origin-tab-btn,
+html[lang='ml'] label {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+html[lang='ml'] .section-head,
+html[lang='ml'] .product-info,
+html[lang='ml'] .footer-bottom,
+html[lang='ml'] .live-enquiry-panel-head {
+  align-items: flex-start;
+}
+
+html[lang='ml'] .section-head {
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+html[lang='ml'] .product-card--catalogue .product-name {
+  min-height: 0;
+  line-height: 1.5;
+  white-space: normal;
+  overflow: visible;
+}
+
+html[lang='ml'] .product-card--catalogue .product-tag {
+  line-height: 1.45;
+}
+
+html[lang='ml'] .language-switcher select {
+  width: auto;
+  min-width: 82px;
+  max-width: 118px;
+  line-height: 1.5;
+}
+
+html[lang='ml'] .site-header .shop-language-switcher select {
+  min-width: 0;
+}
+
+@media (max-width: 800px) {
+  html[lang='ml'] .site-header .shop-language-switcher select {
+    width: 78px;
+    max-width: 90px;
+  }
+
+  html[lang='ml'] .section-head,
+  html[lang='ml'] .footer-bottom {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  html[lang='ml'] .home-tight .hero h1,
+  html[lang='ml'] .hero h1 {
+    font-size: clamp(32px, 8.5vw, 42px) !important;
+    line-height: 1.42 !important;
+  }
+
+  html[lang='ml'] .site-header .shop-language-switcher {
+    min-width: 62px;
+  }
+
+  html[lang='ml'] .site-header .shop-language-switcher select {
+    width: 62px;
+    min-width: 62px;
+    max-width: 62px;
+    padding-inline: 4px;
+    font-size: 11px;
+  }
+
+  html[lang='ml'] .product-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  html[lang='ml'] .product-card-footer .quick-add {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
+    line-height: 1.5;
+  }
+}
+
+/* Telugu uses combining marks and conjuncts. Keep it in a script-capable
+   font, with no tracking or character-level layout rules that can separate a
+   glyph from its vowel signs. */
+html[lang='te'] body,
+html[lang='te'] button,
+html[lang='te'] input,
+html[lang='te'] select,
+html[lang='te'] textarea {
+  font-family: 'Noto Sans Telugu', 'Nirmala UI', 'Gautami', sans-serif;
+  letter-spacing: normal;
+  line-height: 1.58;
+}
+
+html[lang='te'] h1,
+html[lang='te'] h2,
+html[lang='te'] h3,
+html[lang='te'] h4,
+html[lang='te'] h5,
+html[lang='te'] h6,
+html[lang='te'] em,
+html[lang='te'] .font-serif {
+  font-family: 'Noto Serif Telugu', 'Nirmala UI', 'Gautami', serif;
+  letter-spacing: normal;
+  line-height: 1.3;
+}
+
+html[lang='te'] .letter-reveal,
+html[lang='te'] .letter-reveal-char,
+html[lang='te'] .letter-reveal-script {
+  display: inline;
+  opacity: 1;
+  transform: none;
+  white-space: normal;
+  animation: none;
+  letter-spacing: normal;
+  line-height: inherit;
+}
+
+html[lang='te'] .eyebrow,
+html[lang='te'] .announcement,
+html[lang='te'] .marquee,
+html[lang='te'] .product-tag,
+html[lang='te'] [class*='badge'],
+html[lang='te'] [class*='label'],
+html[lang='te'] [class*='kicker'] {
+  letter-spacing: normal;
+  line-height: 1.5;
+  text-transform: none;
+}
+
+html[lang='te'] .hero h1,
+html[lang='te'] .about-page h1,
+html[lang='te'] .shop-page h1,
+html[lang='te'] .contact-page h1,
+html[lang='te'] .wishlist-page h1,
+html[lang='te'] .cart-page h1 {
+  max-width: 100%;
+  font-size: clamp(42px, 5.8vw, 76px) !important;
+  line-height: 1.28 !important;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+html[lang='te'] .button,
+html[lang='te'] .nav button,
+html[lang='te'] .nav-link,
+html[lang='te'] .filters button,
+html[lang='te'] .contact-tab-btn,
+html[lang='te'] .wellness-tab-btn,
+html[lang='te'] .origin-tab-btn,
+html[lang='te'] label {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+html[lang='te'] .section-head,
+html[lang='te'] .product-info,
+html[lang='te'] .footer-bottom,
+html[lang='te'] .live-enquiry-panel-head {
+  align-items: flex-start;
+}
+
+html[lang='te'] .section-head {
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+/* Product controls, recipe cards, testimonials, and the FAQ contain text
+   styles that intentionally use tight Latin tracking. Reset those styles in
+   Telugu so vowel marks stay with their base letters and every label sits
+   centrally in its control. */
+html[lang='te'] .product-card--catalogue .product-name,
+html[lang='te'] .product-card--catalogue .product-card-meta,
+html[lang='te'] .product-card--catalogue .product-price,
+html[lang='te'] .product-card--catalogue .quick-add,
+html[lang='te'] .pack-select-label,
+html[lang='te'] .pack-select-label select,
+html[lang='te'] .recipe-body h3,
+html[lang='te'] .recipe-body p,
+html[lang='te'] .recipe-time-tag,
+html[lang='te'] .testimonial blockquote,
+html[lang='te'] .testimonial figcaption,
+html[lang='te'] .faq-question,
+html[lang='te'] .faq-answer > p,
+html[lang='te'] .faq-search-box input {
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+html[lang='te'] .product-card--catalogue .product-name,
+html[lang='te'] .recipe-body h3,
+html[lang='te'] .testimonial blockquote {
+  font-family: 'Noto Serif Telugu', 'Nirmala UI', 'Gautami', serif;
+  line-height: 1.48;
+}
+
+html[lang='te'] .product-card--catalogue .quick-add,
+html[lang='te'] .pack-select-label select,
+html[lang='te'] .recipe-time-tag {
+  line-height: 1.45;
+}
+
+html[lang='te'] .pack-select-label select {
+  min-height: 42px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+/* The FAQ title has one long Telugu word on its highlighted second line.
+   Keep the editorial scale, while reserving enough room inside the desktop
+   garden panel for the complete word. */
+@media (min-width: 901px) {
+  html[lang='te'] .faq-layout h2 {
+    max-width: 100%;
+    font-size: clamp(44px, 4.1vw, 60px);
+    line-height: 1.36;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+}
+
+/* The ribbon's Latin design uses expansive tracking; Telugu vowel marks and
+   conjuncts need normal script spacing during the opening animation. */
+html[lang='te'] .ajr-ribbon-overline,
+html[lang='te'] .ajr-ribbon-brand {
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  html[lang='te'] .site-header .shop-language-switcher select {
+    width: 78px;
+    min-width: 0;
+    max-width: 90px;
+  }
+
+  html[lang='te'] .contact-page .contact-form .flex > label {
+    flex-basis: 100%;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  html[lang='te'] .home-tight .hero h1,
+  html[lang='te'] .hero h1 {
+    font-size: clamp(32px, 8.7vw, 44px) !important;
+    line-height: 1.36 !important;
+  }
+
+  html[lang='te'] .product-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  html[lang='te'] .product-card-footer .quick-add {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
   }
 }

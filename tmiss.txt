@@ -1,0 +1,16 @@
+app\admin\AdminDashboard.tsx:823 | AJR store workspace
+app\admin\AdminDashboard.tsx:825 | business.
+app\page.tsx:1838 | AJR Everyday Goodness campaign artwork
+app\page.tsx:2080 | Loved by
+app\page.tsx:2081 | good company.
+app\page.tsx:2085 | 4.95 / 5 Average Rating (1,400+ Reviews)
+app\page.tsx:2110 | AJR support library
+app\page.tsx:2112 | Questions,
+app\page.tsx:2113 | answered.
+app\page.tsx:2133 | common questions
+app\page.tsx:2177 | Our people love a thoughtful question.
+app\page.tsx:2254 | Remove item
+app\page.tsx:2707 | AJR / NATURAL HARVEST
+app\page.tsx:2715 | verified reviews
+app\page.tsx:2786 | Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.
+components\NutritionMatch.tsx:140 | Today's ritual

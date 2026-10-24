@@ -1,0 +1,370 @@
+[
+ {
+  "name": "Almonds",
+  "type": "Almonds",
+  "detail": "Whole California almonds — plain, blanched or dry-roasted — with a clean, buttery crunch.",
+  "origin": "California, USA",
+  "nut": "'Vitamin E', 'Plant Protein', 'Magnesium'",
+  "vr": "{ name: 'Almonds', price: 1200 }, { name: 'Blanched Almonds', price: 1600 }, { name: 'Roasted Almonds', price: 1500 },"
+ },
+ {
+  "name": "Cashews",
+  "type": "Cashews",
+  "detail": "Creamy whole cashews in W180, W240, W320 and split grades, roasted to order.",
+  "origin": "Mangalore, India",
+  "nut": "'Healthy Fats', 'Zinc', 'Copper'",
+  "vr": "{ name: 'Cashew W180', price: 1400 }, { name: 'Cashew W240', price: 1100 }, { name: 'Cashew W320', price: 1000 }, { name: 'Cashew Jumbo Splits', price: 1100 }, { name: 'Cashew Splits', price: 1000 }, { name: 'Roasted Cashews', price: 1400 }, { name: 'Chilli Cashews', price: 1400 }, { name: 'Pepper Cashews', price: 1400 }, { name: 'Salted Cashews', price: 1400 }, { name: 'BBQ Cashews', price: 1400 }, { name: 'Chilli Garlic Cashews', price: 1400 }, { name: 'Cheese Cashews', price: 1400 }, { name: 'Tangy Tomato Cashews', price: 1400 }, { name: 'Mint Cashews', price: 1400 }, { name: 'Peri Peri Cashews', price: 1400 },"
+ },
+ {
+  "name": "Pistachios",
+  "type": "Pistachios",
+  "detail": "Premium pistachios with a vivid green kernel and exceptional crunch — salted or plain.",
+  "origin": "Kerman, Iran",
+  "nut": "'Protein', 'Lutein', 'Potassium'",
+  "vr": "{ name: 'Salted Pistachios', price: 1800 }, { name: 'Plain Pistachios', price: 3000 },"
+ },
+ {
+  "name": "Walnuts",
+  "type": "Walnuts",
+  "detail": "Hand-broken snow-white walnut halves with zero bitterness and a naturally buttery bite — Kashmiri and Chilean grades.",
+  "origin": "Kashmir, India",
+  "nut": "'Omega-3 (ALA)', 'Polyphenols', 'B-Vitamins'",
+  "vr": "{ name: 'Kashmiri Walnut', price: 1400 }, { name: 'Chilean Walnut', price: 1900 },"
+ },
+ {
+  "name": "Dried Blueberries",
+  "type": "Berries",
+  "detail": "Sweet-tart whole dried blueberries packed with antioxidants and natural fruit sugars.",
+  "origin": "California, USA",
+  "nut": "'Antioxidants', 'Vitamin C', 'Fiber'",
+  "vr": "{ name: 'Dried Blueberries', price: 1700 }"
+ },
+ {
+  "name": "Dried Cranberries",
+  "type": "Berries",
+  "detail": "Plump dried cranberries with a bright, tangy bite — perfect for snacking and bakes.",
+  "origin": "Wisconsin, USA",
+  "nut": "'Vitamin C', 'Fiber', 'Antioxidants'",
+  "vr": "{ name: 'Dried Cranberries', price: 750 }"
+ },
+ {
+  "name": "Dried Kiwi",
+  "type": "Tropical Fruit",
+  "detail": "Tangy-sweet dried kiwi slices, slow-dried to keep their vivid colour and vitamin C.",
+  "origin": "New Zealand",
+  "nut": "'Vitamin C', 'Fiber', 'Potassium'",
+  "vr": "{ name: 'Dried Kiwi', price: 600 }"
+ },
+ {
+  "name": "Dried Apricots",
+  "type": "Stone Fruit",
+  "detail": "Soft, naturally sweet sun-dried apricot halves with a rich golden flavour.",
+  "origin": "Ladakh, India",
+  "nut": "'Vitamin A', 'Iron', 'Fiber'",
+  "vr": ""
+ },
+ {
+  "name": "Figs",
+  "type": "Figs",
+  "detail": "Naturally sun-dried figs with a sweet chew and crunchy seeds — regular and bold grades.",
+  "origin": "Kandahar, Afghanistan",
+  "nut": "'Dietary Fiber', 'Calcium', 'Iron'",
+  "vr": "{ name: 'Figs', price: 1000 }, { name: 'Figs Bold', price: 1600 },"
+ },
+ {
+  "name": "Raisins",
+  "type": "Raisins",
+  "detail": "Plump, naturally sun-dried raisins — golden Narthol and sweet black — in clean, seedless clusters.",
+  "origin": "Nashik, India",
+  "nut": "'Iron', 'Calcium', 'Dietary Fiber'",
+  "vr": "{ name: 'Narthol Raisins', price: 500 }, { name: 'Black Raisins', price: 600 },"
+ },
+ {
+  "name": "Dates",
+  "type": "Dates",
+  "detail": "Naturally sweet dates — wet, deseeded, Mebroom and Medjool — soft, caramel-like and full of fiber.",
+  "origin": "Saudi Arabia",
+  "nut": "'Natural Fiber', 'Potassium', 'Antioxidants'",
+  "vr": "{ name: 'Wet Dates', price: 200 }, { name: 'Deseeded Wet Dates', price: 300 }, { name: 'Mebroom Dates', price: 950 }, { name: 'Medjool Dates', price: 1900 },"
+ },
+ {
+  "name": "Premium Dried Prunes",
+  "type": "Prunes",
+  "detail": "Soft, naturally sweet dried plums with a deep caramel bite — a rich source of fibre and potassium for everyday gut-friendly snacking.",
+  "origin": "California, USA",
+  "nut": "'Dietary Fiber', 'Potassium', 'Vitamin K'",
+  "vr": ""
+ },
+ {
+  "name": "Dried Pineapple",
+  "type": "Tropical Fruit",
+  "detail": "Golden rings of sun-ripened pineapple, slow-dried to a chewy, tangy-sweet bite with zero added sugar.",
+  "origin": "Kerala, India",
+  "nut": "'Vitamin C', 'Manganese', 'Bromelain'",
+  "vr": ""
+ },
+ {
+  "name": "Dried Mango",
+  "type": "Tropical Fruit",
+  "detail": "Alphonso mango slices dried at low heat to keep their vivid colour and rich, honeyed tropical flavour.",
+  "origin": "Ratnagiri, India",
+  "nut": "'Vitamin A', 'Vitamin C', 'Dietary Fiber'",
+  "vr": "{ name: 'Dried Mango', price: 700 }"
+ },
+ {
+  "name": "Dried Strawberry",
+  "type": "Berries",
+  "detail": "Whole strawberries dried to an intense sweet-tart chew, packed with antioxidants and natural fruit sugars.",
+  "origin": "Maharashtra, India",
+  "nut": "'Vitamin C', 'Antioxidants', 'Folate'",
+  "vr": "{ name: 'Dried Strawberry', price: 900 }"
+ },
+ {
+  "name": "Dried Cherry",
+  "type": "Stone Fruit",
+  "detail": "Deep ruby dried cherries with a bold sweet-tart punch, perfect for desserts, granola and cheese boards.",
+  "origin": "Turkey",
+  "nut": "'Anthocyanins', 'Potassium', 'Vitamin A'",
+  "vr": ""
+ },
+ {
+  "name": "Premium Chia Seeds",
+  "type": "Seeds",
+  "detail": "Omega-3 rich chia seeds that gel beautifully in water, ideal for puddings, smoothies and everyday fibre.",
+  "origin": "Bolivia",
+  "nut": "'Omega-3 (ALA)', 'Dietary Fiber', 'Calcium'",
+  "vr": "{ name: 'Premium Chia Seeds', price: 500 }"
+ },
+ {
+  "name": "Golden Flax Seeds",
+  "type": "Seeds",
+  "detail": "Cold-cleaned flax seeds with a nutty finish, a plant-based powerhouse of ALA omega-3 and lignans.",
+  "origin": "Madhya Pradesh, India",
+  "nut": "'Omega-3 (ALA)', 'Lignans', 'Magnesium'",
+  "vr": "{ name: 'Golden Flax Seeds', price: 200 }"
+ },
+ {
+  "name": "Green Pumpkin Seeds",
+  "type": "Seeds",
+  "detail": "Plump, hulled pumpkin seeds (pepitas) with a buttery crunch and a generous dose of magnesium and zinc.",
+  "origin": "Austria",
+  "nut": "'Magnesium', 'Zinc', 'Plant Protein'",
+  "vr": "{ name: 'Green Pumpkin Seeds', price: 700 }"
+ },
+ {
+  "name": "Sunflower Seeds",
+  "type": "Seeds",
+  "detail": "Jumbo sunflower kernels, lightly roasted for a mellow nutty flavour and a satisfying everyday crunch.",
+  "origin": "Karnataka, India",
+  "nut": "'Vitamin E', 'Selenium', 'Plant Protein'",
+  "vr": "{ name: 'Sunflower Seeds', price: 400 }"
+ },
+ {
+  "name": "Watermelon Seeds",
+  "type": "Seeds",
+  "detail": "Hand-sorted watermelon seeds with a delicate, mildly sweet kernel, a traditional source of iron and protein.",
+  "origin": "Rajasthan, India",
+  "nut": "'Iron', 'Protein', 'Magnesium'",
+  "vr": ""
+ },
+ {
+  "name": "White Sesame Seeds",
+  "type": "Seeds",
+  "detail": "Hulled white sesame seeds with a clean, delicately nutty taste, rich in calcium and healthy fats.",
+  "origin": "Gujarat, India",
+  "nut": "'Calcium', 'Healthy Fats', 'Copper'",
+  "vr": "{ name: 'White Sesame Seeds', price: 400 }"
+ },
+ {
+  "name": "Black Sesame Seeds",
+  "type": "Seeds",
+  "detail": "Bold black sesame seeds with a deep roasted aroma, prized in Asian cooking and traditional wellness.",
+  "origin": "Gujarat, India",
+  "nut": "'Calcium', 'Iron', 'Antioxidants'",
+  "vr": "{ name: 'Black Sesame Seeds', price: 360 }"
+ },
+ {
+  "name": "Basil Seeds (Sabja)",
+  "type": "Seeds",
+  "detail": "Sabja basil seeds that swell into a cooling gel in seconds, a natural way to stay hydrated and refreshed.",
+  "origin": "Tamil Nadu, India",
+  "nut": "'Dietary Fiber', 'Omega-3', 'Cooling'",
+  "vr": "{ name: 'Sabja Seeds', price: 450 }"
+ },
+ {
+  "name": "Poppy Seeds",
+  "type": "Seeds",
+  "detail": "Creamy white poppy seeds with a gentle nutty sweetness, a classic finish for curries, bakes and breads.",
+  "origin": "Madhya Pradesh, India",
+  "nut": "'Calcium', 'Magnesium', 'Healthy Fats'",
+  "vr": ""
+ },
+ {
+  "name": "Melon Seeds",
+  "type": "Seeds",
+  "detail": "Creamy muskmelon seed kernels, hand-sorted and hulled, for a mild, milky crunch in snacks and sweets.",
+  "origin": "Rajasthan, India",
+  "nut": "'Plant Protein', 'Magnesium', 'Healthy Fats'",
+  "vr": "{ name: 'Melon Seeds', price: 900 }"
+ },
+ {
+  "name": "Cucumber Seeds",
+  "type": "Seeds",
+  "detail": "Pale cucumber seed kernels with a soft, nutty bite — a cooling traditional snack in regular and bold grades.",
+  "origin": "Karnataka, India",
+  "nut": "'Plant Protein', 'Iron', 'Healthy Fats'",
+  "vr": "{ name: 'Cucumber Seeds', price: 500 }, { name: 'Cucumber Seeds Bold', price: 900 },"
+ },
+ {
+  "name": "Halim Seeds",
+  "type": "Seeds",
+  "detail": "Garden cress (halim/aliv) seeds that swell into a gel, traditionally eaten for iron and everyday strength.",
+  "origin": "Rajasthan, India",
+  "nut": "'Iron', 'Dietary Fiber', 'Plant Protein'",
+  "vr": "{ name: 'Halim Seeds', price: 500 }"
+ },
+ {
+  "name": "Almond Gum (Badam Pisin)",
+  "type": "Seeds",
+  "detail": "Amber almond gum crystals that bloom into a cooling jelly — the classic badam pisin for summer drinks.",
+  "origin": "Tamil Nadu, India",
+  "nut": "'Dietary Fiber', 'Cooling', 'Plant Based'",
+  "vr": "{ name: 'Almond Gum (Badam Pisin)', price: 700 }"
+ },
+ {
+  "name": "White Pepper",
+  "type": "Spices",
+  "detail": "Clean, aromatic white peppercorns with a bright, gentle heat for creamy sauces, soups and delicate curries.",
+  "origin": "Kerala, India",
+  "nut": "'Whole Spice', 'Fresh Aroma', 'Kitchen Essential'",
+  "vr": ""
+ },
+ {
+  "name": "Black Pepper",
+  "type": "Spices",
+  "detail": "Bold, sun-dried black peppercorns in small, medium and bold grades, selected for deep aroma and warmth.",
+  "origin": "Kerala, India",
+  "nut": "'Whole Spice', 'Pungent Aroma', 'Kitchen Essential'",
+  "vr": "{ name: 'Pepper Small', price: 800 }, { name: 'Pepper Medium', price: 900 }, { name: 'Pepper Bold', price: 1000 },"
+ },
+ {
+  "name": "Mace",
+  "type": "Spices",
+  "detail": "Delicate amber mace blades with a warm, floral character for biryanis, pulaos and festive dishes.",
+  "origin": "Kerala, India",
+  "nut": "'Whole Spice', 'Warm Aroma', 'Festive Essential'",
+  "vr": "{ name: 'Mace', price: 4000 }"
+ },
+ {
+  "name": "Nutmeg",
+  "type": "Spices",
+  "detail": "Whole nutmeg with a sweet, woody fragrance that adds depth to bakes, desserts and savoury dishes.",
+  "origin": "Kerala, India",
+  "nut": "'Whole Spice', 'Sweet Aroma', 'Baking Essential'",
+  "vr": "{ name: 'Nutmeg', price: 1500 }"
+ },
+ {
+  "name": "Star Anise",
+  "type": "Spices",
+  "detail": "Beautiful whole star anise with a naturally sweet licorice note for teas, broths and spice blends.",
+  "origin": "Tamil Nadu, India",
+  "nut": "'Whole Spice', 'Sweet Aroma', 'Tea Essential'",
+  "vr": "{ name: 'Star Anise', price: 1200 }"
+ },
+ {
+  "name": "Cassia",
+  "type": "Spices",
+  "detail": "Robust cassia bark with a warm, sweet-spiced profile for chai, curries, rice dishes and desserts.",
+  "origin": "Kerala, India",
+  "nut": "'Whole Spice', 'Warm Aroma', 'Chai Essential'",
+  "vr": "{ name: 'Cassia', price: 400 }"
+ },
+ {
+  "name": "Cinnamon",
+  "type": "Spices",
+  "detail": "Fragrant cinnamon quills with a mellow sweetness, ready for chai, baking and slow-cooked recipes.",
+  "origin": "Sri Lanka",
+  "nut": "'Whole Spice', 'Sweet Aroma', 'Pantry Essential'",
+  "vr": "{ name: 'Cinnamon', price: 2000 }"
+ },
+ {
+  "name": "Cloves",
+  "type": "Spices",
+  "detail": "Plump whole cloves with an intense, warming aroma for masalas, curries, chai and festive bakes.",
+  "origin": "Tamil Nadu, India",
+  "nut": "'Whole Spice', 'Warm Aroma', 'Masala Essential'",
+  "vr": "{ name: 'Cloves', price: 1600 }"
+ },
+ {
+  "name": "Cardamom",
+  "type": "Spices",
+  "detail": "Vibrant green cardamom pods with a sweet, cooling fragrance — 7 mm bold and 8 mm jumbo grades.",
+  "origin": "Kerala, India",
+  "nut": "'Whole Spice', 'Fresh Aroma', 'Chai Essential'",
+  "vr": "{ name: 'Cardamom 7mm (Bold)', price: 4500 }, { name: 'Cardamom 8mm (Jumbo)', price: 5000 },"
+ },
+ {
+  "name": "Stone Flower (Dagad Phool)",
+  "type": "Spices",
+  "detail": "Kalpasi stone flower with a deep, earthy-woodsy aroma — the secret note in Chettinad and Kolhapuri masalas.",
+  "origin": "Tamil Nadu, India",
+  "nut": "'Whole Spice', 'Earthy Aroma', 'Masala Essential'",
+  "vr": "{ name: 'Stone Flower', price: 1000 }"
+ },
+ {
+  "name": "Birinji Leaves",
+  "type": "Spices",
+  "detail": "Dried birinji leaves with a warm, herbal fragrance, used whole to perfume biryanis, pulaos and kurmas.",
+  "origin": "Tamil Nadu, India",
+  "nut": "'Whole Spice', 'Herbal Aroma', 'Biryani Essential'",
+  "vr": "{ name: 'Birinji Leaves', price: 400 }"
+ },
+ {
+  "name": "Carom (Ajwain)",
+  "type": "Spices",
+  "detail": "Fragrant whole ajwain with its signature warm, thyme-like aroma for breads, snacks and everyday tempering.",
+  "origin": "Rajasthan, India",
+  "nut": "'Whole Spice', 'Fresh Aroma', 'Pantry Essential'",
+  "vr": ""
+ },
+ {
+  "name": "Nigella (Kalonji)",
+  "type": "Spices",
+  "detail": "Clean nigella seeds with a lightly peppery, onion-like flavour for pickles, breads and vegetable dishes.",
+  "origin": "Rajasthan, India",
+  "nut": "'Whole Spice', 'Bold Aroma', 'Kitchen Essential'",
+  "vr": ""
+ },
+ {
+  "name": "Mustard",
+  "type": "Spices",
+  "detail": "Whole mustard seeds with a sharp, earthy character for tempering, pickles, curries and homemade sauces.",
+  "origin": "Gujarat, India",
+  "nut": "'Whole Spice', 'Robust Aroma', 'Tempering Essential'",
+  "vr": "{ name: 'Mustard', price: 160 }"
+ },
+ {
+  "name": "Fenugreek",
+  "type": "Spices",
+  "detail": "Golden fenugreek seeds with a pleasantly bitter, maple-like note for curries, pickles and spice blends.",
+  "origin": "Rajasthan, India",
+  "nut": "'Whole Spice', 'Toasty Aroma', 'Pantry Essential'",
+  "vr": "{ name: 'Fenugreek', price: 300 }"
+ },
+ {
+  "name": "Fennel Seeds",
+  "type": "Spices",
+  "detail": "Sweet, bright green fennel seeds selected for a refreshing finish in teas, desserts and savoury cooking.",
+  "origin": "Gujarat, India",
+  "nut": "'Whole Spice', 'Sweet Aroma', 'Tea Essential'",
+  "vr": "{ name: 'Fennel Seeds', price: 160 }"
+ },
+ {
+  "name": "Cumin (Jeera)",
+  "type": "Spices",
+  "detail": "Aromatic whole cumin with a warm, earthy flavour for curries, dals, rice and everyday masala blends.",
+  "origin": "Rajasthan, India",
+  "nut": "'Whole Spice', 'Warm Aroma', 'Masala Essential'",
+  "vr": "{ name: 'Cumin (Jeera)', price: 400 }"
+ }
+]

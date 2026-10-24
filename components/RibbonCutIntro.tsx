@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { Scissors } from 'lucide-react'
+import { useLanguage } from './LanguageProvider'
 
 type IntroPhase = 'hidden' | 'opening' | 'approach' | 'snip' | 'release' | 'reveal' | 'exit'
 
 const INTRO_KEY = 'ajr-ribbon-cut-seen'
 
 export default function RibbonCutIntro() {
+  const { ready, t } = useLanguage()
   const [phase, setPhase] = useState<IntroPhase>('hidden')
 
   useEffect(() => {
+    // Wait for the persisted language to hydrate before exposing this overlay.
+    // Otherwise a returning Telugu visitor can briefly see the English copy.
+    if (!ready) return
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const replayRequested = new URLSearchParams(window.location.search).get('replayIntro') === '1'
 
@@ -44,7 +49,7 @@ export default function RibbonCutIntro() {
       timers.forEach(window.clearTimeout)
       document.documentElement.style.overflow = previousOverflow
     }
-  }, [])
+  }, [ready])
 
   if (phase === 'hidden') return null
 
@@ -55,9 +60,9 @@ export default function RibbonCutIntro() {
         <div className="ajr-ribbon-botanical botanical-right" />
 
         <div className="ajr-ribbon-mark">
-          <span className="ajr-ribbon-overline">A ceremonial opening</span>
+          <span className="ajr-ribbon-overline">{t('A ceremonial opening')}</span>
           <img src="/ajr-logo.png" alt="" width={82} height={82} />
-          <span className="ajr-ribbon-brand">Always Just Royal</span>
+          <span className="ajr-ribbon-brand">{t('Always Just Royal')}</span>
         </div>
 
         <div className="ajr-ribbon-line">
@@ -81,7 +86,7 @@ export default function RibbonCutIntro() {
         <div className="ajr-ribbon-reveal">
           <span className="ajr-reveal-halo" />
           <img src="/ajr-logo.png" alt="" width={104} height={104} />
-          <p>A royal harvest awaits.</p>
+          <p>{t('A royal harvest awaits.')}</p>
           <span className="ajr-reveal-rule" />
         </div>
 

@@ -1,0 +1,219 @@
+app\admin\AdminDashboard.tsx:824 | ALWAYS JUST ROYAL
+app\admin\AdminDashboard.tsx:837 | Checking session…
+app\admin\AdminDashboard.tsx:929 | Skip to workspace
+app\admin\AdminDashboard.tsx:933 | ALWAYS JUST ROYAL
+app\admin\AdminDashboard.tsx:934 | STORE WORKSPACE
+app\admin\AdminDashboard.tsx:967 | Admin
+app\admin\AdminDashboard.tsx:986 | A little overview. A bigger picture.
+app\admin\AdminDashboard.tsx:987 | growing.
+app\admin\AdminDashboard.tsx:988 | Welcome back. Here’s how your store is doing.
+app\admin\AdminDashboard.tsx:991 | Refresh
+app\admin\AdminDashboard.tsx:992 | Add product
+app\admin\AdminDashboard.tsx:999 | Total revenue
+app\admin\AdminDashboard.tsx:1003 | Excluding cancelled orders
+app\admin\AdminDashboard.tsx:1007 | Total orders
+app\admin\AdminDashboard.tsx:1015 | Products
+app\admin\AdminDashboard.tsx:1023 | Customer inquiries
+app\admin\AdminDashboard.tsx:1032 | Updating your store overview…
+app\admin\AdminDashboard.tsx:1038 | Performance
+app\admin\AdminDashboard.tsx:1039 | Revenue at a glance
+app\admin\AdminDashboard.tsx:1041 | Last 12 months
+app\admin\AdminDashboard.tsx:1045 | Gathering your sales…
+app\admin\AdminDashboard.tsx:1063 | Online sales
+app\admin\AdminDashboard.tsx:1064 | Offline sales
+app\admin\AdminDashboard.tsx:1065 | Pending fulfilments
+app\admin\AdminDashboard.tsx:1072 | A well-stocked store
+app\admin\AdminDashboard.tsx:1073 | Inventory health
+app\admin\AdminDashboard.tsx:1087 | Fresh from your store
+app\admin\AdminDashboard.tsx:1088 | Online and in-store orders will appear here.
+app\admin\AdminDashboard.tsx:1091 | A personal touch
+app\admin\AdminDashboard.tsx:1092 | orders awaiting fulfilment
+app\admin\AdminDashboard.tsx:1095 | Thoughtfully managed. Naturally AJR.
+app\admin\AdminDashboard.tsx:1103 | Customer Inbox
+app\admin\AdminDashboard.tsx:1104 | Messages
+app\admin\AdminDashboard.tsx:1108 | Overview
+app\admin\AdminDashboard.tsx:1114 | Total
+app\admin\AdminDashboard.tsx:1116 | all inquiries
+app\admin\AdminDashboard.tsx:1119 | Unread
+app\admin\AdminDashboard.tsx:1121 | awaiting your reply
+app\admin\AdminDashboard.tsx:1124 | Read
+app\admin\AdminDashboard.tsx:1126 | opened inquiries
+app\admin\AdminDashboard.tsx:1140 | Mark all read
+app\admin\AdminDashboard.tsx:1146 | Loading messages…
+app\admin\AdminDashboard.tsx:1150 | No messages here
+app\admin\AdminDashboard.tsx:1151 | Customer inquiries from the contact page will appear here instantly.
+app\admin\AdminDashboard.tsx:1192 | Reply by email
+app\admin\AdminDashboard.tsx:1194 | Delete
+app\admin\AdminDashboard.tsx:1200 | Select a message
+app\admin\AdminDashboard.tsx:1201 | Choose a conversation from the list to read the full inquiry.
+app\admin\AdminDashboard.tsx:1213 | Orders
+app\admin\AdminDashboard.tsx:1216 | Refresh
+app\admin\AdminDashboard.tsx:1217 | Offline order
+app\admin\AdminDashboard.tsx:1232 | Order
+app\admin\AdminDashboard.tsx:1256 | Products
+app\admin\AdminDashboard.tsx:1257 | Refresh
+app\admin\AdminDashboard.tsx:1260 | Loading products…
+app\admin\AdminDashboard.tsx:1276 | Edit
+app\admin\AdminDashboard.tsx:1285 | Inventory
+app\admin\AdminDashboard.tsx:1286 | Refresh
+app\admin\AdminDashboard.tsx:1289 | Loading inventory…
+app\admin\AdminDashboard.tsx:1297 | Inventory is empty
+app\admin\AdminDashboard.tsx:1302 | Workspace access
+app\admin\AdminDashboard.tsx:1303 | Signed-in administrator
+app\admin\AdminDashboard.tsx:1304 | Administrator access list
+app\admin\AdminDashboard.tsx:1312 | Order detail
+app\admin\AdminDashboard.tsx:1318 | Customer:
+app\admin\AdminDashboard.tsx:1319 | Phone:
+app\admin\AdminDashboard.tsx:1320 | Address:
+app\admin\AdminDashboard.tsx:1321 | Channel:
+app\admin\AdminDashboard.tsx:1323 | Items:
+app\admin\AdminDashboard.tsx:1330 | Subtotal:
+app\admin\AdminDashboard.tsx:1332 | Status:
+app\admin\AdminDashboard.tsx:1344 | Payment:
+app\admin\AdminDashboard.tsx:1356 | Delete
+app\admin\AdminDashboard.tsx:1376 | Cancel
+app\admin\AdminDashboard.tsx:1391 | A sale from your store
+app\admin\AdminDashboard.tsx:1392 | Add Offline Order
+app\admin\AdminDashboard.tsx:1397 | Customer name *
+app\admin\AdminDashboard.tsx:1398 | Phone
+app\admin\AdminDashboard.tsx:1399 | Email (optional)
+app\admin\AdminDashboard.tsx:1400 | Product sold *
+app\admin\AdminDashboard.tsx:1402 | Select a shop product…
+app\admin\AdminDashboard.tsx:1408 | Quantity
+app\admin\AdminDashboard.tsx:1409 | Payment
+app\admin\AdminDashboard.tsx:1411 | Paid
+app\admin\AdminDashboard.tsx:1412 | Pending
+app\admin\AdminDashboard.tsx:1415 | Note (optional)
+app\admin\AdminDashboard.tsx:1419 | Cancel
+app\admin\AdminDashboard.tsx:1455 | Product name *
+app\admin\AdminDashboard.tsx:1460 | Type / category
+app\admin\AdminDashboard.tsx:1468 | Price per kg (₹) *
+app\admin\AdminDashboard.tsx:1471 | Prices are always per kg — the shop scales them to the gram size the customer picks.
+app\admin\AdminDashboard.tsx:1475 | Pack sizes in the gram dropdown
+app\admin\AdminDashboard.tsx:1517 | Varieties (price per kg)
+app\admin\AdminDashboard.tsx:1527 | No varieties yet — every pack size will use the price above.
+app\admin\AdminDashboard.tsx:1547 | Description
+app\admin\AdminDashboard.tsx:1552 | Product image
+app\admin\AdminDashboard.tsx:1579 | Stock
+app\admin\AdminDashboard.tsx:1583 | Status
+app\admin\AdminDashboard.tsx:1585 | In stock
+app\admin\AdminDashboard.tsx:1586 | Low stock
+app\admin\AdminDashboard.tsx:1587 | Out of stock
+app\admin\AdminDashboard.tsx:1594 | Origin
+app\admin\AdminDashboard.tsx:1598 | Nutrients (comma separated)
+app\admin\AdminDashboard.tsx:1605 | Show this product in the shop
+app\login\page.tsx:68 | AJR Essence of Nature
+app\page.tsx:1980 | unforgettable.
+app\page.tsx:1987 | ✦ Laser Engraved Wood
+app\page.tsx:1988 | ✦ Airtight Glass Jars
+app\page.tsx:1989 | ✦ Custom Bulk Pricing
+app\page.tsx:2015 | From Grove to Table
+app\page.tsx:2018 | finds you.
+app\page.tsx:2044 | Culinary Inspiration
+app\page.tsx:2045 | Simple ways to enjoy everyday superfoods
+app\page.tsx:2190 | Stay Connected
+app\page.tsx:2192 | First taste of something good.
+app\page.tsx:2260 | Out of stock
+app\page.tsx:2327 | 01 / Heritage
+app\page.tsx:2348 | The AJR Founding Story
+app\page.tsx:2349 | There is magic in an honest handful.
+app\page.tsx:2375 | “The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”
+app\page.tsx:2376 | — The AJR Family Table
+app\page.tsx:2384 | Uncompromising Standards
+app\page.tsx:2385 | 6 Purity Commitments
+app\page.tsx:2387 | From harvest selection to eco packaging, we keep our standards non-negotiable.
+app\page.tsx:2434 | Our Sourcing Journey
+app\page.tsx:2436 | Goodness
+app\page.tsx:2443 | The Family Table
+app\page.tsx:2444 | Founded in Virudhunagar, Tamil Nadu with a simple commitment to source clean, unbleached California almonds and dates for friends &amp; family.
+app\page.tsx:2448 | Kashmir &amp; Iran Direct
+app\page.tsx:2449 | Partnered with Shopian walnut growers and Kerman pistachio orchards for direct single-origin harvest imports.
+app\page.tsx:2453 | Zero-Plastic Initiative
+app\page.tsx:2454 | Eliminated single-use plastics by introducing woven jute pouches, reusable glass jars, and laser-engraved wooden boxes.
+app\page.tsx:2458 | 28,000+ Happy Homes
+app\page.tsx:2459 | Now delivering fresh harvest dry fruits and custom festive hampers to over 28,000 households across India.
+app\page.tsx:2472 | Master Taster Guarantee
+app\page.tsx:2473 | “If it isn't crisp, sweet, and pure, it never leaves our door.”
+app\page.tsx:2489 | Bring Goodness Home
+app\page.tsx:2792 | Rich in healthy monounsaturated fats, dietary fiber, plant protein, and essential micronutrients.
+app\page.tsx:2824 | CONCIERGE
+app\page.tsx:2831 | to hear from you.
+app\page.tsx:2861 | WhatsApp Support
+app\page.tsx:2862 | Instant support for order tracking, gift guidance &amp; quick recommendations.
+app\page.tsx:2880 | Email Desk
+app\page.tsx:2881 | For custom hampers, corporate gifting decks, and retail wholesale inquiries.
+app\page.tsx:2894 | Studio Call Desk
+app\page.tsx:2895 | Prefer a human voice? Call our Virudhunagar flagship studio directly.
+app\page.tsx:2924 | AJR Live Enquiry Desk
+app\page.tsx:2925 | you need.
+app\page.tsx:2934 | Private, secure, and read by a real AJR team member.
+app\page.tsx:2937 | Direct Contact Information
+app\page.tsx:2938 | hello@ajrnature.com
+app\page.tsx:2939 | Mon–Sat, 9:30am–6:30pm IST
+app\page.tsx:2942 | Wholesale &amp; Bulk Orders
+app\page.tsx:2943 | trade@ajrnature.com
+app\page.tsx:2944 | Custom corporate gifts and retail partnerships.
+app\page.tsx:2947 | Flagship Studio
+app\page.tsx:2948 | AJR Essence of Nature
+app\page.tsx:2955 | Human Support Promise
+app\page.tsx:2965 | LIVE ENQUIRY
+app\page.tsx:2966 | How can we help?
+app\page.tsx:2968 | Sent directly to our team
+app\page.tsx:3037 | Message Received!
+app\page.tsx:3038 | Thank you for reaching out. A real person is reviewing your inquiry — we will be in touch within 1 working day.
+app\page.tsx:3087 | Royal Wooden Chest
+app\page.tsx:3088 | Festive Gold Foil Box
+app\page.tsx:3089 | Eco Jute Pouch
+app\page.tsx:3401 | UPI
+app\page.tsx:3402 | Card
+app\page.tsx:3403 | Netbanking
+app\page.tsx:3434 | wishlist.
+app\page.tsx:3510 | © 2026 AJR Essence of Nature. All rights reserved.
+app\signup\page.tsx:66 | AJR Essence of Nature
+app\signup\page.tsx:137 | or
+components\CorporateEstimator.tsx:60 | Cost Estimator
+components\CorporateEstimator.tsx:72 | 1. Choose Gift Box Style
+components\CorporateEstimator.tsx:107 | 10 units
+components\CorporateEstimator.tsx:108 | 50 units (10% OFF)
+components\CorporateEstimator.tsx:109 | 100 units (15% OFF)
+components\CorporateEstimator.tsx:110 | 250+ units (20% OFF)
+components\CorporateEstimator.tsx:115 | 3. Select Custom Branding Add-ons
+components\CorporateEstimator.tsx:143 | Instant Quote Estimate
+components\CorporateEstimator.tsx:151 | Base Tier Price
+components\CorporateEstimator.tsx:155 | Selected Add-ons
+components\CorporateEstimator.tsx:160 | Volume Discount
+components\CorporateEstimator.tsx:165 | Effective Cost per Unit
+components\CustomBoxBuilder.tsx:75 | Interactive Hamper Studio
+components\CustomBoxBuilder.tsx:77 | Harvest Box
+components\CustomBoxBuilder.tsx:78 | Pick up to 4 premium dry fruits, choose your pack size, and select signature packaging.
+components\CustomBoxBuilder.tsx:85 | Step 1
+components\CustomBoxBuilder.tsx:86 | Select 2 to 4 Dry Fruits & Nuts
+components\CustomBoxBuilder.tsx:118 | Step 2
+components\CustomBoxBuilder.tsx:119 | Choose Pack Quantity
+components\CustomBoxBuilder.tsx:136 | Step 3
+components\CustomBoxBuilder.tsx:137 | Select Packaging Finish
+components\CustomBoxBuilder.tsx:161 | Your Signature Creation
+components\CustomBoxBuilder.tsx:176 | Custom Harvest Hamper
+components\CustomBoxBuilder.tsx:200 | Custom Box Subtotal
+components\FarmOrigins.tsx:76 | Handful Begins
+components\FarmOrigins.tsx:122 | Elevation
+components\FarmOrigins.tsx:129 | Growing Climate
+components\FarmOrigins.tsx:136 | Peak Harvest
+components\MyOrders.tsx:241 | Payment
+components\MyOrders.tsx:247 | Summary
+components\QualityComparison.tsx:53 | Matters
+components\QualityComparison.tsx:65 | Quality Benchmark
+components\QualityComparison.tsx:71 | Generic Market Brands
+components\QualityComparison.tsx:107 | 100% Taste &amp; Freshness Money-Back Guarantee
+components\RibbonCutIntro.tsx:58 | A ceremonial opening
+components\RibbonCutIntro.tsx:60 | Always Just Royal
+components\RibbonCutIntro.tsx:84 | A royal harvest awaits.
+components\StudioLocation.tsx:32 | In Person
+components\StudioLocation.tsx:48 | Virudhunagar Flagship
+components\StudioLocation.tsx:51 | AJR Essence of Nature Studio
+components\StudioLocation.tsx:60 | Studio &amp; Tasting Counter
+components\StudioLocation.tsx:61 | Mon – Sat: 10:00 AM – 7:00 PM IST
+components\StudioLocation.tsx:67 | Complimentary Saffron Almond Milk
+components\StudioLocation.tsx:68 | Served daily 11:30 AM – 5:00 PM
+components\StudioLocation.tsx:112 | Find us in Virudhunagar
+components\StudioLocation.tsx:113 | Open the map for directions to our studio and tasting counter.

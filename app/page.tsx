@@ -87,6 +87,9 @@ const weightMultiplier: Record<Weight, number> = { '25 g': 0.1, '50 g': 0.2, '10
 // Variety products store the per-kg price; 25 g = ÷40, 250 g = ÷4, 500 g = ÷2, 1 kg = ×1.
 const kgFraction: Record<Weight, number> = { '25 g': 0.025, '50 g': 0.05, '100 g': 0.1, '250 g': 0.25, '500 g': 0.5, '1 kg': 1 }
 
+const formatCurrency = (value: number) =>
+  `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+
 const selectedVarietyOf = (product: Product): Variety | undefined => {
   if (!product.varieties?.length) return undefined
   return product.varieties.find((v) => v.name === product.selectedVariety) || product.varieties[0]
@@ -978,6 +981,58 @@ const fallbackProducts: Product[] = [
   },
 ]
 
+const knownFallbackProductNames = new Set(fallbackProducts.map((product) => product.name))
+const tamilOrigins: Record<string, string> = {
+  'California, USA': 'கலிஃபோர்னியா, அமெரிக்கா', 'Wisconsin, USA': 'விஸ்கான்சின், அமெரிக்கா',
+  'New Zealand': 'நியூசிலாந்து', 'Kerman, Iran': 'கெர்மான், ஈரான்', 'Kashmir, India': 'காஷ்மீர், இந்தியா',
+  'Ladakh, India': 'லடாக், இந்தியா', 'Kandahar, Afghanistan': 'கந்தஹார், ஆப்கானிஸ்தான்',
+  'Nashik, India': 'நாசிக், இந்தியா', 'Saudi Arabia': 'சவுதி அரேபியா', 'Kerala, India': 'கேரளா, இந்தியா',
+  'Ratnagiri, India': 'ரத்னகிரி, இந்தியா', 'Maharashtra, India': 'மகாராஷ்டிரா, இந்தியா', Turkey: 'துருக்கி',
+  Bolivia: 'பொலிவியா', 'Madhya Pradesh, India': 'மத்தியப் பிரதேசம், இந்தியா', Austria: 'ஆஸ்திரியா',
+  'Karnataka, India': 'கர்நாடகா, இந்தியா', 'Rajasthan, India': 'ராஜஸ்தான், இந்தியா',
+  'Gujarat, India': 'குஜராத், இந்தியா', 'Tamil Nadu, India': 'தமிழ்நாடு, இந்தியா', 'Sri Lanka': 'இலங்கை',
+}
+const malayalamOrigins: Record<string, string> = {
+  'California, USA': 'കാലിഫോർണിയ, യു.എസ്.എ', 'Wisconsin, USA': 'വിസ്കോൺസിൻ, യു.എസ്.എ',
+  'New Zealand': 'ന്യൂസിലാൻഡ്', 'Kerman, Iran': 'കെർമാൻ, ഇറാൻ', 'Kashmir, India': 'കശ്മീർ, ഇന്ത്യ',
+  'Ladakh, India': 'ലഡാക്ക്, ഇന്ത്യ', 'Kandahar, Afghanistan': 'കന്ദഹാർ, അഫ്ഗാനിസ്ഥാൻ',
+  'Nashik, India': 'നാസിക്, ഇന്ത്യ', 'Saudi Arabia': 'സൗദി അറേബ്യ', 'Kerala, India': 'കേരളം, ഇന്ത്യ',
+  'Ratnagiri, India': 'രത്നഗിരി, ഇന്ത്യ', 'Maharashtra, India': 'മഹാരാഷ്ട്ര, ഇന്ത്യ', Turkey: 'തുർക്കി',
+  Bolivia: 'ബൊളീവിയ', 'Madhya Pradesh, India': 'മധ്യപ്രദേശ്, ഇന്ത്യ', Austria: 'ഓസ്ട്രിയ',
+  'Karnataka, India': 'കർണാടക, ഇന്ത്യ', 'Rajasthan, India': 'രാജസ്ഥാൻ, ഇന്ത്യ',
+  'Gujarat, India': 'ഗുജറാത്ത്, ഇന്ത്യ', 'Tamil Nadu, India': 'തമിഴ്നാട്, ഇന്ത്യ', 'Sri Lanka': 'ശ്രീലങ്ക',
+  'Mangalore, India': 'മംഗളൂരു, ഇന്ത്യ',
+}
+
+const tamilProductDetail = (product: Product) => {
+  if (product.name === 'Dried Blueberries') return 'ஆன்டிஆக்ஸிடென்ட்கள் மற்றும் இயற்கைப் பழச் சர்க்கரை நிறைந்த இனிப்பு-புளிப்பு சுவையுள்ள முழு உலர்ந்த ப்ளூபெர்ரிகள்.'
+  if (product.type === 'Spices') return 'மணம் மற்றும் இயற்கைச் சுவை காக்க கவனமாகத் தேர்ந்தெடுத்து சுத்தம் செய்யப்பட்ட உயர்தர முழு மசாலாப் பொருள்.'
+  if (product.type === 'Seeds') return 'அன்றாட உணவு மற்றும் ஆரோக்கியமான சிற்றுண்டிக்காக சுத்தம் செய்து கவனமாகத் தேர்ந்தெடுக்கப்பட்ட ஊட்டச்சத்து நிறைந்த விதைகள்.'
+  if (['Berries', 'Tropical Fruit', 'Stone Fruit', 'Prunes', 'Figs', 'Raisins', 'Dates'].includes(product.type)) return 'இயற்கைச் சுவை, நிறம் மற்றும் மென்மையைப் பாதுகாக்க மெதுவாக உலர்த்தப்பட்ட உயர்தர பழம்.'
+  return 'இயற்கையான சுவையும் மொறுமொறுப்பும் காக்க கவனமாகத் தேர்ந்தெடுத்து சிறு தொகுதிகளாகப் பொதியப்பட்ட உயர்தரப் பருப்பு.'
+}
+
+const malayalamProductDetail = (product: Product) => {
+  if (product.type === 'Spices') return 'സുഗന്ധവും സ്വാഭാവിക രുചിയും നിലനിർത്താൻ ശ്രദ്ധാപൂർവം തിരഞ്ഞെടുത്ത് വൃത്തിയാക്കിയ മികച്ച മുഴുവൻ മസാലകൾ.'
+  if (product.type === 'Seeds') return 'ദൈനംദിന ഭക്ഷണത്തിനും ആരോഗ്യകരമായ ലഘുഭക്ഷണത്തിനുമായി തിരഞ്ഞെടുത്ത പോഷകസമൃദ്ധമായ വിത്തുകൾ.'
+  if (['Berries', 'Tropical Fruit', 'Stone Fruit', 'Prunes', 'Figs', 'Raisins', 'Dates'].includes(product.type)) return 'സ്വാഭാവിക രുചിയും നിറവും മൃദുത്വവും നിലനിർത്താൻ ശ്രദ്ധാപൂർവം ഉണക്കിയ മികച്ച പഴങ്ങൾ.'
+  return 'സ്വാഭാവിക രുചിയും ക്രഞ്ചും കാത്തുസൂക്ഷിക്കാൻ തിരഞ്ഞെടുത്ത് ചെറിയ ബാച്ചുകളായി പായ്ക്ക് ചെയ്ത മികച്ച നട്സ്.'
+}
+
+const productDetailForDisplay = (product: Product, language: string, t: (text: string) => string) =>
+  language === 'ta' && knownFallbackProductNames.has(product.name)
+    ? tamilProductDetail(product)
+    : language === 'ml' && knownFallbackProductNames.has(product.name) && t(product.detail) === product.detail
+      ? malayalamProductDetail(product)
+      : t(product.detail)
+
+const productOriginForDisplay = (product: Product, language: string, t: (text: string) => string) => {
+  const origin = product.origin || '100% Organic'
+  if (language === 'ta') return tamilOrigins[origin] || t(origin)
+  if (language === 'ml') return malayalamOrigins[origin] || t(origin)
+  return t(origin)
+}
+
 const baseNavItems: Array<{ label: string; view?: View; href?: string; action?: 'logout' }> = [
   { label: 'Home', view: 'home' },
   { label: 'About us', view: 'about' },
@@ -1616,8 +1671,8 @@ function LetterReveal({ text }: { text: string }) {
 
   return (
     <span ref={ref} className={isVisible ? 'letter-reveal is-visible' : 'letter-reveal'} aria-label={text}>
-      {language === 'ta' || language === 'hi' ? (
-        <span className="letter-reveal-tamil" aria-hidden="true">{text}</span>
+      {language === 'ta' || language === 'hi' || language === 'ml' || language === 'te' ? (
+        <span className="letter-reveal-script" aria-hidden="true">{text}</span>
       ) : Array.from(text).map((character, index) => (
         <span
           className="letter-reveal-char"
@@ -1704,7 +1759,8 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
     return () => window.clearInterval(timer)
   }, [campaignControlsFocused, prefersReducedMotion, campaignSlides.length])
 
-  const filteredFaqs = initialFaqs.filter(
+  const localizedFaqs = initialFaqs.map((faq) => ({ q: t(faq.q), a: t(faq.a) }))
+  const filteredFaqs = localizedFaqs.filter(
     (f) =>
       f.q.toLowerCase().includes(faqSearch.toLowerCase()) ||
       f.a.toLowerCase().includes(faqSearch.toLowerCase())
@@ -1764,6 +1820,8 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
             <span>{t('Handpicked Grade A Kernels')}</span>
             <span>✦</span>
             <span>{t('Zero Preservatives')}</span>
+            <span>✦</span>
+            <span>{t('Small Batch Roasted')}</span>
             <span>✦</span>
           </div>
         </section>
@@ -1942,27 +2000,27 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
           <section className="festive-banner">
             <div className="festive-copy">
               <p className="eyebrow text-lime-300">
-                <Gift size={15} /> Royal Celebrations &amp; Hampers
+                <Gift size={15} /> {t('Royal Celebrations & Hampers')}
               </p>
               <h2>
-                Gifting made<br />
+                {t('Gifting made')}<br />
                 <em>unforgettable.</em>
               </h2>
               <p>
-                Elevate weddings, festive celebrations, and corporate milestones with AJR handcrafted wooden presentation boxes, embossed gold foils, and custom handwritten cards.
+                {t('Elevate weddings, festive celebrations, and corporate milestones with AJR handcrafted wooden presentation boxes, embossed gold foils, and custom handwritten cards.')}
               </p>
 
               <div className="festive-pills">
-                <span className="festive-pill">✦ Laser Engraved Wood</span>
-                <span className="festive-pill">✦ Airtight Glass Jars</span>
-                <span className="festive-pill">✦ Custom Bulk Pricing</span>
+                <span className="festive-pill">✦ {t('Laser Engraved Wood')}</span>
+                <span className="festive-pill">✦ {t('Airtight Glass Jars')}</span>
+                <span className="festive-pill">✦ {t('Custom Bulk Pricing')}</span>
               </div>
 
               <button
                 className="button button-light"
                 onClick={() => go('product')}
               >
-                Explore Gift Hampers <ArrowRight size={17} />
+                {t('Explore Gift Hampers')} <ArrowRight size={17} />
               </button>
             </div>
             <div className="festive-visual">
@@ -1981,14 +2039,14 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
           <section className="process-section section">
             <div className="section-head">
               <div>
-                <p className="eyebrow">From Grove to Table</p>
+                <p className="eyebrow">{t('From Grove to Table')}</p>
                 <h2>
-                  How every pack<br />
-                  <em>finds you.</em>
+                  {t('How every pack')}<br />
+                  <em>{t('finds you.')}</em>
                 </h2>
               </div>
               <p className="section-intro">
-                Three rigorous steps between harvest and your table — zero shortcuts, nothing rushed.
+                {t('Three rigorous steps between harvest and your table — zero shortcuts, nothing rushed.')}
               </p>
             </div>
             <div className="process-grid">
@@ -1996,8 +2054,8 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
                 <Reveal key={s.step} delay={i * 120}>
                   <div className="process-card">
                     <span className="process-step">{s.step}</span>
-                    <h3>{s.title}</h3>
-                    <p>{s.text}</p>
+                    <h3>{t(s.title)}</h3>
+                    <p>{t(s.text)}</p>
                   </div>
                 </Reveal>
               ))}
@@ -2010,27 +2068,27 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
           <section className="journal section">
             <div className="section-head">
               <div>
-                <p className="eyebrow">Culinary Inspiration</p>
-                <h2>Simple ways to enjoy everyday superfoods</h2>
+                <p className="eyebrow">{t('Culinary Inspiration')}</p>
+                <h2>{t('Simple ways to enjoy everyday superfoods')}</h2>
               </div>
             </div>
             <div className="product-grid">
               {recipes.map((r) => (
                 <div key={r.title} className="recipe-card">
                   <div className="recipe-img">
-                    <img src={r.image} alt={r.title} />
+                    <img src={r.image} alt={t(r.title)} />
                     <span className="recipe-time-tag">
-                      <Clock size={12} /> {r.time}
+                      <Clock size={12} /> {t(r.time)}
                     </span>
                   </div>
                   <div className="recipe-body">
-                    <h3>{r.title}</h3>
-                    <p>{r.desc}</p>
+                    <h3>{t(r.title)}</h3>
+                    <p>{t(r.desc)}</p>
                     <button
                       className="text-link"
                       onClick={() => go('product')}
                     >
-                      Shop Ingredients <ArrowRight size={15} />
+                      {t('Shop Ingredients')} <ArrowRight size={15} />
                     </button>
                   </div>
                 </div>
@@ -2044,25 +2102,25 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
           <section className="testimonials section">
             <div className="section-head">
               <div>
-                <p className="eyebrow">Customer Voices</p>
+                <p className="eyebrow">{t('Customer Voices')}</p>
                 <h2>
-                  Loved by<br />
-                  <em>good company.</em>
+                  {t('Loved by')}<br />
+                  <em>{t('good company.')}</em>
                 </h2>
               </div>
               <span className="rating-chip">
-                <Star size={14} className="inline mr-1 fill-current" /> 4.95 / 5 Average Rating (1,400+ Reviews)
+                <Star size={14} className="inline mr-1 fill-current" /> {t('4.95 / 5 Average Rating (1,400+ Reviews)')}
               </span>
             </div>
             <div className="testimonial-grid">
-              {testimonials.map((t, i) => (
-                <Reveal key={t.name} delay={i * 100}>
+              {testimonials.map((testimonial, i) => (
+                <Reveal key={testimonial.name} delay={i * 100}>
                   <figure className="testimonial">
                     <span className="testimonial-stars">★★★★★</span>
-                    <blockquote>“{t.quote}”</blockquote>
+                    <blockquote>“{t(testimonial.quote)}”</blockquote>
                     <figcaption>
-                      <strong>{t.name}</strong>
-                      <span>{t.role}</span>
+                      <strong>{testimonial.name}</strong>
+                      <span>{t(testimonial.role)}</span>
                     </figcaption>
                   </figure>
                 </Reveal>
@@ -2076,39 +2134,39 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
           <section className="faq-section section">
             <div className="faq-layout">
               <div className="faq-garden-panel">
-                <p className="faq-support-label"><span aria-hidden="true">●</span> AJR support library</p>
+                <p className="faq-support-label"><span aria-hidden="true">●</span> {t('AJR support library')}</p>
                 <h2>
-                  Questions,<br />
-                  <em>answered.</em>
+                  {t('Questions,')}<br />
+                  <em>{t('answered.')}</em>
                 </h2>
                 <p className="section-intro">
-                  Everything you might wonder before your first handful arrives.
+                  {t('Everything you might wonder before your first handful arrives.')}
                 </p>
                 <div className="faq-garden-note">
                   <span className="faq-note-mark" aria-hidden="true">✦</span>
-                  <p>Need a hand choosing, gifting, or ordering in bulk?</p>
+                  <p>{t('Need a hand choosing, gifting, or ordering in bulk?')}</p>
                   <button className="faq-panel-link" onClick={() => go('contact')}>
-                    Write to us <ArrowRight size={16} aria-hidden="true" />
+                    {t('Write to us')} <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </div>
               </div>
 
               <div className="faq-answer-desk">
                 <div className="faq-desk-head">
-                  <p>Find your answer</p>
+                  <p>{t('Find your answer')}</p>
                   <span aria-live="polite" aria-atomic="true">
                     {faqSearch
-                      ? `${filteredFaqs.length} ${filteredFaqs.length === 1 ? 'answer' : 'answers'} found`
-                      : `${initialFaqs.length} common questions`}
+                      ? `${filteredFaqs.length} ${t(filteredFaqs.length === 1 ? 'answer found' : 'answers found')}`
+                      : `${localizedFaqs.length} ${t('common questions')}`}
                   </span>
                 </div>
                 <div className="faq-search-box">
                   <Search size={18} aria-hidden="true" />
-                  <label className="sr-only" htmlFor="faq-search">Search AJR frequently asked questions</label>
+                  <label className="sr-only" htmlFor="faq-search">{t('Search AJR frequently asked questions')}</label>
                   <input
                     id="faq-search"
                     type="text"
-                    placeholder="Search questions (e.g. freshness, organic, bulk)..."
+                    placeholder={t('Search questions (e.g. freshness, organic, bulk)...')}
                     value={faqSearch}
                     onChange={(e) => {
                       setFaqSearch(e.target.value)
@@ -2116,7 +2174,7 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
                     }}
                   />
                   {faqSearch && (
-                    <button className="faq-clear-search" type="button" onClick={() => setFaqSearch('')} aria-label="Clear FAQ search">
+                    <button className="faq-clear-search" type="button" onClick={() => setFaqSearch('')} aria-label={t('Clear FAQ search')}>
                       <X size={15} aria-hidden="true" />
                     </button>
                   )}
@@ -2135,16 +2193,16 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
                   ) : (
                     <div className="faq-empty-state" role="status">
                       <span aria-hidden="true">⌕</span>
-                      <p>No answers match that search just yet.</p>
-                      <button className="faq-empty-link" type="button" onClick={() => go('contact')}>Ask the AJR team <ArrowRight size={15} aria-hidden="true" /></button>
+                      <p>{t('No answers match that search just yet.')}</p>
+                      <button className="faq-empty-link" type="button" onClick={() => go('contact')}>{t('Ask the AJR team')} <ArrowRight size={15} aria-hidden="true" /></button>
                     </div>
                   )}
                 </div>
                 {filteredFaqs.length > 0 && (
                   <div className="faq-contact-row">
                     <span className="faq-contact-sprout" aria-hidden="true">✦</span>
-                    <p><strong>Still curious?</strong> Our people love a thoughtful question.</p>
-                    <button type="button" onClick={() => go('contact')}>Talk to us <ArrowRight size={15} aria-hidden="true" /></button>
+                    <p><strong>{t('Still curious?')}</strong> {t('Our people love a thoughtful question.')}</p>
+                    <button type="button" onClick={() => go('contact')}>{t('Talk to us')} <ArrowRight size={15} aria-hidden="true" /></button>
                   </div>
                 )}
               </div>
@@ -2156,28 +2214,28 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
         <Reveal>
           <section className="home-cta">
             <div className="manifesto-inner">
-              <p className="eyebrow">Stay Connected</p>
+              <p className="eyebrow">{t('Stay Connected')}</p>
               <h2>
-                <span className="sr-only">First taste of something good.</span>
+                <span className="sr-only">{t('First taste of something good.')}</span>
                 <span className="letter-heading" aria-hidden="true">
-                  <LetterReveal text="First taste of" />
+                  <LetterReveal text={t('First taste of')} />
                   <br />
-                  <em><LetterReveal text="something good." /></em>
+                  <em><LetterReveal text={t('something good.')} /></em>
                 </span>
               </h2>
               <p>
-                Subscribe to receive private harvest releases, seasonal box discounts, and natural health guides delivered to your inbox.
+                {t('Subscribe to receive private harvest releases, seasonal box discounts, and natural health guides delivered to your inbox.')}
               </p>
               <div className="cta-newsletter">
                 <input
-                  placeholder="Enter your email address"
-                  aria-label="Email address"
+                  placeholder={t('Enter your email address')}
+                  aria-label={t('Email address')}
                 />
                 <button
                   className="button button-light"
                   onClick={() => go('contact')}
                 >
-                  Subscribe <ArrowRight size={17} />
+                  {t('Subscribe')} <ArrowRight size={17} />
                 </button>
               </div>
             </div>
@@ -2210,9 +2268,9 @@ function ProductCard({
   const selectedProduct = productAtWeight(productWithSelectedVarietyImage(withVariety), weight)
   return (
     <article className="product-card product-card--catalogue" style={outOfStock ? { opacity: 0.75 } : undefined}>
-      <button type="button" className="product-card-link" onClick={() => onSelect(selectedProduct)} aria-label={`${t('View details')}: ${product.name}`} />
+      <button type="button" className="product-card-link" onClick={() => onSelect(selectedProduct)} aria-label={`${t('View details')}: ${t(product.name)}`} />
       <div className={`product-photo ${product.color}`}>
-        <img src={selectedProduct.image} alt={product.name} />
+        <img src={selectedProduct.image} alt={t(product.name)} />
         <button
           type="button"
           className={wished ? 'wish wished' : 'wish'}
@@ -2220,18 +2278,18 @@ function ProductCard({
             event.stopPropagation()
             toggleWish(product)
           }}
-          aria-label={wished ? `${t('Remove item')}: ${product.name}` : `${t('Add to wishlist')}: ${product.name}`}
+          aria-label={wished ? `${t('Remove item')}: ${t(product.name)}` : `${t('Add to wishlist')}: ${t(product.name)}`}
           aria-pressed={wished}
         >
           <Heart size={18} fill={wished ? 'currentColor' : 'none'} />
         </button>
-        <span className="product-tag">{product.type}</span>
-        {outOfStock && <span className="stock-note">Out of stock</span>}
+        <span className="product-tag">{t(product.type)}</span>
+        {outOfStock && <span className="stock-note">{t('Out of stock')}</span>}
       </div>
       <div className="product-card-copy">
         <div className="product-card-title-row">
           <div className="product-name-pair">
-            <h3 className="product-name">{product.name}</h3>
+            <h3 className="product-name">{t(product.name)}</h3>
           </div>
           <span className="product-view-arrow" aria-hidden="true"><ArrowRight size={16} /></span>
         </div>
@@ -2246,9 +2304,9 @@ function ProductCard({
               value={variety}
               onClick={(event) => event.stopPropagation()}
               onChange={(event) => setVariety(event.target.value)}
-              aria-label={`${t('Variety')}: ${product.name}`}
+              aria-label={`${t('Variety')}: ${t(product.name)}`}
             >
-              {product.varieties.map((option) => <option key={option.name} value={option.name}>{option.name}</option>)}
+              {product.varieties.map((option) => <option key={option.name} value={option.name}>{t(option.name)}</option>)}
             </select>
           </label>
         ) : <div className="pack-select-placeholder" aria-hidden="true" />}
@@ -2258,13 +2316,13 @@ function ProductCard({
             value={weight}
             onClick={(event) => event.stopPropagation()}
             onChange={(event) => setWeight(event.target.value as Weight)}
-            aria-label={`${t('Pack size')}: ${product.name}`}
+            aria-label={`${t('Pack size')}: ${t(product.name)}`}
           >
             {weightsForProduct(product).map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </label>
         <div className="product-card-footer">
-          <div className="product-price"><span>{t('From')}</span><strong>{`₹${selectedProduct.price}`}</strong></div>
+          <div className="product-price"><span>{t('From')}</span><strong>{formatCurrency(selectedProduct.price)}</strong></div>
         <button
           type="button"
           className="quick-add"
@@ -2284,6 +2342,7 @@ function ProductCard({
 }
 
 function About({ go }: { go: (v: View) => void }) {
+  const { t } = useLanguage()
   return (
     <main className="about-page">
       {/* Hero Header */}
@@ -2293,13 +2352,13 @@ function About({ go }: { go: (v: View) => void }) {
           <span className="about-hero-orbit about-hero-orbit-two" />
           <span className="about-hero-sprout" />
         </div>
-        <span className="about-hero-index" aria-hidden="true">01 / Heritage</span>
+        <span className="about-hero-index" aria-hidden="true">{t('01 / HERITAGE')}</span>
         <p className="eyebrow">
-          <Leaf size={14} /> Our Heritage &amp; Sourcing Philosophy
+          <Leaf size={14} /> {t('Our Heritage & Sourcing Philosophy')}
         </p>
         <h1>
-          <LetterReveal text="Rooted in nature." /><br />
-          <em><LetterReveal text="Crafted for living." /></em>
+          <LetterReveal text={t('Rooted in nature.')} /><br />
+          <em><LetterReveal text={t('Crafted for living.')} /></em>
         </h1>
         <p>
           We are on a mission to redefine everyday snacking — bringing unbleached, single-origin dry fruits and nuts straight from accredited family orchards to your home.
@@ -2310,12 +2369,12 @@ function About({ go }: { go: (v: View) => void }) {
       <section className="about-split section about-story">
         <Reveal className="about-story-media-reveal">
           <div className="about-image">
-            <img src="/nut-selection.png" alt="Handpicked nuts and dry fruits" />
+            <img src="/nut-selection.png" alt={t('Handpicked nuts and dry fruits')} />
           </div>
         </Reveal>
         <div className="about-copy">
-          <p className="eyebrow">The AJR Founding Story</p>
-          <h2>There is magic in an honest handful.</h2>
+          <p className="eyebrow">{t('The AJR Founding Story')}</p>
+          <h2>{t('There is magic in an honest handful.')}</h2>
           <p>
             AJR began at a family table in Virudhunagar, Tamil Nadu. We noticed that most store-bought dry fruits were dry, over-bleached with sulfur, or sat in open warehouses for over a year before reaching customers.
           </p>
@@ -2323,7 +2382,7 @@ function About({ go }: { go: (v: View) => void }) {
             We set out to change that by establishing direct fair-trade relationships with orchards in Kashmir, California, Mangalore, and Kerman. By packing in small weekly batches with zero chemical glazes, we preserve the natural essential oils and authentic crunch that nature intended.
           </p>
           <button className="button button-dark" onClick={() => go('product')}>
-            Explore Our Collection <ArrowRight size={17} />
+            {t('Explore Our Collection')} <ArrowRight size={17} />
           </button>
         </div>
       </section>
@@ -2341,8 +2400,8 @@ function About({ go }: { go: (v: View) => void }) {
       {/* Quote Banner */}
       <Reveal className="about-quote-reveal">
         <section className="about-quote">
-          <p>“The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”</p>
-          <span>— The AJR Family Table</span>
+          <p>{t('“The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”')}</p>
+          <span>{t('— The AJR Family Table')}</span>
         </section>
       </Reveal>
 
@@ -2350,47 +2409,47 @@ function About({ go }: { go: (v: View) => void }) {
       <section className="values section">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Uncompromising Standards</p>
-            <h2>6 Purity Commitments</h2>
+            <p className="eyebrow">{t('Uncompromising Standards')}</p>
+            <h2>{t('6 Purity Commitments')}</h2>
           </div>
-          <p className="section-intro">From harvest selection to eco packaging, we keep our standards non-negotiable.</p>
+          <p className="section-intro">{t('From harvest selection to eco packaging, we keep our standards non-negotiable.')}</p>
         </div>
         <div className="value-grid">
           <Value
             delay={0}
             icon={<Leaf />}
-            title="100% Unbleached"
-            text="Zero chlorine, no sulfur dioxide, and no artificial color processing. Just natural shade."
+            title={t('100% Unbleached')}
+            text={t('Zero chlorine, no sulfur dioxide, and no artificial color processing. Just natural shade.')}
           />
           <Value
             delay={90}
             icon={<Sparkles />}
-            title="Nitrogen-Flush Packed"
-            text="Sealed in small batches weekly to lock in crispness and protect natural Vitamin E & ALA."
+            title={t('Nitrogen-Flush Packed')}
+            text={t('Sealed in small batches weekly to lock in crispness and protect natural Vitamin E & ALA.')}
           />
           <Value
             delay={180}
             icon={<ShieldCheck />}
-            title="Direct Farmer Trade"
-            text="Fair trade contracts that pay 25% above market rates directly to single-origin growers."
+            title={t('Direct Farmer Trade')}
+            text={t('Fair trade contracts that pay 25% above market rates directly to single-origin growers.')}
           />
           <Value
             delay={270}
             icon={<Award />}
-            title="Optically Size Graded"
-            text="Only hand-selected Jumbo W240 cashews & Mammoth Kashmiri walnuts make the cut."
+            title={t('Optically Size Graded')}
+            text={t('Only hand-selected Jumbo W240 cashews & Mammoth Kashmiri walnuts make the cut.')}
           />
           <Value
             delay={360}
             icon={<Heart />}
-            title="Zero Oil Glazes"
-            text="No cheap palm oil coats, no glucose weight additives. Pure dry roasted goodness."
+            title={t('Zero Oil Glazes')}
+            text={t('No cheap palm oil coats, no glucose weight additives. Pure dry roasted goodness.')}
           />
           <Value
             delay={450}
             icon={<Gift />}
-            title="Eco Jute & Glass"
-            text="Sustainable, zero-plastic packaging options designed for reuse and lower carbon footprint."
+            title={t('Eco Jute & Glass')}
+            text={t('Sustainable, zero-plastic packaging options designed for reuse and lower carbon footprint.')}
           />
         </div>
       </section>
@@ -2400,31 +2459,31 @@ function About({ go }: { go: (v: View) => void }) {
         <section className="timeline-section">
           <div className="section-head text-center">
             <div>
-              <p className="eyebrow justify-center">Our Sourcing Journey</p>
+              <p className="eyebrow justify-center">{t('Our Sourcing Journey')}</p>
               <h2>
-                Milestones of <em>Goodness</em>
+                {t('Milestones of')} <em>{t('Goodness')}</em>
               </h2>
             </div>
           </div>
           <div className="timeline-grid">
             <div className="timeline-card">
               <span className="timeline-year">2021</span>
-              <h4>The Family Table</h4>
+              <h4>{t('The Family Table')}</h4>
               <p>Founded in Virudhunagar, Tamil Nadu with a simple commitment to source clean, unbleached California almonds and dates for friends &amp; family.</p>
             </div>
             <div className="timeline-card">
               <span className="timeline-year">2022</span>
-              <h4>Kashmir &amp; Iran Direct</h4>
+              <h4>{t('Kashmir & Iran Direct')}</h4>
               <p>Partnered with Shopian walnut growers and Kerman pistachio orchards for direct single-origin harvest imports.</p>
             </div>
             <div className="timeline-card">
               <span className="timeline-year">2023</span>
-              <h4>Zero-Plastic Initiative</h4>
+              <h4>{t('Zero-Plastic Initiative')}</h4>
               <p>Eliminated single-use plastics by introducing woven jute pouches, reusable glass jars, and laser-engraved wooden boxes.</p>
             </div>
             <div className="timeline-card">
               <span className="timeline-year">2026</span>
-              <h4>28,000+ Happy Homes</h4>
+              <h4>{t('28,000+ Happy Homes')}</h4>
               <p>Now delivering fresh harvest dry fruits and custom festive hampers to over 28,000 households across India.</p>
             </div>
           </div>
@@ -2438,8 +2497,8 @@ function About({ go }: { go: (v: View) => void }) {
             <img src="/dates-apricots.png" alt="AJR Master Tasters & Farm Sourcing Team" />
           </div>
           <div>
-            <p className="eyebrow">Master Taster Guarantee</p>
-            <h2 className="text-4xl font-serif mb-4">“If it isn't crisp, sweet, and pure, it never leaves our door.”</h2>
+            <p className="eyebrow">{t('Master Taster Guarantee')}</p>
+            <h2 className="text-4xl font-serif mb-4">{t('“If it isn\'t crisp, sweet, and pure, it never leaves our door.”')}</h2>
             <p className="text-muted-foreground mb-4">
               Every single batch of almonds, cashews, dates, and walnuts is sampled by our master quality tasters before being approved for nitrogen packaging.
             </p>
@@ -2447,7 +2506,7 @@ function About({ go }: { go: (v: View) => void }) {
               We stand behind every pouch with our 100% Taste &amp; Freshness Money-Back Guarantee.
             </p>
             <button className="button button-dark" onClick={() => go('product')}>
-              Shop Fresh Harvest Now <ArrowRight size={17} />
+              {t('Shop Fresh Harvest Now')} <ArrowRight size={17} />
             </button>
           </div>
         </section>
@@ -2455,13 +2514,13 @@ function About({ go }: { go: (v: View) => void }) {
 
       {/* CTA Section */}
       <section className="about-cta">
-        <p className="eyebrow">Bring Goodness Home</p>
+        <p className="eyebrow">{t('Bring Goodness Home')}</p>
         <h2>
-          <LetterReveal text="Your next favorite" /><br />
-          <em><LetterReveal text="is waiting." /></em>
+          <LetterReveal text={t('Your next favorite')} /><br />
+          <em><LetterReveal text={t('is waiting.')} /></em>
         </h2>
         <button className="button button-light" onClick={() => go('product')}>
-          Explore Pantry <ArrowRight size={17} />
+          {t('Explore Pantry')} <ArrowRight size={17} />
         </button>
       </section>
     </main>
@@ -2513,6 +2572,11 @@ function Shop({
             product.origin,
             product.detail,
             ...(product.nutrients || []),
+            t(product.name),
+            t(product.type),
+            t(product.origin || ''),
+            t(product.detail),
+            ...(product.nutrients || []).map((nutrient) => t(nutrient)),
           ]
             .filter(Boolean)
             .join(' ')
@@ -2527,7 +2591,7 @@ function Shop({
       if (sortBy === 'name') return a.name.localeCompare(b.name)
       return 0
     })
-  }, [list, searchQuery, sortBy])
+  }, [list, searchQuery, sortBy, t])
 
   const resetFilters = () => {
     setSearchQuery('')
@@ -2654,7 +2718,7 @@ function Shop({
 }
 
 function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished, go, outOfStock }: any) {
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
   const [weight, setWeight] = useState<Weight>(product.selectedWeight || defaultWeightFor(product))
   const [variety, setVariety] = useState<string>(product.selectedVariety || product.varieties?.[0]?.name || '')
 
@@ -2672,24 +2736,24 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
       </button>
       <section className="detail-grid">
         <div className={`detail-image ${product.color}`}>
-          <img src={weightedProduct.image} alt={product.name} />
-          <span className="detail-label">AJR / NATURAL HARVEST</span>
+          <img src={weightedProduct.image} alt={t(product.name)} />
+          <span className="detail-label">{t('AJR / NATURAL HARVEST')}</span>
         </div>
         <div className="detail-copy">
-          <p className="eyebrow">{product.type} · {product.origin || '100% Organic'}</p>
+          <p className="eyebrow">{t(product.type)} · {productOriginForDisplay(product, language, t)}</p>
           <div className="detail-product-name">
-            <h1>{product.name}</h1>
+            <h1>{t(product.name)}</h1>
           </div>
           <div className="rating">
-            ★★★★★ <span>{product.rating || 4.9} / 5 · {product.reviewsCount || 80} verified reviews</span>
+            ★★★★★ <span>{product.rating || 4.9} / 5 · {product.reviewsCount || 80} {t('verified reviews')}</span>
           </div>
-          <p className="detail-description">{product.detail}</p>
+          <p className="detail-description">{productDetailForDisplay(product, language, t)}</p>
           
           {product.nutrients && (
             <div className="flex gap-2 my-4 flex-wrap">
               {product.nutrients.map((n: string) => (
                 <span key={n} className="bg-emerald-100 text-emerald-900 font-medium text-xs px-3 py-1 rounded-full">
-                  ✓ {n}
+                  ✓ {t(n)}
                 </span>
               ))}
             </div>
@@ -2697,24 +2761,24 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
 
           <div className="detail-divider" />
           <div className="detail-price-row">
-            <p className="weighted-price">₹{weightedProduct.price}</p>
-            <span>{t('Price for')} {product.varieties?.length ? `${variety} · ` : ''}{weight}</span>
+            <p className="weighted-price">{formatCurrency(weightedProduct.price)}</p>
+            <span>{t('Price for')} {product.varieties?.length ? `${t(variety)} · ` : ''}{weight}</span>
           </div>
           {product.varieties && product.varieties.length > 1 && (
             <label className="pack-select-label detail-pack-selector">
               <span>{t('Variety')}</span>
-              <select value={variety} onChange={(event) => setVariety(event.target.value)} aria-label={`Variety for ${product.name}`}>
-                {product.varieties.map((option: Variety) => <option key={option.name} value={option.name}>{option.name}</option>)}
+              <select value={variety} onChange={(event) => setVariety(event.target.value)} aria-label={`${t('Variety')}: ${t(product.name)}`}>
+                {product.varieties.map((option: Variety) => <option key={option.name} value={option.name}>{t(option.name)}</option>)}
               </select>
             </label>
           )}
           <label className="pack-select-label detail-pack-selector">
               <span>{t('Pack size')}</span>
-            <select value={weight} onChange={(event) => setWeight(event.target.value as Weight)} aria-label={`Pack size for ${product.name}`}>
+            <select value={weight} onChange={(event) => setWeight(event.target.value as Weight)} aria-label={`${t('Pack size')}: ${t(product.name)}`}>
               {weightsForProduct(product).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </label>
-          <p className="price">₹{product.price}</p>
+          <p className="price">{formatCurrency(product.price)}</p>
           <p className="shipping">
             <Check size={15} /> {t('Free express shipping on orders over ₹999')}
           </p>
@@ -2752,7 +2816,7 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
               <summary>
                 {t('Storage & Shelf Life')} <Plus size={16} />
               </summary>
-              <p>Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.</p>
+              <p>{t('Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.')}</p>
             </details>
             <details>
               <summary>
@@ -2768,6 +2832,7 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
 }
 
 function Contact({ sent, setSent }: any) {
+  const { t } = useLanguage()
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
   const [activeFormTab, setActiveFormTab] = useState<'retail' | 'gifting' | 'corporate' | 'press'>('retail')
@@ -2776,7 +2841,10 @@ function Contact({ sent, setSent }: any) {
   const handleFillCorporateForm = (data: { tier: string; qty: number; total: number }) => {
     setActiveFormTab('corporate')
     setFormNotes(
-      `Interested in ${data.qty} units of ${data.tier}. Estimated total: ₹${data.total.toLocaleString()}. Please send official deck & sample box.`
+      t('Interested in {qty} units of {tier}. Estimated total: ₹{total}. Please send official deck & sample box.')
+        .replace('{qty}', String(data.qty))
+        .replace('{tier}', t(data.tier))
+        .replace('{total}', data.total.toLocaleString())
     )
     window.scrollTo({ top: document.querySelector('.contact-form-section')?.getBoundingClientRect().top ? window.scrollY + (document.querySelector('.contact-form-section')?.getBoundingClientRect().top || 0) - 100 : 0, behavior: 'smooth' })
   }
@@ -2793,11 +2861,11 @@ function Contact({ sent, setSent }: any) {
           <span className="contact-desk-mark">AJR<br />CONCIERGE</span>
         </div>
         <p className="eyebrow">
-          <MessageCircle size={14} /> Concierge &amp; Customer Care
+          <MessageCircle size={14} /> {t('Concierge & Customer Care')}
         </p>
         <h1>
-          We would love<br />
-          <em>to hear from you.</em>
+          {t('We would love')}<br />
+          <em>{t('to hear from you.')}</em>
         </h1>
         <p>
           Whether you have a product question, need custom festival hampers, or want to discuss bulk corporate gifting, our human team replies promptly.
@@ -2815,7 +2883,7 @@ function Contact({ sent, setSent }: any) {
             target="_blank"
             rel="noreferrer"
           >
-            <MessageCircle size={15} /> WhatsApp Concierge (Fastest)
+            <MessageCircle size={15} /> {t('WhatsApp Concierge (Fastest)')}
           </a>
         </div>
         <p className="contact-hero-assurance"><span aria-hidden="true">✦</span> A personal reply, never an automated queue.</p>
@@ -2827,8 +2895,8 @@ function Contact({ sent, setSent }: any) {
           <span className="quick-icon">
             <MessageCircle size={22} />
           </span>
-          <h3>WhatsApp Support</h3>
-          <p>Instant support for order tracking, gift guidance &amp; quick recommendations.</p>
+          <h3>{t('WhatsApp Support')}</h3>
+          <p>{t('Instant support for order tracking, gift guidance & quick recommendations.')}</p>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full w-fit mb-2">
             ⚡ Avg Reply: ~5 Mins
           </span>
@@ -2838,7 +2906,7 @@ function Contact({ sent, setSent }: any) {
             target="_blank"
             rel="noreferrer"
           >
-            Open WhatsApp <ArrowRight size={16} />
+            {t('Open WhatsApp')} <ArrowRight size={16} />
           </a>
         </div>
 
@@ -2846,13 +2914,13 @@ function Contact({ sent, setSent }: any) {
           <span className="quick-icon">
             <Mail size={22} />
           </span>
-          <h3>Email Desk</h3>
-          <p>For custom hampers, corporate gifting decks, and retail wholesale inquiries.</p>
+          <h3>{t('Email Desk')}</h3>
+          <p>{t('For custom hampers, corporate gifting decks, and retail wholesale inquiries.')}</p>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full w-fit mb-2">
             ✉ Avg Reply: &lt; 2 Hours
           </span>
           <a className="text-link" href="mailto:hello@ajrnature.com">
-            Write Email <ArrowRight size={16} />
+            {t('Write Email')} <ArrowRight size={16} />
           </a>
         </div>
 
@@ -2860,13 +2928,13 @@ function Contact({ sent, setSent }: any) {
           <span className="quick-icon">
             <Phone size={22} />
           </span>
-          <h3>Studio Call Desk</h3>
-          <p>Prefer a human voice? Call our Virudhunagar flagship studio directly.</p>
+          <h3>{t('Studio Call Desk')}</h3>
+          <p>{t('Prefer a human voice? Call our Virudhunagar flagship studio directly.')}</p>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full w-fit mb-2">
             📞 Mon–Sat 9:30am–6:30pm IST
           </span>
           <a className="text-link" href="tel:+919876543210">
-            Call +91 98765 43210 <ArrowRight size={16} />
+            {t('Call +91 98765 43210')} <ArrowRight size={16} />
           </a>
         </div>
       </section>
@@ -2888,32 +2956,32 @@ function Contact({ sent, setSent }: any) {
             <div className="live-enquiry-content">
               <div className="live-enquiry-status" role="status">
                 <span className="live-status-dot" aria-hidden="true" />
-                Enquiry desk online
+                {t('Enquiry desk online')}
               </div>
-              <p className="eyebrow"><MessageCircle size={14} /> AJR Live Enquiry Desk</p>
-              <h2>Tell us what<br /><em>you need.</em></h2>
+              <p className="eyebrow"><MessageCircle size={14} /> {t('AJR Live Enquiry Desk')}</p>
+              <h2>{t('Tell us what')}<br /><em>{t('you need.')}</em></h2>
               <p className="live-enquiry-copy">
-                Product help, gifting plans, bulk orders, and partnerships — send one enquiry and our team receives it instantly.
+                {t('Product help, gifting plans, bulk orders, and partnerships — send one enquiry and our team receives it instantly.')}
               </p>
               <div className="live-enquiry-steps" aria-label="How the enquiry desk works">
-                <div><span>01</span><p>Choose your enquiry type.</p></div>
-                <div><span>02</span><p>Share the details that matter.</p></div>
-                <div><span>03</span><p>Receive a personal reply within business hours.</p></div>
+                <div><span>01</span><p>{t('Choose your enquiry type.')}</p></div>
+                <div><span>02</span><p>{t('Share the details that matter.')}</p></div>
+                <div><span>03</span><p>{t('Receive a personal reply within business hours.')}</p></div>
               </div>
-              <p className="live-enquiry-note"><ShieldCheck size={15} /> Private, secure, and read by a real AJR team member.</p>
+              <p className="live-enquiry-note"><ShieldCheck size={15} /> {t('Private, secure, and read by a real AJR team member.')}</p>
             </div>
             <div>
-              <p className="eyebrow">Direct Contact Information</p>
+              <p className="eyebrow">{t('Direct Contact Information')}</p>
               <h3>hello@ajrnature.com</h3>
               <p>Mon–Sat, 9:30am–6:30pm IST</p>
             </div>
             <div>
-              <p className="eyebrow">Wholesale &amp; Bulk Orders</p>
+              <p className="eyebrow">{t('Wholesale & Bulk Orders')}</p>
               <h3>trade@ajrnature.com</h3>
               <p>Custom corporate gifts and retail partnerships.</p>
             </div>
             <div>
-              <p className="eyebrow">Flagship Studio</p>
+              <p className="eyebrow">{t('Flagship Studio')}</p>
               <h3>AJR Essence of Nature</h3>
               <p>
                 <MapPin size={13} /> 14, TC Godown Street, Vadiyan St, Virudhunagar, Tamil Nadu 626001
@@ -2921,9 +2989,9 @@ function Contact({ sent, setSent }: any) {
             </div>
 
             <div className="bg-emerald-900 text-cream p-6 rounded-2xl border border-emerald-700 mt-4">
-              <h4 className="font-serif text-xl mb-2 text-lime">Human Support Promise</h4>
+              <h4 className="font-serif text-xl mb-2 text-lime">{t('Human Support Promise')}</h4>
               <p className="text-xs text-emerald-200 leading-relaxed">
-                When you contact AJR, a real team member reads and replies to your message. No bots, no mystery queues.
+                {t('When you contact AJR, a real team member reads and replies to your message. No bots, no mystery queues.')}
               </p>
             </div>
           </div>
@@ -2931,10 +2999,10 @@ function Contact({ sent, setSent }: any) {
           <div className="contact-form-wrapper">
             <div className="live-enquiry-panel-head">
               <div>
-                <span>LIVE ENQUIRY</span>
-                <h3>How can we help?</h3>
+                <span>{t('LIVE ENQUIRY')}</span>
+                <h3>{t('How can we help?')}</h3>
               </div>
-              <p><span className="live-status-dot" aria-hidden="true" /> Sent directly to our team</p>
+              <p><span className="live-status-dot" aria-hidden="true" /> {t('Sent directly to our team')}</p>
             </div>
             {/* Form Category Selector */}
             <div className="contact-tab-switcher">
@@ -2943,28 +3011,28 @@ function Contact({ sent, setSent }: any) {
                 className={`contact-tab-btn ${activeFormTab === 'retail' ? 'active' : ''}`}
                 onClick={() => setActiveFormTab('retail')}
               >
-                Product &amp; Retail Support
+                {t('Product & Retail Support')}
               </button>
               <button
                 type="button"
                 className={`contact-tab-btn ${activeFormTab === 'gifting' ? 'active' : ''}`}
                 onClick={() => setActiveFormTab('gifting')}
               >
-                Custom Festive Hampers
+                {t('Custom Festive Hampers')}
               </button>
               <button
                 type="button"
                 className={`contact-tab-btn ${activeFormTab === 'corporate' ? 'active' : ''}`}
                 onClick={() => setActiveFormTab('corporate')}
               >
-                Corporate Bulk Inquiry
+                {t('Corporate Bulk Inquiry')}
               </button>
               <button
                 type="button"
                 className={`contact-tab-btn ${activeFormTab === 'press' ? 'active' : ''}`}
                 onClick={() => setActiveFormTab('press')}
               >
-                Press &amp; Collaborations
+                {t('Press & Collaborations')}
               </button>
             </div>
 
@@ -3017,28 +3085,28 @@ function Contact({ sent, setSent }: any) {
                 <>
                   <div className="flex gap-4">
                     <label className="flex-1">
-                      Your Name
-                      <input name="name" required placeholder="Full Name" />
+                      {t('Your Name')}
+                      <input name="name" required placeholder={t('Full name')} />
                     </label>
                     <label className="flex-1">
-                      Phone / WhatsApp
+                      {t('Phone / WhatsApp')}
                       <input name="phone" required type="tel" placeholder="+91 98XXX XXXXX" />
                     </label>
                   </div>
 
                   <label>
-                    Email Address
+                    {t('Email address')}
                     <input name="email" required type="email" placeholder="you@example.com" />
                   </label>
 
                   {activeFormTab === 'corporate' && (
                     <div className="flex gap-4 my-2">
                       <label className="flex-1">
-                        Company / Organization Name
+                        {t('Company / Organization Name')}
                         <input required placeholder="Acme Inc." />
                       </label>
                       <label className="flex-1">
-                        Estimated Quantity
+                        {t('Estimated Quantity')}
                         <input placeholder="e.g. 50 hampers" />
                       </label>
                     </div>
@@ -3047,27 +3115,27 @@ function Contact({ sent, setSent }: any) {
                   {activeFormTab === 'gifting' && (
                     <div className="flex gap-4 my-2">
                       <label className="flex-1">
-                        Event / Festival Date
+                        {t('Event / Festival Date')}
                         <input type="date" />
                       </label>
                       <label className="flex-1">
-                        Packaging Style Preference
+                        {t('Packaging Style Preference')}
                         <select defaultValue="Wood Box">
-                          <option>Royal Wooden Chest</option>
-                          <option>Festive Gold Foil Box</option>
-                          <option>Eco Jute Pouch</option>
+                          <option>{t('Royal Wooden Chest')}</option>
+                          <option>{t('Festive Gold Foil Box')}</option>
+                          <option>{t('Eco Jute Pouch')}</option>
                         </select>
                       </label>
                     </div>
                   )}
 
                   <label>
-                    Message / Special Requests
+                    {t('Message / Special Requests')}
                     <textarea
                       name="notes"
                       required
                       rows={5}
-                      placeholder="Tell us how we can help..."
+                      placeholder={t('Tell us how we can help...')}
                       value={formNotes}
                       onChange={(e) => setFormNotes(e.target.value)}
                     />
@@ -3078,7 +3146,7 @@ function Contact({ sent, setSent }: any) {
                     {sending ? 'Sending…' : <>Send Inquiry <ArrowRight size={17} /></>}
                   </button>
                   <p className="form-note">
-                    <Check size={14} /> 100% Confidential. Replies within 2 hours during business hours.
+                    <Check size={14} /> {t('100% Confidential. Replies within 2 hours during business hours.')}
                   </p>
                 </>
               )}
@@ -3239,10 +3307,10 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
           <div className="cart-items">
             {cart.map((item: any) => (
               <div className="cart-item" key={`${item.product.id}-${item.product.selectedWeight || '250 g'}-${item.product.selectedVariety || ''}`}>
-                <img src={item.product.image} alt={item.product.name} />
+                <img src={item.product.image} alt={t(item.product.name)} />
                 <div className="cart-item-info">
-                  <h3>{item.product.name}</h3>
-                  <p>{item.product.type}{item.product.selectedVariety ? ` · ${item.product.selectedVariety}` : ''} · {item.product.selectedWeight || '250 g'}</p>
+                  <h3>{t(item.product.name)}</h3>
+                  <p>{t(item.product.type)}{item.product.selectedVariety ? ` · ${t(item.product.selectedVariety)}` : ''} · {item.product.selectedWeight || '250 g'}</p>
                   <div className="item-bottom">
                     <div className="quantity small">
                       <button
@@ -3356,7 +3424,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
                 </label>
                 <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 600 }}>
                   {t('Delivery address')}
-                  <textarea required value={address} onChange={(e: any) => setAddress(e.target.value)} placeholder="Door no, street, city, pincode" rows={3} suppressHydrationWarning style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontWeight: 400, fontFamily: 'inherit' }} />
+                  <textarea required value={address} onChange={(e: any) => setAddress(e.target.value)} placeholder={t('Door no, street, city, pincode')} rows={3} suppressHydrationWarning style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontWeight: 400, fontFamily: 'inherit' }} />
                 </label>
                 <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 600 }}>
                   {t('Payment method')}
@@ -3368,8 +3436,8 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
                   >
                     <option value="COD">{t('Cash on delivery')}</option>
                     <option value="UPI">UPI</option>
-                    <option value="Card">Card</option>
-                    <option value="Netbanking">Netbanking</option>
+                    <option value="Card">{t('Card')}</option>
+                    <option value="Netbanking">{t('Netbanking')}</option>
                   </select>
                 </label>
                 {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
@@ -3476,7 +3544,7 @@ function Footer({ go }: { go: (v: View) => void }) {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© 2026 AJR Essence of Nature. All rights reserved.</span>
+        <span>{t('© 2026 AJR Essence of Nature. All rights reserved.')}</span>
         <span>{t('Crafted with intention & care')}</span>
         <span>{t('Privacy · Terms')}</span>
       </div>

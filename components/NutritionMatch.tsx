@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Heart, Activity, Brain, Sparkles, ShieldCheck, ArrowRight, Zap } from 'lucide-react'
+import { useLanguage } from './LanguageProvider'
 
 type Product = { id: number; name: string; type: string; price: number; color: string; image: string; detail: string }
 type FeaturedType = 'Almonds' | 'Walnuts'
@@ -83,6 +84,7 @@ export default function NutritionMatch({
   onSelectProduct: (p: Product) => void
   go: (view: any) => void
 }) {
+  const { t } = useLanguage()
   const [activeGoalId, setActiveGoalId] = useState('energy')
   const activeGoal = WELLNESS_GOALS.find((g) => g.id === activeGoalId) || WELLNESS_GOALS[0]
   const recommendedProducts = activeGoal.recommended.flatMap((recommendation) => {
@@ -95,14 +97,14 @@ export default function NutritionMatch({
       <div className="section-head text-center">
         <div>
           <p className="eyebrow justify-center">
-            <Activity size={14} /> Personalised Wellness
+            <Activity size={14} /> {t('Personalised Wellness')}
           </p>
           <h2>
-            Find Your <em>Superfood Match</em>
+            {t('Find Your')} <em>{t('Superfood Match')}</em>
           </h2>
         </div>
         <p className="section-intro text-center">
-          What is your health focus today? Pick a goal to discover nutrients tailored to your body.
+          {t('What is your health focus today? Pick a goal to discover nutrients tailored to your body.')}
         </p>
       </div>
 
@@ -119,7 +121,7 @@ export default function NutritionMatch({
               onClick={() => setActiveGoalId(goal.id)}
             >
               <GoalIcon size={18} />
-              <span>{goal.title}</span>
+              <span>{t(goal.title)}</span>
             </button>
           )
         })}
@@ -129,21 +131,21 @@ export default function NutritionMatch({
       <div className="wellness-display-card">
         <div className="display-copy">
           <div className="display-badge">
-            <ShieldCheck size={14} /> <span>{activeGoal.badge}</span>
+            <ShieldCheck size={14} /> <span>{t(activeGoal.badge)}</span>
           </div>
-          <h3>{activeGoal.headline}</h3>
-          <p>{activeGoal.description}</p>
+          <h3>{t(activeGoal.headline)}</h3>
+          <p>{t(activeGoal.description)}</p>
 
           <div className="wellness-ritual">
-            <span>Today&apos;s ritual</span>
-            <p>{activeGoal.ritual}</p>
+            <span>{t("Today's ritual")}</span>
+            <p>{t(activeGoal.ritual)}</p>
           </div>
 
           <div className="goal-stats-row">
             {activeGoal.stats.map((s) => (
               <div key={s.label} className="goal-stat-item">
-                <strong>{s.value}</strong>
-                <span>{s.label}</span>
+                <strong>{t(s.value)}</strong>
+                <span>{t(s.label)}</span>
               </div>
             ))}
           </div>
@@ -153,23 +155,23 @@ export default function NutritionMatch({
             className="button button-dark"
             onClick={() => go('product')}
           >
-            Explore Wellness Collection <ArrowRight size={16} />
+            {t('Explore Wellness Collection')} <ArrowRight size={16} />
           </button>
         </div>
 
         <div className="display-recommendations">
-          <h4 className="rec-title">Recommended Superfoods</h4>
+          <h4 className="rec-title">{t('Recommended Superfoods')}</h4>
           <div className="rec-cards-list">
             {recommendedProducts.map((item) => (
               <div key={item.name} className="rec-product-card">
                 <div className="rec-img">
-                  <img src={item.image} alt={item.name} />
+                  <img src={item.image} alt={t(item.name)} />
                 </div>
                 <div className="rec-info">
-                  <span className="rec-tag">{item.type}</span>
-                  <h5>{item.name}</h5>
+                  <span className="rec-tag">{t(item.type)}</span>
+                  <h5>{t(item.name)}</h5>
                   <p className="rec-nutrient">
-                    <Sparkles size={12} /> {item.nutrient}
+                    <Sparkles size={12} /> {t(item.nutrient)}
                   </p>
                   <div className="rec-action-row">
                     <span className="rec-price">₹{item.price}</span>
@@ -180,7 +182,7 @@ export default function NutritionMatch({
                         onSelectProduct(item)
                       }}
                     >
-                      View Details <ArrowRight size={14} />
+                      {t('View Details')} <ArrowRight size={14} />
                     </button>
                   </div>
                 </div>

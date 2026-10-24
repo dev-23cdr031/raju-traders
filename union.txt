@@ -1,0 +1,283 @@
+ta,ml,te :: Workspace
+ta,ml,te :: Visit your store
+ta,ml,te :: See the customer experience
+ta,ml,te :: Open navigation
+ta,ml,te :: Private workspace
+ta,ml,te :: unread
+ta,ml,te :: Administrator settings
+ta,ml,te :: Login failed. Please check your email and password.
+ta,ml,te :: This email is not confirmed yet. Check your email for the confirmation link.
+ta,ml,te :: Login failed. Please try again.
+ta,ml,te :: We source generous, delicious dry fruits and nuts that bring authentic nourishment to your daily routine. Every handful starts with careful selection at peak harvest, honest ingredients, and zero artificial processing.
+ta,ml,te,hi :: AJR Everyday Goodness campaign artwork
+ta,ml,te :: for
+ta,ml,te :: My
+ta,ml,te :: Your orders are stored with your account. Sign in to see them.
+ta,ml,te :: Loading your orders…
+ta,ml,te :: Could not load your orders.
+ta,ml,te :: total
+ta,ml,te,hi :: , body: Record
+ta,ml,te,hi :: AJR
+ta,ml,te,hi :: Excluding cancelled orders
+ta,ml,te,hi :: Customer inquiries
+ta,ml,te,hi :: Performance
+ta,ml,te,hi :: Revenue at a glance
+ta,ml,te,hi :: Last 12 months
+ta,ml,te,hi :: A well-stocked store
+ta,ml,te,hi :: Inventory health
+ta,ml,te,hi :: Fresh from your store
+ta,ml,te,hi :: Online and in-store orders will appear here.
+ta,ml,te,hi :: A personal touch
+ta,ml,te,hi :: orders awaiting fulfilment
+ta,ml,te,hi :: Thoughtfully managed. Naturally AJR.
+ta,ml,te,hi :: Customer Inbox
+ta,ml,te,hi :: all inquiries
+ta,ml,te,hi :: Unread
+ta,ml,te,hi :: awaiting your reply
+ta,ml,te,hi :: Read
+ta,ml,te,hi :: opened inquiries
+ta,ml,te,hi :: Mark all read
+ta,ml,te,hi :: Loading messages…
+ta,ml,te,hi :: No messages here
+ta,ml,te,hi :: Customer inquiries from the contact page will appear here instantly.
+ta,ml,te,hi :: Reply by email
+ta,ml,te,hi :: Select a message
+ta,ml,te,hi :: Choose a conversation from the list to read the full inquiry.
+ta,ml,te,hi :: Offline order
+ta,ml,te,hi :: Order
+ta,ml,te,hi :: Loading inventory…
+ta,ml,te,hi :: Inventory is empty
+ta,ml,te,hi :: Promise
+ta,ml,te,hi :: Prices are always per kg — the shop scales them to the gram size the customer picks.
+ta,ml,te,hi :: No varieties yet — every pack size will use the price above.
+ta,ml,te,hi :: Number(p.stock)
+ta,ml,te,hi :: AJR Essence of Nature
+ta,ml,te,hi :: Rich in healthy monounsaturated fats, dietary fiber, plant protein, and essential micronutrients.
+ta,ml,te,hi :: hello@ajrnature.com
+ta,ml,te,hi :: Mon–Sat, 9:30am–6:30pm IST
+ta,ml,te,hi :: trade@ajrnature.com
+ta,ml,te,hi :: Royal Wooden Chest
+ta,ml,te :: Festive Gold Foil Box
+ta,ml,te,hi :: Eco Jute Pouch
+ta,ml,te,hi :: UPI
+ta,ml,te,hi :: Card
+ta,ml,te,hi :: Netbanking
+ta,ml,te,hi :: Your
+ta,ml,te,hi :: A ceremonial opening
+ta,ml,te,hi :: Always Just Royal
+ta,ml,te,hi :: A royal harvest awaits.
+ta,ml,te,hi :: = 1 && day
+ta,ml,te,hi :: AJR Essence of Nature Studio
+ta,ml,te,hi :: Mon – Sat: 10:00 AM – 7:00 PM IST
+ta,ml,te,hi :: Served daily 11:30 AM – 5:00 PM
+ml,te,hi :: AJR store workspace
+ml,te :: Rooted in good things
+ml,te :: A little care.
+ml,te :: A flourishing
+ml,te :: business.
+ml,te :: Your products, your people, your progress.
+ml,te :: A thoughtful space to bring it all together.
+ml,te :: THE AJR WORKSPACE
+ml,te :: Made for everyday growth.
+ml,te :: Your store, thoughtfully managed
+ml,te :: Sign in with your administrator account to tend to your store.
+ml,te :: Enter your password
+ml,te :: Back to the store
+ml,te :: Continue your healthy snacking journey with premium farm-picked dry fruits, wellness blends, and thoughtful gifting.
+ml,te :: Fresh sourcing • Small batch roasting
+ml,te :: Member Login
+ml,te :: Sign in to manage your orders and nutrition preferences.
+ml,te :: Please wait...
+ml,te :: or
+ml,te :: New to AJR?
+ml,te :: Create an account
+ml,te :: Harvest · 100% Organic
+ml,te :: Goodness worth sharing.
+ml,te :: Goodness
+ml,te :: worth sharing.
+ml,te :: Handpicked California almonds, jumbo golden cashews, Medjool dates and Kashmiri walnuts — curated for daily wellness and royal gifting.
+ml,te :: Good food is
+ml,te :: always
+ml,te :: Customer Voices
+ml,te,hi :: Loved by
+ml,te,hi :: good company.
+ml,te,hi :: 4.95 / 5 Average Rating (1,400+ Reviews)
+ml,te,hi :: AJR support library
+ml,te,hi :: Questions,
+ml,te,hi :: answered.
+ml,te :: Everything you might wonder before your first handful arrives.
+ml,te :: Need a hand choosing, gifting, or ordering in bulk?
+ml,te :: Write to us
+ml,te :: Find your answer
+ml,te,hi :: common questions
+ml,te :: Search AJR frequently asked questions
+ml,te :: Search questions (e.g. freshness, organic, bulk)...
+ml,te :: Clear FAQ search
+ml,te :: No answers match that search just yet.
+ml,te :: Ask the AJR team
+ml,te :: Still curious?
+ml,te,hi :: Our people love a thoughtful question.
+ml,te :: Talk to us
+ml,te,hi :: Remove item
+ml,te :: Add to wishlist
+ml,te :: Variety
+ml,te :: From
+ml,te :: Add
+ml,te :: Find your
+ml,te :: everyday
+ml,te :: superfoods.
+ml,te :: 100% natural, Grade A almonds, cashews, walnuts, dates, and festive hampers packed for peak freshness.
+ml,te :: Directly sourced · Packed in small batches
+ml,te :: Search the collection
+ml,te :: Clear product search
+ml,te :: in
+ml,te :: Sort products
+ml,te :: Product results
+ml,te,hi :: AJR / NATURAL HARVEST
+ml,te,hi :: verified reviews
+ml,te,hi :: Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.
+ml,te :: Essence of nature.
+ml,te :: Pure dry fruits, nuts, and handcrafted hampers made for everyday living.
+ml,te :: Our Story
+ml,te :: Shop All
+ml,te :: Contact Us
+ml,te :: Join the table for private harvest releases.
+ml,te :: Crafted with intention & care
+ml,te :: Privacy · Terms
+ml,te :: Join our community for better nutrition, curated product selections, pantry planning, and beautiful seasonal harvest gifts.
+ml,te :: Member savings • Gift collections
+ml,te :: Healthy habits start here
+ml,te :: Sign up
+ml,te :: Build your wellness pantry and save your favorites.
+ml,te :: Creating account...
+ml,te :: What is your health focus today? Pick a goal to discover nutrients tailored to your body.
+ml,te,hi :: Today's ritual
+ml,te :: View Details
+ml,te :: Checking session…
+ml,te :: Skip to workspace
+ml,te :: STORE WORKSPACE
+ml,te :: Admin
+ml,te :: A little overview. A bigger picture.
+ml,te :: Good things are
+ml,te :: Welcome back. Here’s how your store is doing.
+ml,te :: Total revenue
+ml,te :: Total orders
+ml,te :: Updating your store overview…
+ml,te :: Gathering your sales…
+ml,te :: Online sales
+ml,te :: Offline sales
+ml,te :: Pending fulfilments
+ml,te,hi :: Workspace access
+ml,te :: Signed-in administrator
+ml,te :: Administrator access list
+ml,te :: Order detail
+ml,te :: Customer:
+ml,te,hi :: Channel:
+ml,te :: Items:
+ml,te :: Status:
+ml,te,hi :: A sale from your store
+ml,te :: Add Offline Order
+ml,te :: Customer name *
+ml,te,hi :: Email (optional)
+ml,te :: Product sold *
+ml,te :: Select a shop product…
+ml,te :: Paid
+ml,te :: Note (optional)
+ml,te :: Product name *
+ml,te :: Type / category
+ml,te :: Price per kg (₹) *
+ml,te :: Pack sizes in the gram dropdown
+ml,te :: Varieties (price per kg)
+ml,te :: Description
+ml,te :: Product image
+ml,te :: Stock
+ml,te :: Status
+ml,te,hi :: Origin
+ml,te,hi :: Nutrients (comma separated)
+ml,te :: Show this product in the shop
+ml,te :: From Grove to Table
+ml,te :: finds you.
+ml,te :: Culinary Inspiration
+ml,te :: Simple ways to enjoy everyday superfoods
+ml,te,hi :: Stay Connected
+ml,te :: First taste of something good.
+ml,te :: 01 / Heritage
+ml,te :: The AJR Founding Story
+ml,te :: There is magic in an honest handful.
+ml,te,hi :: “The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”
+ml,te,hi :: — The AJR Family Table
+ml,te :: Uncompromising Standards
+ml,te :: 6 Purity Commitments
+ml,te :: From harvest selection to eco packaging, we keep our standards non-negotiable.
+ml,te :: Our Sourcing Journey
+ml,te :: The Family Table
+ml,te :: Founded in Virudhunagar, Tamil Nadu with a simple commitment to source clean, unbleached California almonds and dates for friends & family.
+ml,te,hi :: Kashmir & Iran Direct
+ml,te :: Partnered with Shopian walnut growers and Kerman pistachio orchards for direct single-origin harvest imports.
+ml,te :: Zero-Plastic Initiative
+ml,te :: Eliminated single-use plastics by introducing woven jute pouches, reusable glass jars, and laser-engraved wooden boxes.
+ml,te,hi :: 28,000+ Happy Homes
+ml,te :: Now delivering fresh harvest dry fruits and custom festive hampers to over 28,000 households across India.
+ml,te :: Master Taster Guarantee
+ml,te,hi :: “If it isn't crisp, sweet, and pure, it never leaves our door.”
+ml,te :: Bring Goodness Home
+ml,te :: to hear from you.
+ml,te :: A personal reply, never an automated queue.
+ml,te :: WhatsApp Support
+ml,te :: Instant support for order tracking, gift guidance & quick recommendations.
+ml,te :: Email Desk
+ml,te :: For custom hampers, corporate gifting decks, and retail wholesale inquiries.
+ml,te :: Studio Call Desk
+ml,te :: Prefer a human voice? Call our Virudhunagar flagship studio directly.
+ml,te :: AJR Live Enquiry Desk
+ml,te :: Tell us what
+ml,te :: Choose your enquiry type.
+ml,te :: Share the details that matter.
+ml,te :: Receive a personal reply within business hours.
+ml,te :: Private, secure, and read by a real AJR team member.
+ml,te :: Direct Contact Information
+ml,te,hi :: Wholesale & Bulk Orders
+ml,te :: Custom corporate gifts and retail partnerships.
+ml,te,hi :: Flagship Studio
+ml,te :: Human Support Promise
+ml,te :: LIVE ENQUIRY
+ml,te :: How can we help?
+ml,te :: Sent directly to our team
+ml,te :: Message Received!
+ml,te :: Thank you for reaching out. A real person is reviewing your inquiry — we will be in touch within 1 working day.
+ml,te :: Send Inquiry
+ml,te :: © 2026 AJR Essence of Nature. All rights reserved.
+ml,te :: Cost Estimator
+ml,te :: 1. Choose Gift Box Style
+ml,te :: 2. Select Order Quantity:
+ml,te :: 10 units
+ml,te :: 50 units (10% OFF)
+ml,te :: 100 units (15% OFF)
+ml,te :: 250+ units (20% OFF)
+ml,te :: 3. Select Custom Branding Add-ons
+ml,te :: Instant Quote Estimate
+ml,te :: Base Tier Price
+ml,te :: Selected Add-ons
+ml,te :: Volume Discount
+ml,te :: Effective Cost per Unit
+ml,te :: Interactive Hamper Studio
+ml,te,hi :: Build Your Custom
+ml,te :: Pick up to 4 premium dry fruits, choose your pack size, and select signature packaging.
+ml,te,hi :: Step 1
+ml,te :: Select 2 to 4 Dry Fruits & Nuts
+ml,te,hi :: Step 2
+ml,te :: Choose Pack Quantity
+ml,te,hi :: Step 3
+ml,te :: Select Packaging Finish
+ml,te :: Your Signature Creation
+ml,te,hi :: Custom Harvest Hamper
+ml,te :: Custom Box Subtotal
+ml,te :: Summary
+ml,te :: Quality Benchmark
+ml,te :: Generic Market Brands
+ml,te :: 100% Taste & Freshness Money-Back Guarantee
+ml,te :: Virudhunagar Flagship
+ml,te :: Studio & Tasting Counter
+ml,te :: Complimentary Saffron Almond Milk
+ml,te :: Find us in Virudhunagar
+ml,te :: Open the map for directions to our studio and tasting counter.

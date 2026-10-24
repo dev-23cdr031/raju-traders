@@ -1,0 +1,276 @@
+  1| Workspace
+  2| Visit your store
+  3| See the customer experience
+  4| Open navigation
+  5| Private workspace
+  6| unread
+  7| Administrator settings
+  8| Login failed. Please check your email and password.
+  9| This email is not confirmed yet. Check your email for the confirmation link.
+ 10| Login failed. Please try again.
+ 11| We source generous, delicious dry fruits and nuts that bring authentic nourishment to your daily routine. Every handful starts with careful selection at peak harvest, honest ingredients, and zero artificial processing.
+ 12| AJR Everyday Goodness campaign artwork
+ 13| for
+ 14| My
+ 15| Your orders are stored with your account. Sign in to see them.
+ 16| Loading your orders…
+ 17| Could not load your orders.
+ 18| total
+ 19| Excluding cancelled orders
+ 20| Customer inquiries
+ 21| Performance
+ 22| Revenue at a glance
+ 23| Last 12 months
+ 24| A well-stocked store
+ 25| Inventory health
+ 26| Fresh from your store
+ 27| Online and in-store orders will appear here.
+ 28| A personal touch
+ 29| orders awaiting fulfilment
+ 30| Thoughtfully managed. Naturally AJR.
+ 31| Customer Inbox
+ 32| all inquiries
+ 33| Unread
+ 34| awaiting your reply
+ 35| Read
+ 36| opened inquiries
+ 37| Mark all read
+ 38| Loading messages…
+ 39| No messages here
+ 40| Customer inquiries from the contact page will appear here instantly.
+ 41| Reply by email
+ 42| Select a message
+ 43| Choose a conversation from the list to read the full inquiry.
+ 44| Offline order
+ 45| Order
+ 46| Loading inventory…
+ 47| Inventory is empty
+ 48| Promise
+ 49| Prices are always per kg — the shop scales them to the gram size the customer picks.
+ 50| No varieties yet — every pack size will use the price above.
+ 51| AJR Essence of Nature
+ 52| Rich in healthy monounsaturated fats, dietary fiber, plant protein, and essential micronutrients.
+ 53| Mon–Sat, 9:30am–6:30pm IST
+ 54| Royal Wooden Chest
+ 55| Festive Gold Foil Box
+ 56| Eco Jute Pouch
+ 57| Card
+ 58| Netbanking
+ 59| Your
+ 60| A ceremonial opening
+ 61| Always Just Royal
+ 62| A royal harvest awaits.
+ 63| AJR Essence of Nature Studio
+ 64| Mon – Sat: 10:00 AM – 7:00 PM IST
+ 65| Served daily 11:30 AM – 5:00 PM
+ 66| AJR store workspace
+ 67| Rooted in good things
+ 68| A little care.
+ 69| A flourishing
+ 70| business.
+ 71| Your products, your people, your progress.
+ 72| A thoughtful space to bring it all together.
+ 73| THE AJR WORKSPACE
+ 74| Made for everyday growth.
+ 75| Your store, thoughtfully managed
+ 76| Sign in with your administrator account to tend to your store.
+ 77| Enter your password
+ 78| Back to the store
+ 79| Continue your healthy snacking journey with premium farm-picked dry fruits, wellness blends, and thoughtful gifting.
+ 80| Fresh sourcing • Small batch roasting
+ 81| Member Login
+ 82| Sign in to manage your orders and nutrition preferences.
+ 83| Please wait...
+ 84| or
+ 85| New to AJR?
+ 86| Create an account
+ 87| Harvest · 100% Organic
+ 88| Goodness worth sharing.
+ 89| Goodness
+ 90| worth sharing.
+ 91| Handpicked California almonds, jumbo golden cashews, Medjool dates and Kashmiri walnuts — curated for daily wellness and royal gifting.
+ 92| Good food is
+ 93| always
+ 94| Customer Voices
+ 95| Loved by
+ 96| good company.
+ 97| 4.95 / 5 Average Rating (1,400+ Reviews)
+ 98| AJR support library
+ 99| Questions,
+100| answered.
+101| Everything you might wonder before your first handful arrives.
+102| Need a hand choosing, gifting, or ordering in bulk?
+103| Write to us
+104| Find your answer
+105| common questions
+106| Search AJR frequently asked questions
+107| Search questions (e.g. freshness, organic, bulk)...
+108| Clear FAQ search
+109| No answers match that search just yet.
+110| Ask the AJR team
+111| Still curious?
+112| Our people love a thoughtful question.
+113| Talk to us
+114| Remove item
+115| Add to wishlist
+116| Variety
+117| From
+118| Add
+119| Find your
+120| everyday
+121| superfoods.
+122| 100% natural, Grade A almonds, cashews, walnuts, dates, and festive hampers packed for peak freshness.
+123| Directly sourced · Packed in small batches
+124| Search the collection
+125| Clear product search
+126| in
+127| Sort products
+128| Product results
+129| AJR / NATURAL HARVEST
+130| verified reviews
+131| Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.
+132| Essence of nature.
+133| Pure dry fruits, nuts, and handcrafted hampers made for everyday living.
+134| Our Story
+135| Shop All
+136| Contact Us
+137| Join the table for private harvest releases.
+138| Crafted with intention & care
+139| Privacy · Terms
+140| Join our community for better nutrition, curated product selections, pantry planning, and beautiful seasonal harvest gifts.
+141| Member savings • Gift collections
+142| Healthy habits start here
+143| Sign up
+144| Build your wellness pantry and save your favorites.
+145| Creating account...
+146| What is your health focus today? Pick a goal to discover nutrients tailored to your body.
+147| Today's ritual
+148| View Details
+149| Checking session…
+150| Skip to workspace
+151| STORE WORKSPACE
+152| Admin
+153| A little overview. A bigger picture.
+154| Good things are
+155| Welcome back. Here’s how your store is doing.
+156| Total revenue
+157| Total orders
+158| Updating your store overview…
+159| Gathering your sales…
+160| Online sales
+161| Offline sales
+162| Pending fulfilments
+163| Workspace access
+164| Signed-in administrator
+165| Administrator access list
+166| Order detail
+167| Customer:
+168| Channel:
+169| Items:
+170| Status:
+171| A sale from your store
+172| Add Offline Order
+173| Customer name *
+174| Email (optional)
+175| Product sold *
+176| Select a shop product…
+177| Paid
+178| Note (optional)
+179| Product name *
+180| Type / category
+181| Price per kg (₹) *
+182| Pack sizes in the gram dropdown
+183| Varieties (price per kg)
+184| Description
+185| Product image
+186| Stock
+187| Status
+188| Origin
+189| Nutrients (comma separated)
+190| Show this product in the shop
+191| From Grove to Table
+192| finds you.
+193| Culinary Inspiration
+194| Simple ways to enjoy everyday superfoods
+195| Stay Connected
+196| First taste of something good.
+197| 01 / Heritage
+198| The AJR Founding Story
+199| There is magic in an honest handful.
+200| “The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”
+201| — The AJR Family Table
+202| Uncompromising Standards
+203| 6 Purity Commitments
+204| From harvest selection to eco packaging, we keep our standards non-negotiable.
+205| Our Sourcing Journey
+206| The Family Table
+207| Founded in Virudhunagar, Tamil Nadu with a simple commitment to source clean, unbleached California almonds and dates for friends & family.
+208| Kashmir & Iran Direct
+209| Partnered with Shopian walnut growers and Kerman pistachio orchards for direct single-origin harvest imports.
+210| Zero-Plastic Initiative
+211| Eliminated single-use plastics by introducing woven jute pouches, reusable glass jars, and laser-engraved wooden boxes.
+212| 28,000+ Happy Homes
+213| Now delivering fresh harvest dry fruits and custom festive hampers to over 28,000 households across India.
+214| Master Taster Guarantee
+215| “If it isn't crisp, sweet, and pure, it never leaves our door.”
+216| Bring Goodness Home
+217| to hear from you.
+218| A personal reply, never an automated queue.
+219| WhatsApp Support
+220| Instant support for order tracking, gift guidance & quick recommendations.
+221| Email Desk
+222| For custom hampers, corporate gifting decks, and retail wholesale inquiries.
+223| Studio Call Desk
+224| Prefer a human voice? Call our Virudhunagar flagship studio directly.
+225| AJR Live Enquiry Desk
+226| Tell us what
+227| Choose your enquiry type.
+228| Share the details that matter.
+229| Receive a personal reply within business hours.
+230| Private, secure, and read by a real AJR team member.
+231| Direct Contact Information
+232| Wholesale & Bulk Orders
+233| Custom corporate gifts and retail partnerships.
+234| Flagship Studio
+235| Human Support Promise
+236| LIVE ENQUIRY
+237| How can we help?
+238| Sent directly to our team
+239| Message Received!
+240| Thank you for reaching out. A real person is reviewing your inquiry — we will be in touch within 1 working day.
+241| Send Inquiry
+242| © 2026 AJR Essence of Nature. All rights reserved.
+243| Cost Estimator
+244| 1. Choose Gift Box Style
+245| 2. Select Order Quantity:
+246| 10 units
+247| 50 units (10% OFF)
+248| 100 units (15% OFF)
+249| 250+ units (20% OFF)
+250| 3. Select Custom Branding Add-ons
+251| Instant Quote Estimate
+252| Base Tier Price
+253| Selected Add-ons
+254| Volume Discount
+255| Effective Cost per Unit
+256| Interactive Hamper Studio
+257| Build Your Custom
+258| Pick up to 4 premium dry fruits, choose your pack size, and select signature packaging.
+259| Step 1
+260| Select 2 to 4 Dry Fruits & Nuts
+261| Step 2
+262| Choose Pack Quantity
+263| Step 3
+264| Select Packaging Finish
+265| Your Signature Creation
+266| Custom Harvest Hamper
+267| Custom Box Subtotal
+268| Summary
+269| Quality Benchmark
+270| Generic Market Brands
+271| 100% Taste & Freshness Money-Back Guarantee
+272| Virudhunagar Flagship
+273| Studio & Tasting Counter
+274| Complimentary Saffron Almond Milk
+275| Find us in Virudhunagar
+276| Open the map for directions to our studio and tasting counter.

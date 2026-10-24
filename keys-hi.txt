@@ -1,0 +1,272 @@
+0. AJR Everyday Goodness campaign artwork
+1. Excluding cancelled orders
+2. Customer inquiries
+3. Performance
+4. Revenue at a glance
+5. Last 12 months
+6. A well-stocked store
+7. Inventory health
+8. Fresh from your store
+9. Online and in-store orders will appear here.
+10. A personal touch
+11. orders awaiting fulfilment
+12. Thoughtfully managed. Naturally AJR.
+13. Customer Inbox
+14. all inquiries
+15. Unread
+16. awaiting your reply
+17. Read
+18. opened inquiries
+19. Mark all read
+20. Loading messages…
+21. No messages here
+22. Customer inquiries from the contact page will appear here instantly.
+23. Reply by email
+24. Select a message
+25. Choose a conversation from the list to read the full inquiry.
+26. Offline order
+27. Order
+28. Loading inventory…
+29. Inventory is empty
+30. Promise
+31. Prices are always per kg — the shop scales them to the gram size the customer picks.
+32. No varieties yet — every pack size will use the price above.
+33. AJR Essence of Nature
+34. Rich in healthy monounsaturated fats, dietary fiber, plant protein, and essential micronutrients.
+35. Mon–Sat, 9:30am–6:30pm IST
+36. Royal Wooden Chest
+37. Eco Jute Pouch
+38. Card
+39. Netbanking
+40. Your
+41. A ceremonial opening
+42. Always Just Royal
+43. A royal harvest awaits.
+44. AJR Essence of Nature Studio
+45. Mon – Sat: 10:00 AM – 7:00 PM IST
+46. Served daily 11:30 AM – 5:00 PM
+47. Mangalore, India
+48. Kerman, Iran
+49. Kashmir, India
+50. Wisconsin, USA
+51. New Zealand
+52. Ladakh, India
+53. Kandahar, Afghanistan
+54. Nashik, India
+55. Saudi Arabia
+56. Kerala, India
+57. Ratnagiri, India
+58. Maharashtra, India
+59. Turkey
+60. Bolivia
+61. Madhya Pradesh, India
+62. Austria
+63. Karnataka, India
+64. Rajasthan, India
+65. Gujarat, India
+66. Tamil Nadu, India
+67. Sri Lanka
+68. Vitamin E
+69. Plant Protein
+70. Magnesium
+71. Healthy Fats
+72. Zinc
+73. Copper
+74. Lutein
+75. Potassium
+76. Omega-3 (ALA)
+77. Polyphenols
+78. B-Vitamins
+79. Vitamin A
+80. Iron
+81. Dietary Fiber
+82. Calcium
+83. Natural Fiber
+84. Vitamin K
+85. Manganese
+86. Bromelain
+87. Folate
+88. Anthocyanins
+89. Lignans
+90. Selenium
+91. Omega-3
+92. Cooling
+93. Plant Based
+94. Whole Spice
+95. Fresh Aroma
+96. Kitchen Essential
+97. Pungent Aroma
+98. Warm Aroma
+99. Festive Essential
+100. Sweet Aroma
+101. Baking Essential
+102. Tea Essential
+103. Chai Essential
+104. Pantry Essential
+105. Masala Essential
+106. Earthy Aroma
+107. Herbal Aroma
+108. Biryani Essential
+109. Bold Aroma
+110. Robust Aroma
+111. Tempering Essential
+112. Toasty Aroma
+113. Whole California almonds — plain, blanched or dry-roasted — with a clean, buttery crunch.
+114. Creamy whole cashews in W180, W240, W320 and split grades, roasted to order.
+115. Premium pistachios with a vivid green kernel and exceptional crunch — salted or plain.
+116. Hand-broken snow-white walnut halves with zero bitterness and a naturally buttery bite — Kashmiri and Chilean grades.
+117. Plump dried cranberries with a bright, tangy bite — perfect for snacking and bakes.
+118. Tangy-sweet dried kiwi slices, slow-dried to keep their vivid colour and vitamin C.
+119. Soft, naturally sweet sun-dried apricot halves with a rich golden flavour.
+120. Naturally sun-dried figs with a sweet chew and crunchy seeds — regular and bold grades.
+121. Plump, naturally sun-dried raisins — golden Narthol and sweet black — in clean, seedless clusters.
+122. Naturally sweet dates — wet, deseeded, Mebroom and Medjool — soft, caramel-like and full of fiber.
+123. Soft, naturally sweet dried plums with a deep caramel bite — a rich source of fibre and potassium for everyday gut-friendly snacking.
+124. Golden rings of sun-ripened pineapple, slow-dried to a chewy, tangy-sweet bite with zero added sugar.
+125. Alphonso mango slices dried at low heat to keep their vivid colour and rich, honeyed tropical flavour.
+126. Whole strawberries dried to an intense sweet-tart chew, packed with antioxidants and natural fruit sugars.
+127. Deep ruby dried cherries with a bold sweet-tart punch, perfect for desserts, granola and cheese boards.
+128. Omega-3 rich chia seeds that gel beautifully in water, ideal for puddings, smoothies and everyday fibre.
+129. Cold-cleaned flax seeds with a nutty finish, a plant-based powerhouse of ALA omega-3 and lignans.
+130. Plump, hulled pumpkin seeds (pepitas) with a buttery crunch and a generous dose of magnesium and zinc.
+131. Jumbo sunflower kernels, lightly roasted for a mellow nutty flavour and a satisfying everyday crunch.
+132. Hand-sorted watermelon seeds with a delicate, mildly sweet kernel, a traditional source of iron and protein.
+133. Hulled white sesame seeds with a clean, delicately nutty taste, rich in calcium and healthy fats.
+134. Bold black sesame seeds with a deep roasted aroma, prized in Asian cooking and traditional wellness.
+135. Sabja basil seeds that swell into a cooling gel in seconds, a natural way to stay hydrated and refreshed.
+136. Creamy white poppy seeds with a gentle nutty sweetness, a classic finish for curries, bakes and breads.
+137. Creamy muskmelon seed kernels, hand-sorted and hulled, for a mild, milky crunch in snacks and sweets.
+138. Pale cucumber seed kernels with a soft, nutty bite — a cooling traditional snack in regular and bold grades.
+139. Garden cress (halim/aliv) seeds that swell into a gel, traditionally eaten for iron and everyday strength.
+140. Amber almond gum crystals that bloom into a cooling jelly — the classic badam pisin for summer drinks.
+141. Clean, aromatic white peppercorns with a bright, gentle heat for creamy sauces, soups and delicate curries.
+142. Bold, sun-dried black peppercorns in small, medium and bold grades, selected for deep aroma and warmth.
+143. Delicate amber mace blades with a warm, floral character for biryanis, pulaos and festive dishes.
+144. Whole nutmeg with a sweet, woody fragrance that adds depth to bakes, desserts and savoury dishes.
+145. Beautiful whole star anise with a naturally sweet licorice note for teas, broths and spice blends.
+146. Robust cassia bark with a warm, sweet-spiced profile for chai, curries, rice dishes and desserts.
+147. Fragrant cinnamon quills with a mellow sweetness, ready for chai, baking and slow-cooked recipes.
+148. Plump whole cloves with an intense, warming aroma for masalas, curries, chai and festive bakes.
+149. Vibrant green cardamom pods with a sweet, cooling fragrance — 7 mm bold and 8 mm jumbo grades.
+150. Kalpasi stone flower with a deep, earthy-woodsy aroma — the secret note in Chettinad and Kolhapuri masalas.
+151. Dried birinji leaves with a warm, herbal fragrance, used whole to perfume biryanis, pulaos and kurmas.
+152. Fragrant whole ajwain with its signature warm, thyme-like aroma for breads, snacks and everyday tempering.
+153. Clean nigella seeds with a lightly peppery, onion-like flavour for pickles, breads and vegetable dishes.
+154. Whole mustard seeds with a sharp, earthy character for tempering, pickles, curries and homemade sauces.
+155. Golden fenugreek seeds with a pleasantly bitter, maple-like note for curries, pickles and spice blends.
+156. Sweet, bright green fennel seeds selected for a refreshing finish in teas, desserts and savoury cooking.
+157. Aromatic whole cumin with a warm, earthy flavour for curries, dals, rice and everyday masala blends.
+158. AJR store workspace
+159. Loved by
+160. good company.
+161. 4.95 / 5 Average Rating (1,400+ Reviews)
+162. AJR support library
+163. Questions,
+164. answered.
+165. common questions
+166. Our people love a thoughtful question.
+167. Remove item
+168. AJR / NATURAL HARVEST
+169. verified reviews
+170. Store in a cool, dry place in an airtight container. Refrigeration after opening extends crunch up to 9 months.
+171. Today's ritual
+172. Workspace access
+173. Channel:
+174. A sale from your store
+175. Email (optional)
+176. Origin
+177. Nutrients (comma separated)
+178. Stay Connected
+179. “The finest things in life are often the simplest: good ingredients, good company, and time to enjoy both.”
+180. — The AJR Family Table
+181. Kashmir & Iran Direct
+182. 28,000+ Happy Homes
+183. “If it isn't crisp, sweet, and pure, it never leaves our door.”
+184. Wholesale & Bulk Orders
+185. Flagship Studio
+186. Build Your Custom
+187. Step 1
+188. Step 2
+189. Step 3
+190. Custom Harvest Hamper
+191. Dried Blueberries
+192. Dried Cranberries
+193. Dried Kiwi
+194. Dried Apricots
+195. Premium Dried Prunes
+196. Dried Pineapple
+197. Dried Mango
+198. Dried Strawberry
+199. Dried Cherry
+200. Premium Chia Seeds
+201. Golden Flax Seeds
+202. Green Pumpkin Seeds
+203. Sunflower Seeds
+204. Watermelon Seeds
+205. White Sesame Seeds
+206. Black Sesame Seeds
+207. Basil Seeds (Sabja)
+208. Poppy Seeds
+209. Melon Seeds
+210. Cucumber Seeds
+211. Halim Seeds
+212. Almond Gum (Badam Pisin)
+213. White Pepper
+214. Black Pepper
+215. Mace
+216. Nutmeg
+217. Star Anise
+218. Cassia
+219. Cinnamon
+220. Cloves
+221. Cardamom
+222. Stone Flower (Dagad Phool)
+223. Birinji Leaves
+224. Carom (Ajwain)
+225. Nigella (Kalonji)
+226. Mustard
+227. Fenugreek
+228. Fennel Seeds
+229. Cumin (Jeera)
+230. California, USA
+231. Protein
+232. Antioxidants
+233. Vitamin C
+234. Fiber
+235. Blanched Almonds
+236. Roasted Almonds
+237. Cashew W180
+238. Cashew W240
+239. Cashew W320
+240. Cashew Jumbo Splits
+241. Cashew Splits
+242. Roasted Cashews
+243. Chilli Cashews
+244. Pepper Cashews
+245. Salted Cashews
+246. BBQ Cashews
+247. Chilli Garlic Cashews
+248. Cheese Cashews
+249. Tangy Tomato Cashews
+250. Mint Cashews
+251. Peri Peri Cashews
+252. Salted Pistachios
+253. Plain Pistachios
+254. Kashmiri Walnut
+255. Chilean Walnut
+256. Figs Bold
+257. Narthol Raisins
+258. Black Raisins
+259. Wet Dates
+260. Deseeded Wet Dates
+261. Mebroom Dates
+262. Medjool Dates
+263. Sabja Seeds
+264. Cucumber Seeds Bold
+265. Pepper Small
+266. Pepper Medium
+267. Pepper Bold
+268. Cardamom 7mm (Bold)
+269. Cardamom 8mm (Jumbo)
+270. Stone Flower
+271. Sweet-tart whole dried blueberries packed with antioxidants and natural fruit sugars.
