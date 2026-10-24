@@ -7276,6 +7276,33 @@ html[lang='ta'] .home-tight .testimonial figcaption { font-size: 12px; }
   html[lang='ta'] .home-tight .faq-layout h2 em { display: inline; }
 }
 
+/* Keep the cart count attached to the bag glyph inside the 44px mobile tap target. */
+.site-header .cart-header-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.site-header .cart-header-button .cart-count-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 1;
+  display: grid;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--forest);
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* Malayalam uses different glyph and line-height metrics from the Latin display face. */
 html[lang='ml'] *,
 html[lang='ml'] *::before,
@@ -7621,5 +7648,668 @@ html[lang='te'] .ajr-ribbon-brand {
     width: 100%;
     justify-content: center;
     white-space: normal;
+  }
+}
+
+/* ---------- Contact page: responsive layout safeguards ---------- */
+/* Keep the visual treatment contained by its own sections, rather than
+   clipping the entire page. This lets translated copy and form controls grow
+   naturally at smaller widths. */
+.contact-page { overflow: visible; }
+
+.contact-page .contact-hero,
+.contact-page .quick-grid,
+.contact-page .studio-location-container,
+.contact-page .corporate-estimator-container,
+.contact-page .live-enquiry-section,
+.contact-page .studio-card-grid,
+.contact-page .estimator-grid,
+.contact-page .studio-info-card,
+.contact-page .studio-visual-card,
+.contact-page .estimator-controls,
+.contact-page .estimator-summary-card,
+.contact-page .live-enquiry-intro,
+.contact-page .live-enquiry-content,
+.contact-page .contact-form-wrapper,
+.contact-page .contact-form,
+.contact-page .control-block,
+.contact-page .tier-btn,
+.contact-page .addon-btn,
+.contact-page .calc-row,
+.contact-page .shipping-tag {
+  min-width: 0;
+}
+
+.contact-page .studio-location-container .section-head,
+.contact-page .corporate-estimator-container .section-head {
+  gap: clamp(20px, 4vw, 66px);
+}
+
+.contact-page .studio-info-card h3,
+.contact-page .estimator-summary-card h3,
+.contact-page .live-enquiry-panel-head h3,
+.contact-page .quick-card h3 {
+  overflow-wrap: anywhere;
+}
+
+.contact-page .studio-address,
+.contact-page .visual-overlay > div,
+.contact-page .tier-desc,
+.contact-page .live-enquiry-copy,
+.contact-page .live-enquiry-note,
+.contact-page .form-note {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Tablet: convert the wider editorial columns into a deliberate vertical
+   sequence before their controls become cramped. */
+@media (max-width: 1180px) {
+  .contact-page .studio-location-container,
+  .contact-page .corporate-estimator-container {
+    padding-block: clamp(68px, 8vw, 84px);
+  }
+
+  .contact-page .studio-card-grid,
+  .contact-page .estimator-grid,
+  .contact-page .live-enquiry-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contact-page .studio-card-grid,
+  .contact-page .estimator-grid {
+    gap: clamp(24px, 4vw, 34px);
+  }
+
+  .contact-page .studio-visual-card {
+    min-height: 390px;
+    height: min(56vw, 520px);
+  }
+
+  .contact-page .estimator-summary-card {
+    max-width: 760px;
+  }
+
+  .contact-page .live-enquiry-section {
+    gap: clamp(32px, 5vw, 48px);
+  }
+
+  .contact-page .live-enquiry-intro {
+    min-height: 0;
+    gap: 26px;
+  }
+}
+
+/* Medium widths retain useful estimator density without sacrificing the
+   full-width cards and form fields. */
+@media (min-width: 601px) and (max-width: 800px) {
+  .contact-page .contact-hero {
+    padding-block: 72px 78px;
+  }
+
+  .contact-page .tier-selector-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .contact-page .tier-btn {
+    min-height: 88px;
+    padding-inline: 9px;
+  }
+
+  .contact-page .contact-form .flex {
+    flex-wrap: wrap;
+  }
+
+  .contact-page .contact-form .flex > label {
+    min-width: min(240px, 100%);
+  }
+}
+
+@media (max-width: 800px) {
+  .contact-page .quick-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 5vw;
+  }
+
+  .contact-page .quick-card,
+  .contact-page .quick-card:nth-child(2) {
+    margin-top: 0;
+  }
+
+  .contact-page .studio-location-container .section-head,
+  .contact-page .corporate-estimator-container .section-head {
+    align-items: flex-start;
+  }
+
+  .contact-page .section-intro {
+    max-width: 540px;
+  }
+
+  .contact-page .contact-form .flex {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .contact-page .contact-hero {
+    min-height: 0;
+    padding: 58px 5vw 62px;
+  }
+
+  .contact-page .contact-hero h1 {
+    max-width: 100%;
+    font-size: clamp(40px, 11.3vw, 56px);
+    line-height: 1.12;
+  }
+
+  .contact-page .contact-hero > p:not(.eyebrow, .contact-hero-assurance) {
+    max-width: 34rem;
+    margin-top: 22px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .contact-page .contact-chips {
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .contact-page .chip {
+    min-height: 40px;
+    padding-inline: 11px;
+  }
+
+  .contact-page .contact-hero-assurance {
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+
+  .contact-desk-mark { display: none; }
+  .contact-orbit-one { right: -86vw; top: -44vw; }
+  .contact-stem-two { right: -8vw; bottom: -78px; }
+
+  .contact-page .quick-grid {
+    gap: 16px;
+    padding-block: 48px;
+  }
+
+  .contact-page .quick-card {
+    min-height: 0;
+    padding: 25px 21px 24px;
+  }
+
+  .contact-page .studio-location-container,
+  .contact-page .corporate-estimator-container {
+    padding: 52px 5vw;
+  }
+
+  .contact-page .studio-card-grid,
+  .contact-page .estimator-grid {
+    margin-top: 27px;
+    gap: 20px;
+  }
+
+  .contact-page .studio-info-card,
+  .contact-page .estimator-controls,
+  .contact-page .estimator-summary-card {
+    padding: 24px 18px;
+  }
+
+  .contact-page .studio-info-card h3 {
+    font-size: clamp(25px, 7vw, 31px);
+    line-height: 1.28;
+  }
+
+  .contact-page .studio-status-row {
+    align-items: flex-start;
+  }
+
+  .contact-page .status-badge,
+  .contact-page .city-tag {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.45;
+  }
+
+  .contact-page .studio-address {
+    line-height: 1.6;
+  }
+
+  .contact-page .studio-features-list {
+    gap: 8px;
+  }
+
+  .contact-page .studio-features-list span {
+    align-items: flex-start;
+    max-width: 100%;
+    line-height: 1.45;
+  }
+
+  .contact-page .studio-actions-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contact-page .studio-actions-row .button {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .contact-page .studio-visual-card {
+    min-height: 340px;
+    height: 72vw;
+    max-height: 430px;
+  }
+
+  .contact-page .visual-overlay {
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .contact-page .visual-overlay p { line-height: 1.45; }
+
+  .contact-page .estimator-controls { gap: 24px; }
+  .contact-page .tier-selector-grid { grid-template-columns: minmax(0, 1fr); }
+  .contact-page .tier-btn { min-height: 62px; }
+
+  .contact-page .control-block > .flex {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .contact-page .block-label,
+  .contact-page .discount-pill {
+    max-width: 100%;
+    line-height: 1.45;
+    white-space: normal;
+  }
+
+  .contact-page .slider-ticks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 14px;
+    margin-top: 12px;
+    line-height: 1.4;
+  }
+
+  .contact-page .slider-ticks span:nth-child(even) { text-align: right; }
+
+  .contact-page .addon-btn {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px 12px;
+    text-align: left;
+  }
+
+  .contact-page .addon-btn > div {
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .contact-page .addon-btn .text-xs {
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .contact-page .estimator-summary-card h3 {
+    font-size: clamp(25px, 7vw, 31px);
+    line-height: 1.28;
+  }
+
+  .contact-page .calc-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    line-height: 1.5;
+  }
+
+  .contact-page .calc-row > :last-child { margin-left: auto; text-align: right; }
+  .contact-page .shipping-tag { align-items: flex-start; line-height: 1.45; }
+  .contact-page .estimator-summary-card .button { min-height: 50px; white-space: normal; line-height: 1.45; }
+
+  .contact-page .live-enquiry-section {
+    gap: 26px;
+    padding: 56px 5vw;
+  }
+
+  .contact-page .live-enquiry-section::before { right: 8vw; width: 105px; height: 105px; box-shadow: 0 0 0 14px rgba(216, 241, 113, .22); }
+  .contact-page .live-enquiry-content { padding: 25px 19px; box-shadow: 8px 10px 0 #d9ecb6, 0 18px 36px rgba(13, 47, 30, .18); }
+  .contact-page .live-enquiry-content h2 { font-size: clamp(35px, 10vw, 46px); line-height: 1.18; }
+  .contact-page .live-enquiry-steps > div { grid-template-columns: 25px minmax(0, 1fr); gap: 9px; }
+  .contact-page .live-enquiry-steps p { line-height: 1.55; }
+  .contact-page .live-enquiry-note { align-items: flex-start; }
+
+  .contact-page .live-enquiry-section .contact-form-wrapper { padding: 24px 17px; }
+  .contact-page .live-enquiry-panel-head { gap: 9px; padding-top: 9px; padding-bottom: 15px; }
+  .contact-page .live-enquiry-panel-head h3 { font-size: clamp(25px, 7vw, 31px); line-height: 1.25; }
+  .contact-page .live-enquiry-panel-head > p { text-align: left; line-height: 1.5; }
+  .contact-page .contact-tab-switcher { gap: 6px; padding: 5px; }
+  .contact-page .contact-tab-btn { width: 100%; min-height: 46px; padding: 10px 12px; text-align: left; line-height: 1.45; }
+  .contact-page .contact-tab-btn.active { transform: none; }
+
+  .contact-page .contact-form label { margin-bottom: 21px; line-height: 1.5; }
+  .contact-page .contact-form .flex { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .contact-page .contact-form .flex > label { min-width: 0; width: 100%; }
+  .contact-page .contact-form textarea { min-height: 134px; }
+  .contact-page .contact-form .button { min-height: 52px; white-space: normal; line-height: 1.45; }
+  .contact-page .form-note { align-items: flex-start; line-height: 1.5; }
+}
+
+@media (max-width: 390px) {
+  .contact-page .contact-hero { padding-inline: 16px; }
+  .contact-page .contact-hero h1 { font-size: clamp(37px, 10.8vw, 43px); }
+  .contact-page .quick-grid,
+  .contact-page .studio-location-container,
+  .contact-page .corporate-estimator-container,
+  .contact-page .live-enquiry-section { padding-inline: 16px; }
+  .contact-page .studio-info-card,
+  .contact-page .estimator-controls,
+  .contact-page .estimator-summary-card { padding-inline: 16px; }
+  .contact-page .visual-overlay { right: 10px; bottom: 10px; left: 10px; }
+  .contact-page .live-enquiry-content { padding-inline: 17px; }
+  .contact-page .live-enquiry-section .contact-form-wrapper { padding-inline: 14px; }
+}
+
+/* Telugu needs normal script spacing and a little extra vertical room in
+   Contact controls. Do not split glyph clusters with Latin-style tracking. */
+html[lang='te'] .contact-page .contact-hero h1,
+html[lang='te'] .contact-page .studio-info-card h3,
+html[lang='te'] .contact-page .estimator-summary-card h3,
+html[lang='te'] .contact-page .live-enquiry-content h2,
+html[lang='te'] .contact-page .live-enquiry-panel-head h3 {
+  letter-spacing: normal;
+  line-height: 1.38;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+html[lang='te'] .contact-page .eyebrow,
+html[lang='te'] .contact-page .block-label,
+html[lang='te'] .contact-page .summary-badge,
+html[lang='te'] .contact-page .total-cost-box span,
+html[lang='te'] .contact-page .contact-tab-btn,
+html[lang='te'] .contact-page .contact-form label,
+html[lang='te'] .contact-page .tier-btn,
+html[lang='te'] .contact-page .addon-btn,
+html[lang='te'] .contact-page .slider-ticks,
+html[lang='te'] .contact-page .calc-row,
+html[lang='te'] .contact-page .visual-overlay,
+html[lang='te'] .contact-page .live-enquiry-steps p {
+  letter-spacing: normal;
+  line-height: 1.58;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  html[lang='te'] .contact-page .contact-hero h1 { font-size: clamp(38px, 10.5vw, 50px) !important; line-height: 1.38 !important; }
+  html[lang='te'] .contact-page .live-enquiry-content h2 { font-size: clamp(31px, 9.1vw, 42px); line-height: 1.42; }
+  html[lang='te'] .contact-page .studio-info-card h3,
+  html[lang='te'] .contact-page .estimator-summary-card h3,
+  html[lang='te'] .contact-page .live-enquiry-panel-head h3 { line-height: 1.42; }
+}
+
+/* Terminal mobile header layout: keep controls in their own grid cells so they
+   can never overlap the logo. Count badges live inside the button hit area. */
+.mobile-nav-language { display: none; }
+
+@media (max-width: 480px) {
+  .site-header {
+    display: grid;
+    grid-template-columns: 44px minmax(42px, 1fr) max-content;
+    column-gap: 6px;
+    height: 66px;
+    padding-inline: 12px;
+  }
+
+  .site-header .mobile-menu {
+    grid-column: 1;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .site-header .brand {
+    position: static;
+    grid-column: 2;
+    justify-self: center;
+    min-width: 0;
+    transform: none;
+  }
+
+  .site-header .brand img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .site-header .header-utilities {
+    grid-column: 3;
+    justify-self: end;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .site-header .header-actions {
+    display: flex;
+    gap: 0;
+  }
+
+  .site-header .header-actions > button {
+    position: relative;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .site-header .icon-badge > b,
+  .site-header .cart-header-button .cart-count-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 1;
+    display: grid;
+    width: auto;
+    min-width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0 3px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--lime);
+    color: var(--forest);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 390px) {
+  .site-header {
+    grid-template-columns: 44px minmax(42px, 1fr) max-content;
+    column-gap: 4px;
+    padding-inline: 8px;
+  }
+
+  .site-header .brand { justify-self: center; }
+  .site-header .brand img { width: 38px; height: 38px; }
+
+  /* The language picker moves to the open menu rather than squeezing the
+     brand and the three 44px utility controls into an impossible row. */
+  .site-header > .header-utilities > .shop-language-switcher { display: none; }
+  .site-header .header-actions > button:first-child { display: grid; }
+  .site-header .header-utilities { gap: 0; }
+
+  .site-header .nav .mobile-nav-language {
+    display: block;
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .site-header .nav .mobile-nav-language-switcher {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+
+  .site-header .nav .mobile-nav-language-switcher select {
+    flex: 1;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    min-height: 44px;
+  }
+}
+
+/* Keep the same icon-to-badge relationship at tablet and desktop widths. */
+.site-header .icon-badge {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.site-header .icon-badge > b,
+.site-header .cart-header-button .cart-count-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: grid;
+  width: auto;
+  min-width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0 3px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--forest);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Language picker: use one deliberate chevron rather than the browser's
+   platform-dependent arrow. This keeps the affordance inside its border even
+   when a compact header selector is showing a long Indic-language label. */
+.language-switcher {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.language-switcher select {
+  box-sizing: border-box;
+  padding-right: 26px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  text-overflow: ellipsis;
+}
+
+.language-switcher-chevron {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  z-index: 1;
+  display: block;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.language-switcher select:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+/* Product actions confirm their destination without taking over the page. The
+   header stays available as the real destination while a customer is browsing
+   a long collection. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.fly-product-token {
+  position: fixed;
+  /* Above the optional ceremonial opening overlay (z-index: 20000) as well as
+     ordinary page content, so the confirmation is never visually lost. */
+  z-index: 20001;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  object-fit: cover;
+  border: 2px solid var(--cream);
+  border-radius: 13px;
+  box-shadow: 0 10px 24px rgba(23, 59, 40, .24), 0 0 0 1px rgba(23, 59, 40, .14);
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: fly-product-to-header 575ms cubic-bezier(.18, .72, .22, 1) both;
+}
+
+@keyframes fly-product-to-header {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: .98; }
+  42% { transform: translate3d(calc(var(--flight-x) * .42), calc(var(--flight-y) * .18 - 20px), 0) scale(.92) rotate(-3deg); opacity: 1; }
+  100% { transform: translate3d(var(--flight-x), var(--flight-y), 0) scale(.56) rotate(2deg); opacity: .15; }
+}
+
+.fly-target-pulse {
+  animation: fly-target-arrival 420ms cubic-bezier(.2, .9, .25, 1);
+}
+
+@keyframes fly-target-arrival {
+  0% { transform: scale(1); }
+  48% { transform: scale(1.16); color: var(--forest); filter: drop-shadow(0 0 6px rgba(206, 237, 91, .9)); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fly-product-token,
+  .fly-target-pulse { animation: none; }
+
+  .fly-target-pulse { outline: 2px solid var(--lime); outline-offset: 2px; }
+}
+
+@media (max-width: 480px) {
+  .site-header .shop-language-switcher {
+    min-width: 68px;
+  }
+
+  .site-header .shop-language-switcher select {
+    padding: 0 27px 0 6px;
+  }
+
+  .site-header .shop-language-switcher .language-switcher-chevron {
+    right: 7px;
+    display: block;
+  }
+
+  .site-header .nav .mobile-nav-language-switcher select {
+    padding-right: 34px;
+  }
+
+  .site-header .nav .mobile-nav-language-switcher .language-switcher-chevron {
+    right: 12px;
   }
 }

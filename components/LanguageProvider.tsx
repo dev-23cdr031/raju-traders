@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Globe2 } from 'lucide-react'
+import { ChevronDown, Globe2 } from 'lucide-react'
 
 export type Language = 'en' | 'ta' | 'ml' | 'te' | 'hi'
 
@@ -1793,6 +1793,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
       <select aria-label={t('Language')} value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
         {LANGUAGE_NAMES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
       </select>
+      <ChevronDown className="language-switcher-chevron" size={15} strokeWidth={2.25} aria-hidden="true" />
     </label>
   )
 }

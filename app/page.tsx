@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   ArrowRight,
   Award,
@@ -45,6 +45,17 @@ import { PACK_SIZE_OPTIONS } from '@/lib/supabase'
 const logo = '/ajr-logo.png'
 
 type View = 'home' | 'about' | 'product' | 'contact' | 'cart' | 'wishlist' | 'detail' | 'orders'
+type FlightTarget = 'cart' | 'wishlist'
+type FlightLaunchResult = 'started' | 'skipped' | 'locked'
+type Flight = {
+  id: number
+  image: string
+  x: number
+  y: number
+  dx: number
+  dy: number
+  target: FlightTarget
+}
 export type Variety = { name: string; price: number }
 
 export type Product = {
@@ -1109,6 +1120,14 @@ export default function Page() {
   const [sent, setSent] = useState(false)
   const [catalog, setCatalog] = useState<Product[]>(fallbackProducts)
   const [stockMap, setStockMap] = useState<Record<number, { stock: number; status: string }>>({})
+  const [flight, setFlight] = useState<Flight | null>(null)
+  const [pulsingTarget, setPulsingTarget] = useState<FlightTarget | null>(null)
+  const cartTargetRef = useRef<HTMLButtonElement>(null)
+  const wishlistTargetRef = useRef<HTMLButtonElement>(null)
+  const wishlistRef = useRef<Product[]>([])
+  const flightLockRef = useRef<Set<FlightTarget>>(new Set())
+  const flightIdRef = useRef(0)
+  const pulseTimeoutRef = useRef<number | null>(null)
 
   // Signed-in customer. null = anonymous visitor.
   const [session, setSession] = useState<{
@@ -1214,6 +1233,12 @@ export default function Page() {
     return () => clearTimeout(timer)
   }, [wishlist, session, dataLoaded])
 
+  // The ref makes a rapid second press see the result of the first press before
+  // React has had a chance to schedule a render.
+  useEffect(() => {
+    wishlistRef.current = wishlist
+  }, [wishlist])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -1273,7 +1298,61 @@ export default function Page() {
     (a.selectedWeight || '250 g') === (b.selectedWeight || '250 g') &&
     (a.selectedVariety || '') === (b.selectedVariety || '')
 
-  const addToCart = (product: Product, qty = 1) => {
+  const pulseTarget = (target: FlightTarget) => {
+    if (pulseTimeoutRef.current) window.clearTimeout(pulseTimeoutRef.current)
+    setPulsingTarget(target)
+    pulseTimeoutRef.current = window.setTimeout(() => setPulsingTarget(null), 420)
+  }
+
+  const finishFlight = (target: FlightTarget) => {
+    setFlight(null)
+    flightLockRef.current.delete(target)
+    pulseTarget(target)
+  }
+
+  // Uses real, viewport-relative geometry rather than a fixed header position, so
+  // the confirmation remains accurate across the desktop and compact headers.
+  const launchFlight = (product: Product, origin: HTMLElement | null | undefined, target: FlightTarget): FlightLaunchResult => {
+    const destination = target === 'cart' ? cartTargetRef.current : wishlistTargetRef.current
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (flightLockRef.current.size > 0) {
+      return 'locked'
+    }
+    if (reduceMotion || !origin || !destination) {
+      pulseTarget(target)
+      return 'skipped'
+    }
+
+    const originRect = origin.getBoundingClientRect()
+    const targetRect = destination.getBoundingClientRect()
+    if (!originRect.width || !originRect.height || !targetRect.width || !targetRect.height) {
+      pulseTarget(target)
+      return 'skipped'
+    }
+
+    const tokenSize = 44
+    const startX = originRect.left + originRect.width / 2 - tokenSize / 2
+    const startY = originRect.top + originRect.height / 2 - tokenSize / 2
+    const endX = targetRect.left + targetRect.width / 2 - tokenSize / 2
+    const endY = targetRect.top + targetRect.height / 2 - tokenSize / 2
+    flightLockRef.current.add(target)
+    setFlight({
+      id: ++flightIdRef.current,
+      image: productWithSelectedVarietyImage(product).image,
+      x: startX,
+      y: startY,
+      dx: endX - startX,
+      dy: endY - startY,
+      target,
+    })
+    return 'started'
+  }
+
+  useEffect(() => () => {
+    if (pulseTimeoutRef.current) window.clearTimeout(pulseTimeoutRef.current)
+  }, [])
+
+  const addToCart = (product: Product, qty = 1, origin?: HTMLElement | null) => {
     const selectedProduct = productWithSelectedVarietyImage(product)
     setCart((items) => {
       const found = items.find((item) => sameVariant(item.product, selectedProduct))
@@ -1281,12 +1360,18 @@ export default function Page() {
         ? items.map((item) => (sameVariant(item.product, selectedProduct) ? { ...item, quantity: item.quantity + qty } : item))
         : [...items, { product: selectedProduct, quantity: qty }]
     })
+    return launchFlight(selectedProduct, origin, 'cart')
   }
 
-  const toggleWish = (product: Product) =>
-    setWishlist((items) =>
-      items.some((item) => item.id === product.id) ? items.filter((item) => item.id !== product.id) : [...items, product]
-    )
+  const toggleWish = (product: Product, origin?: HTMLElement | null) => {
+    const currentItems = wishlistRef.current
+    const isAdding = !currentItems.some((item) => item.id === product.id)
+    const nextItems = isAdding ? [...currentItems, product] : currentItems.filter((item) => item.id !== product.id)
+    wishlistRef.current = nextItems
+    setWishlist(nextItems)
+    // Removing a saved item is intentionally quiet; only additions fly to the heart.
+    if (isAdding) launchFlight(product, origin, 'wishlist')
+  }
 
   // Signed-in members get the account nav; visitors keep Login / Signup.
   const navItems: typeof baseNavItems = !sessionLoaded
@@ -1370,6 +1455,9 @@ export default function Page() {
               </Link>
             )
           )}
+          <div className="mobile-nav-language">
+            <LanguageSwitcher className="mobile-nav-language-switcher" />
+          </div>
         </nav>
         <div className="header-utilities">
           <LanguageSwitcher className="shop-language-switcher" />
@@ -1403,7 +1491,8 @@ export default function Page() {
             <button
               aria-label={t('Wishlist')}
               onClick={() => go('wishlist')}
-              className="icon-badge"
+              className={pulsingTarget === 'wishlist' ? 'icon-badge fly-target-pulse' : 'icon-badge'}
+              ref={wishlistTargetRef}
             >
               <Heart size={19} />
               {wishlist.length > 0 && <b>{wishlist.length}</b>}
@@ -1411,10 +1500,11 @@ export default function Page() {
             <button
               aria-label={t('Cart')}
               onClick={() => go('cart')}
-              className="icon-badge"
+              className={pulsingTarget === 'cart' ? 'icon-badge cart-header-button fly-target-pulse' : 'icon-badge cart-header-button'}
+              ref={cartTargetRef}
             >
               <ShoppingBag size={19} />
-              {cartCount > 0 && <b>{cartCount}</b>}
+              {cartCount > 0 && <b className="cart-count-badge">{cartCount}</b>}
             </button>
           </div>
         </div>
@@ -1474,6 +1564,22 @@ export default function Page() {
         <MyOrders session={session} sessionLoaded={sessionLoaded} go={go} />
       )}
       <Footer go={go} />
+      {flight && (
+        <img
+          key={flight.id}
+          className="fly-product-token"
+          src={flight.image}
+          alt=""
+          aria-hidden="true"
+          onAnimationEnd={() => finishFlight(flight.target)}
+          style={{
+            left: flight.x,
+            top: flight.y,
+            '--flight-x': `${flight.dx}px`,
+            '--flight-y': `${flight.dy}px`,
+          } as CSSProperties}
+        />
+      )}
     </div>
   )
 }
@@ -2256,8 +2362,8 @@ function ProductCard({
 }: {
   product: Product
   onSelect: (product: Product) => void
-  addToCart: (p: Product) => void
-  toggleWish: (p: Product) => void
+  addToCart: (p: Product, qty?: number, origin?: HTMLElement | null) => FlightLaunchResult
+  toggleWish: (p: Product, origin?: HTMLElement | null) => void
   wished: boolean
   outOfStock?: boolean
 }) {
@@ -2276,7 +2382,7 @@ function ProductCard({
           className={wished ? 'wish wished' : 'wish'}
           onClick={(event) => {
             event.stopPropagation()
-            toggleWish(product)
+            toggleWish(product, event.currentTarget)
           }}
           aria-label={wished ? `${t('Remove item')}: ${t(product.name)}` : `${t('Add to wishlist')}: ${t(product.name)}`}
           aria-pressed={wished}
@@ -2330,7 +2436,7 @@ function ProductCard({
           title={outOfStock ? t('Out of stock') : t('Add to bag')}
           onClick={(event) => {
             event.stopPropagation()
-            if (!outOfStock) addToCart(selectedProduct)
+            if (!outOfStock) addToCart(selectedProduct, 1, event.currentTarget)
           }}
         >
           {outOfStock ? t('Out of stock') : <>{t('Add')} <Plus size={15} aria-hidden="true" /></>}
@@ -2795,17 +2901,23 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
             <button
               className="button button-dark grow"
               disabled={outOfStock}
-              onClick={() => {
+              onClick={(event) => {
                 if (outOfStock) return
-                addToCart(weightedProduct, quantity)
-                go('cart')
+                const flightStatus = addToCart(weightedProduct, quantity, event.currentTarget)
+                // A repeated press while a confirmation is still in flight is
+                // intentionally ignored for navigation. It can never pull the
+                // customer away from the product before the first flight lands.
+                if (flightStatus === 'locked') return
+                // Keep the successful flight visible before switching views. The
+                // cart state itself is still updated synchronously above.
+                window.setTimeout(() => go('cart'), flightStatus === 'started' ? 575 : 0)
               }}
             >
               {outOfStock ? t('Out of stock') : <>{t('Add to bag')} <ShoppingBag size={17} /></>}
             </button>
             <button
               className={wished ? 'detail-wish wished' : 'detail-wish'}
-              onClick={() => toggleWish(product)}
+              onClick={(event) => toggleWish(product, event.currentTarget)}
               aria-label={t('Wishlist')}
             >
               <Heart fill={wished ? 'currentColor' : 'none'} />
