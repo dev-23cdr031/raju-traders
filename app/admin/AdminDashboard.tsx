@@ -698,9 +698,13 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
 
   const toggleStock = async (product: Product) => {
     const out = product.status === 'Out of stock' || product.stock <= 0
-    const nextStock = out ? 20 : 0
-    const nextStatus: InventoryStatus = out ? 'In stock' : 'Out of stock'
+    // When coming back in stock, keep existing quantity if any, else set a minimum of 1
+    const nextStock = out ? 0 : (product.stock > 0 ? product.stock : 1)
+    const nextStatus: InventoryStatus = out ? 'Out of stock' : 'In stock'
+
+    // Optimistic UI update
     setProducts(products.map((p) => (p.id === product.id ? { ...p, stock: nextStock, status: nextStatus } : p)))
+
     try {
       const res = await fetch(`/api/products/${product.id}`, {
         method: 'PATCH',
@@ -708,8 +712,12 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
         body: JSON.stringify({ stock: nextStock, status: nextStatus }),
       })
       if (!res.ok) throw new Error('Sync failed')
+      // Re-fetch to guarantee local state matches the database
+      await loadProducts()
     } catch {
-      alert('Stock changed locally. Run supabase/schema.sql to sync with shop.')
+      // Revert optimistic update on failure
+      setProducts(products.map((p) => (p.id === product.id ? { ...p, stock: out ? product.stock : 0, status: out ? 'In stock' : 'Out of stock' } : p)))
+      alert('Failed to update stock in database. Please try again.')
     }
   }
 
@@ -1273,7 +1281,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
                     <div className="product-admin-info"><strong>{product.name}</strong><span>{product.category} · ₹{product.varieties?.[0]?.price ?? product.price * 4}/kg</span><span>{product.varieties?.length ? `Varieties: ${product.varieties.map((variety) => variety.name).join(', ')}` : 'Standard variety'} · Packs: {product.packSizes?.length ? product.packSizes.join(', ') : 'Shop defaults'}</span><span>{product.origin || 'India'}{product.detail ? ` · ${product.detail}` : ''}{product.nutrients?.length ? ` · ${product.nutrients.join(', ')}` : ''}</span></div>
                     <span className={`stock-status ${product.status.toLowerCase().replace(/\s/g, '-')}`}>{product.status}</span>
                     <span className={`product-visibility ${product.active === false ? 'hidden' : 'visible'}`}>{product.active === false ? 'Hidden from shop' : 'Visible in shop'}</span>
-                    <div className="product-admin-actions"><button className="icon-button small" title={product.active === false ? 'Show in shop' : 'Hide from shop'} aria-label={product.active === false ? 'Show in shop' : 'Hide from shop'} onClick={() => toggleProductVisibility(product)}>{product.active === false ? <Eye size={15} /> : <EyeOff size={15} />}</button><button className="button button-light small-button" onClick={() => openEditProduct(product)}>Edit</button><button className="icon-button small" title="Delete product" onClick={() => deleteProduct(product)}><Trash2 size={15} /></button></div>
+                    <div className="product-admin-actions"><button className="icon-button small" title={product.active === false ? 'Show in shop' : 'Hide from shop'} aria-label={product.active === false ? 'Show in shop' : 'Hide from shop'} onClick={() => toggleProductVisibility(product)}>{product.active === false ? <Eye size={15} /> : <EyeOff size={15} />}</button><button className="icon-button small stock-toggle" title={product.status === 'Out of stock' ? 'Mark in stock' : 'Mark out of stock'} aria-label={product.status === 'Out of stock' ? 'Mark in stock' : 'Mark out of stock'} onClick={() => toggleStock(product)}>{product.status === 'Out of stock' ? <CheckCircle size={14} /> : <Archive size={14} />}</button><button className="button button-light small-button" onClick={() => openEditProduct(product)}>Edit</button><button className="icon-button small" title="Delete product" onClick={() => deleteProduct(product)}><Trash2 size={15} /></button></div>
                   </article>
                 ))}
               </div>
