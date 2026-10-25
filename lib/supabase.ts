@@ -15,6 +15,8 @@ const cleanSupabaseUrl = rawSupabaseUrl
       .replace(/\/auth\/v1.*$/, '')            // strip /auth/v1 and anything after
   : ''
 
+export { cleanSupabaseUrl }
+
 if (!cleanSupabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase env vars missing: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }

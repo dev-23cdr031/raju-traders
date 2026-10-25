@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cleanSupabaseUrl } from '@/lib/supabase'
 
 // Supabase's built-in mailer is rate limited, and with "Confirm email" turned on
 // every signup needs an email round-trip. Translate the provider wording into
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Please provide a valid email and a 6-character password.' }, { status: 400 })
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const url = cleanSupabaseUrl
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
     if (!url || !anonKey) {

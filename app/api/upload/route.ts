@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/supabase'
+import { cleanSupabaseUrl, requireAdmin } from '@/lib/supabase'
 
 const BUCKET = 'product-images'
 const MAX_BYTES = 5 * 1024 * 1024
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const gate = await requireAdmin(request)
   if ('response' in gate) return gate.response
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const url = cleanSupabaseUrl
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     if (!url || !serviceKey) {
       return NextResponse.json({ message: 'Supabase environment is not configured.' }, { status: 500 })

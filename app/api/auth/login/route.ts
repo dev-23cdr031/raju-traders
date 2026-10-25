@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cleanSupabaseUrl } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 })
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const url = cleanSupabaseUrl
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
     if (!url || !anonKey) {
