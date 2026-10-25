@@ -1,14 +1,26 @@
 import { createClient as createServerClient, createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Sanitize the Supabase base URL so a misconfigured env var (e.g. one that
+// accidentally includes /rest/v1, /auth/v1, or a trailing slash) does not
+// cause the SDK to build duplicated paths like
+// https://project.supabase.co/rest/v1/auth/v1/token — which Supabase rejects
+// with "Invalid path specified in request URL".
+const cleanSupabaseUrl = rawSupabaseUrl
+  ? rawSupabaseUrl
+      .replace(/\/+$/, '')                     // strip trailing slashes
+      .replace(/\/rest\/v1.*$/, '')            // strip /rest/v1 and anything after
+      .replace(/\/auth\/v1.*$/, '')            // strip /auth/v1 and anything after
+  : ''
+
+if (!cleanSupabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase env vars missing: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
 // Browser / client-side Supabase (anon key, safe to expose)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(cleanSupabaseUrl, supabaseAnonKey)
 
 // ---- Admin access control ----
 // These emails may use the admin dashboard / admin API routes.
@@ -32,10 +44,10 @@ export function isAdminEmail(email: unknown) {
 
 export function supabaseAdmin() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  if (!supabaseUrl || !serviceKey) {
+  if (!cleanSupabaseUrl || !serviceKey) {
     throw new Error('Supabase server env vars missing (URL or SERVICE_ROLE_KEY).')
   }
-  return createServerClient(supabaseUrl, serviceKey, {
+  return createServerClient(cleanSupabaseUrl, serviceKey, {
     auth: { persistSession: false },
   })
 }
