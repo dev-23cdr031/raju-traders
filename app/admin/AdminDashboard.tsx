@@ -19,7 +19,6 @@ import {
 } from '@/lib/supabase'
 import {
   AlertCircle,
-  Archive,
   ArrowRight,
   ArrowUpRight,
   BarChart3,
@@ -77,6 +76,52 @@ type Product = {
   // Gram options offered for this product. Empty = shop defaults for the category.
   packSizes?: string[]
   active?: boolean
+}
+
+type StockFeedback = {
+  tone: 'pending' | 'success' | 'error'
+  message: string
+}
+
+const isAvailableForSale = (product: Product) => product.status !== 'Out of stock' && product.stock > 0
+
+function AvailabilitySwitch({
+  product,
+  pending,
+  feedback,
+  onToggle,
+}: {
+  product: Product
+  pending: boolean
+  feedback?: StockFeedback
+  onToggle: (product: Product) => void
+}) {
+  const available = isAvailableForSale(product)
+  const stateLabel = available ? 'In stock' : 'Out of stock'
+  const quantityLabel = product.status === 'Low stock'
+    ? `Low stock: ${product.stock} ${product.stock === 1 ? 'unit' : 'units'} remaining`
+    : `${product.stock} ${product.stock === 1 ? 'unit' : 'units'} tracked`
+
+  return (
+    <div className="availability-control">
+      <div className="availability-switch-row">
+        <button
+          type="button"
+          className={`availability-switch ${available ? 'is-on' : 'is-off'}`}
+          role="switch"
+          aria-checked={available}
+          aria-label={`${product.name}: ${stateLabel}. Activate to mark ${available ? 'out of stock' : 'in stock'}.`}
+          disabled={pending}
+          onClick={() => onToggle(product)}
+        >
+          <span className="availability-switch-thumb" aria-hidden="true" />
+        </button>
+        <span className={`availability-state ${available ? 'is-on' : 'is-off'}`}>{pending ? 'Saving…' : stateLabel}</span>
+      </div>
+      <span className="availability-quantity">{quantityLabel}</span>
+      {feedback && <span className={`availability-feedback ${feedback.tone}`} role={feedback.tone === 'error' ? 'alert' : 'status'}>{feedback.message}</span>}
+    </div>
+  )
 }
 
 type VarietyDraft = { name: string; price: string }
@@ -254,6 +299,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const [ordersError, setOrdersError] = useState('')
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [productsError, setProductsError] = useState('')
+  const [pendingStockIds, setPendingStockIds] = useState<Set<number>>(() => new Set())
+  const [stockFeedback, setStockFeedback] = useState<Record<number, StockFeedback>>({})
   const [editingId, setEditingId] = useState<number | null>(null)
   const [orderQuery, setOrderQuery] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('All')
@@ -697,13 +744,19 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   }
 
   const toggleStock = async (product: Product) => {
-    const out = product.status === 'Out of stock' || product.stock <= 0
-    // When coming back in stock, keep existing quantity if any, else set a minimum of 1
-    const nextStock = out ? 0 : (product.stock > 0 ? product.stock : 1)
-    const nextStatus: InventoryStatus = out ? 'Out of stock' : 'In stock'
+    if (pendingStockIds.has(product.id)) return
 
-    // Optimistic UI update
-    setProducts(products.map((p) => (p.id === product.id ? { ...p, stock: nextStock, status: nextStatus } : p)))
+    const wasAvailable = isAvailableForSale(product)
+    // Removing availability should not erase a count the team has already entered.
+    // Restoring availability needs at least one unit so the shop never receives a
+    // contradictory "In stock / 0 units" state.
+    const nextStock = wasAvailable ? product.stock : Math.max(1, product.stock)
+    const nextStatus: InventoryStatus = wasAvailable ? 'Out of stock' : 'In stock'
+    const optimisticProduct = { ...product, stock: nextStock, status: nextStatus }
+
+    setPendingStockIds((current) => new Set(current).add(product.id))
+    setStockFeedback((current) => ({ ...current, [product.id]: { tone: 'pending', message: 'Saving availability…' } }))
+    setProducts((current) => current.map((item) => (item.id === product.id ? optimisticProduct : item)))
 
     try {
       const res = await fetch(`/api/products/${product.id}`, {
@@ -711,13 +764,37 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
         headers: authHeaders(),
         body: JSON.stringify({ stock: nextStock, status: nextStatus }),
       })
-      if (!res.ok) throw new Error('Sync failed')
-      // Re-fetch to guarantee local state matches the database
-      await loadProducts()
-    } catch {
-      // Revert optimistic update on failure
-      setProducts(products.map((p) => (p.id === product.id ? { ...p, stock: out ? product.stock : 0, status: out ? 'In stock' : 'Out of stock' } : p)))
-      alert('Failed to update stock in database. Please try again.')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || 'Could not save availability.')
+
+      const savedStock = Number(data?.product?.stock)
+      const savedStatus = data?.product?.status
+      const persistedStatus: InventoryStatus = savedStatus === 'In stock' || savedStatus === 'Low stock' || savedStatus === 'Out of stock'
+        ? savedStatus
+        : nextStatus
+      setProducts((current) => current.map((item) => item.id === product.id
+        ? { ...item, stock: Number.isFinite(savedStock) ? savedStock : nextStock, status: persistedStatus }
+        : item))
+      setStockFeedback((current) => ({
+        ...current,
+        [product.id]: { tone: 'success', message: `${persistedStatus} saved.` },
+      }))
+    } catch (error: any) {
+      // Only restore the fields this request changed. A visibility edit may have
+      // completed while the availability request was in flight.
+      setProducts((current) => current.map((item) => (item.id === product.id
+        ? { ...item, stock: product.stock, status: product.status }
+        : item)))
+      setStockFeedback((current) => ({
+        ...current,
+        [product.id]: { tone: 'error', message: error?.message || 'Could not save. Restored the previous availability.' },
+      }))
+    } finally {
+      setPendingStockIds((current) => {
+        const next = new Set(current)
+        next.delete(product.id)
+        return next
+      })
     }
   }
 
@@ -1279,9 +1356,16 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
                   <article className="product-admin-row" key={product.id}>
                     <span className="product-admin-image">{product.image ? <img src={product.image} alt={product.name} /> : <Image size={22} />}</span>
                     <div className="product-admin-info"><strong>{product.name}</strong><span>{product.category} · ₹{product.varieties?.[0]?.price ?? product.price * 4}/kg</span><span>{product.varieties?.length ? `Varieties: ${product.varieties.map((variety) => variety.name).join(', ')}` : 'Standard variety'} · Packs: {product.packSizes?.length ? product.packSizes.join(', ') : 'Shop defaults'}</span><span>{product.origin || 'India'}{product.detail ? ` · ${product.detail}` : ''}{product.nutrients?.length ? ` · ${product.nutrients.join(', ')}` : ''}</span></div>
-                    <span className={`stock-status ${product.status.toLowerCase().replace(/\s/g, '-')}`}>{product.status}</span>
-                    <span className={`product-visibility ${product.active === false ? 'hidden' : 'visible'}`}>{product.active === false ? 'Hidden from shop' : 'Visible in shop'}</span>
-                    <div className="product-admin-actions"><button className="icon-button small" title={product.active === false ? 'Show in shop' : 'Hide from shop'} aria-label={product.active === false ? 'Show in shop' : 'Hide from shop'} onClick={() => toggleProductVisibility(product)}>{product.active === false ? <Eye size={15} /> : <EyeOff size={15} />}</button><button className="icon-button small stock-toggle" title={product.status === 'Out of stock' ? 'Mark in stock' : 'Mark out of stock'} aria-label={product.status === 'Out of stock' ? 'Mark in stock' : 'Mark out of stock'} onClick={() => toggleStock(product)}>{product.status === 'Out of stock' ? <CheckCircle size={14} /> : <Archive size={14} />}</button><button className="button button-light small-button" onClick={() => openEditProduct(product)}>Edit</button><button className="icon-button small" title="Delete product" onClick={() => deleteProduct(product)}><Trash2 size={15} /></button></div>
+                    <section className="product-availability" aria-label={`${product.name} availability`}>
+                      <span className="inventory-block-label">Availability</span>
+                      <AvailabilitySwitch product={product} pending={pendingStockIds.has(product.id)} feedback={stockFeedback[product.id]} onToggle={toggleStock} />
+                    </section>
+                    <section className="product-shop-visibility" aria-label={`${product.name} shop visibility`}>
+                      <span className="inventory-block-label">Shop visibility</span>
+                      <span className={`product-visibility ${product.active === false ? 'is-hidden' : 'is-visible'}`}>{product.active === false ? 'Hidden from shop' : 'Visible in shop'}</span>
+                      <button className="visibility-action" type="button" onClick={() => toggleProductVisibility(product)}>{product.active === false ? <><Eye size={14} /> Show</> : <><EyeOff size={14} /> Hide</>}</button>
+                    </section>
+                    <div className="product-admin-actions" role="group" aria-label={`${product.name} actions`}><button className="button button-light small-button" onClick={() => openEditProduct(product)}>Edit</button><button className="icon-button small destructive-action" title={`Delete ${product.name}`} aria-label={`Delete ${product.name}`} onClick={() => deleteProduct(product)}><Trash2 size={15} /></button></div>
                   </article>
                 ))}
               </div>
@@ -1298,8 +1382,12 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
             <div className="stock-list">
               {products.map((product) => (
                 <div className="stock-row" key={product.id}>
-                  <div className="stock-row-left"><span className="stock-image">{product.image ? <img src={product.image} alt={product.name} /> : <Image size={20} />}</span><div className="stock-info"><span className="stock-title">{product.name}</span><span className="stock-meta">{product.stock} units · ₹{product.varieties?.[0]?.price ?? product.price}/kg</span><span className={`stock-status ${product.status.toLowerCase().replace(/\s/g, '-')}`}>{product.status}</span></div></div>
-                  <div className="stock-right"><button className="icon-button small stock-toggle" title={product.status === 'Out of stock' ? 'Bring back in stock' : 'Mark out of stock'} aria-label={product.status === 'Out of stock' ? 'Bring back in stock' : 'Mark out of stock'} onClick={() => toggleStock(product)}>{product.status === 'Out of stock' ? <CheckCircle size={14} /> : <Archive size={14} />}</button><button className="icon-button small" title="Edit product" onClick={() => openEditProduct(product)}><Settings size={14} /></button></div>
+                  <div className="stock-row-left"><span className="stock-image">{product.image ? <img src={product.image} alt={product.name} /> : <Image size={20} />}</span><div className="stock-info"><span className="stock-title">{product.name}</span><span className="stock-meta">{product.stock} units · ₹{product.varieties?.[0]?.price ?? product.price * 4}/kg</span><span className={`stock-status ${product.status.toLowerCase().replace(/\s/g, '-')}`}>{product.status}</span></div></div>
+                  <section className="stock-row-availability" aria-label={`${product.name} availability`}>
+                    <span className="inventory-block-label">Availability</span>
+                    <AvailabilitySwitch product={product} pending={pendingStockIds.has(product.id)} feedback={stockFeedback[product.id]} onToggle={toggleStock} />
+                  </section>
+                  <div className="stock-right" role="group" aria-label={`${product.name} actions`}><button className="button button-light small-button" onClick={() => openEditProduct(product)}><Settings size={14} /> Edit</button></div>
                 </div>
               ))}
               {!loadingProducts && products.length === 0 && <div className="messages-empty"><Box size={40} /><h3>Inventory is empty</h3><p>Add a product to start tracking stock.</p></div>}

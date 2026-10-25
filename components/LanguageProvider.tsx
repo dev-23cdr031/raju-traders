@@ -77,6 +77,84 @@ const supplementalTranslations: Record<Exclude<Language, 'en'>, Record<string, s
   },
 }
 
+// AJR Virudhunagar discovery-point copy. Keep this compact section in the
+// shared dictionary so language changes update both its visible labels and
+// its accessibility text together.
+const studioLocationTranslations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
+  ta: {
+    'AJR • Virudhunagar': 'AJR • விருதுநகர்',
+    'AJR — Virudhunagar': 'AJR — விருதுநகர்',
+    'Premium Dry Fruits • Nuts • Seeds • Honey': 'உயர்தர உலர் பழங்கள் • பருப்புகள் • விதைகள் • தேன்',
+    'Discover the world of AJR in person. Explore our premium collection, taste selected products, customise gift boxes, and find the perfect choice for your everyday needs or special occasions.': 'AJR உலகை நேரில் அறிந்துகொள்ளுங்கள். எங்கள் உயர்தரத் தொகுப்பைப் பாருங்கள், தேர்ந்தெடுக்கப்பட்ட பொருட்களைச் சுவையுங்கள், பரிசுப் பெட்டிகளைத் தனிப்பயனாக்குங்கள்; அன்றாடத் தேவைகள் அல்லது சிறப்பு நிகழ்வுகளுக்கான சரியான தேர்வைக் கண்டறியுங்கள்.',
+    'Taste & Discover': 'சுவைத்தறியுங்கள்',
+    'Experience selected AJR nuts, dry fruits and speciality products.': 'தேர்ந்தெடுக்கப்பட்ட AJR பருப்புகள், உலர் பழங்கள் மற்றும் சிறப்புப் பொருட்களை அனுபவியுங்கள்.',
+    'Create Your Own Gift Box': 'உங்கள் சொந்த பரிசுப் பெட்டியை உருவாக்குங்கள்',
+    'Choose your favourites and build a personalised AJR gift box.': 'உங்களுக்குப் பிடித்தவற்றைத் தேர்ந்து தனிப்பயன் AJR பரிசுப் பெட்டியை உருவாக்குங்கள்.',
+    'Explore Our Collection': 'எங்கள் தொகுப்பைப் பாருங்கள்',
+    'Premium cashews, almonds, seeds, honey, dry fruits and exclusive varieties.': 'உயர்தர முந்திரி, பாதாம், விதைகள், தேன், உலர் பழங்கள் மற்றும் பிரத்யேக வகைகள்.',
+    'Bulk & Wholesale Orders': 'மொத்த மற்றும் பெருந்தொகை ஆர்டர்கள்',
+    'Special assistance for retailers, businesses, events and bulk requirements.': 'சில்லறை விற்பனையாளர்கள், வணிகங்கள், நிகழ்வுகள் மற்றும் பெருந்தொகை தேவைகளுக்கான சிறப்பு உதவி.',
+    'Product Tasting': 'பொருட்களைச் சுவைத்தல்', 'Custom Gift Boxes': 'தனிப்பயன் பரிசுப் பெட்டிகள்', 'Wholesale Orders': 'மொத்த ஆர்டர்கள்', 'Premium Collection': 'உயர்தரத் தொகுப்பு',
+    'Get Directions →': 'வழிகாட்டுதலைப் பெறுங்கள் →', 'Call AJR ☎': 'AJR-ஐ அழைக்கவும் ☎',
+    'AJR Virudhunagar services': 'AJR விருதுநகர் சேவைகள்', 'AJR Virudhunagar location map': 'AJR விருதுநகர் இருப்பிட வரைபடம்',
+    'Find AJR in Virudhunagar': 'விருதுநகரில் AJR-ஐக் கண்டறியுங்கள்', 'Open the map for directions to AJR — Virudhunagar.': 'AJR — விருதுநகருக்கான வழியைப் பெற வரைபடத்தைத் திறக்கவும்.',
+  },
+  ml: {
+    'AJR • Virudhunagar': 'AJR • വിരുദുനഗർ',
+    'AJR — Virudhunagar': 'AJR — വിരുദുനഗർ',
+    'Premium Dry Fruits • Nuts • Seeds • Honey': 'പ്രീമിയം ഡ്രൈ ഫ്രൂട്ട്‌സ് • നട്‌സ് • വിത്തുകൾ • തേൻ',
+    'Discover the world of AJR in person. Explore our premium collection, taste selected products, customise gift boxes, and find the perfect choice for your everyday needs or special occasions.': 'AJR-ന്റെ ലോകം നേരിട്ട് അനുഭവിക്കൂ. ഞങ്ങളുടെ പ്രീമിയം ശേഖരം കാണൂ, തിരഞ്ഞെടുത്ത ഉൽപ്പന്നങ്ങൾ രുചിക്കൂ, സമ്മാനപ്പെട്ടികൾ വ്യക്തിഗതമാക്കൂ, ദൈനംദിന ആവശ്യങ്ങൾക്കും പ്രത്യേക അവസരങ്ങൾക്കും അനുയോജ്യമായത് കണ്ടെത്തൂ.',
+    'Taste & Discover': 'രുചിച്ച് അറിയൂ',
+    'Experience selected AJR nuts, dry fruits and speciality products.': 'തിരഞ്ഞെടുത്ത AJR നട്‌സും ഡ്രൈ ഫ്രൂട്ട്‌സും പ്രത്യേക ഉൽപ്പന്നങ്ങളും അനുഭവിക്കൂ.',
+    'Create Your Own Gift Box': 'നിങ്ങളുടെ സ്വന്തം സമ്മാനപ്പെട്ടി ഉണ്ടാക്കൂ',
+    'Choose your favourites and build a personalised AJR gift box.': 'നിങ്ങളുടെ പ്രിയപ്പെട്ടവ തിരഞ്ഞെടുക്കി വ്യക്തിഗത AJR സമ്മാനപ്പെട്ടി ഉണ്ടാക്കൂ.',
+    'Explore Our Collection': 'ഞങ്ങളുടെ ശേഖരം കാണൂ',
+    'Premium cashews, almonds, seeds, honey, dry fruits and exclusive varieties.': 'പ്രീമിയം കശുവണ്ടി, ബദാം, വിത്തുകൾ, തേൻ, ഡ്രൈ ഫ്രൂട്ട്‌സ്, പ്രത്യേക ഇനങ്ങൾ.',
+    'Bulk & Wholesale Orders': 'ബൾക്ക്, മൊത്തവ്യാപാര ഓർഡറുകൾ',
+    'Special assistance for retailers, businesses, events and bulk requirements.': 'ചില്ലറവ്യാപാരികൾക്കും ബിസിനസുകൾക്കും പരിപാടികൾക്കും ബൾക്ക് ആവശ്യങ്ങൾക്കും പ്രത്യേക സഹായം.',
+    'Product Tasting': 'ഉൽപ്പന്ന രുചിപരിശോധന', 'Custom Gift Boxes': 'ഇഷ്ടാനുസൃത സമ്മാനപ്പെട്ടികൾ', 'Wholesale Orders': 'മൊത്തവ്യാപാര ഓർഡറുകൾ', 'Premium Collection': 'പ്രീമിയം ശേഖരം',
+    'Get Directions →': 'വഴി കണ്ടെത്തൂ →', 'Call AJR ☎': 'AJR-ലേക്ക് വിളിക്കൂ ☎',
+    'AJR Virudhunagar services': 'AJR വിരുദുനഗർ സേവനങ്ങൾ', 'AJR Virudhunagar location map': 'AJR വിരുദുനഗർ ലൊക്കേഷൻ മാപ്പ്',
+    'Find AJR in Virudhunagar': 'വിരുദുനഗറിൽ AJR കണ്ടെത്തൂ', 'Open the map for directions to AJR — Virudhunagar.': 'AJR — വിരുദുനഗറിലേക്കുള്ള വഴി അറിയാൻ മാപ്പ് തുറക്കൂ.',
+  },
+  te: {
+    'AJR • Virudhunagar': 'AJR • విరుదునగర్',
+    'AJR — Virudhunagar': 'AJR — విరుదునగర్',
+    'Premium Dry Fruits • Nuts • Seeds • Honey': 'ప్రీమియం డ్రై ఫ్రూట్స్ • నట్స్ • విత్తనాలు • తేనె',
+    'Discover the world of AJR in person. Explore our premium collection, taste selected products, customise gift boxes, and find the perfect choice for your everyday needs or special occasions.': 'AJR ప్రపంచాన్ని ప్రత్యక్షంగా తెలుసుకోండి. మా ప్రీమియం సేకరణను చూడండి, ఎంపిక చేసిన ఉత్పత్తులను రుచి చూడండి, గిఫ్ట్ బాక్స్‌లను వ్యక్తిగతీకరించండి; రోజువారీ అవసరాలకు లేదా ప్రత్యేక సందర్భాలకు సరైన ఎంపికను కనుగొనండి.',
+    'Taste & Discover': 'రుచి చూసి తెలుసుకోండి',
+    'Experience selected AJR nuts, dry fruits and speciality products.': 'ఎంపిక చేసిన AJR నట్స్, డ్రై ఫ్రూట్స్ మరియు ప్రత్యేక ఉత్పత్తులను ఆస్వాదించండి.',
+    'Create Your Own Gift Box': 'మీ స్వంత గిఫ్ట్ బాక్స్‌ను రూపొందించండి',
+    'Choose your favourites and build a personalised AJR gift box.': 'మీకు ఇష్టమైన వాటిని ఎంచుకుని వ్యక్తిగత AJR గిఫ్ట్ బాక్స్‌ను రూపొందించండి.',
+    'Explore Our Collection': 'మా సేకరణను చూడండి',
+    'Premium cashews, almonds, seeds, honey, dry fruits and exclusive varieties.': 'ప్రీమియం జీడిపప్పు, బాదం, విత్తనాలు, తేనె, డ్రై ఫ్రూట్స్ మరియు ప్రత్యేక రకాలు.',
+    'Bulk & Wholesale Orders': 'బల్క్ మరియు హోల్‌సేల్ ఆర్డర్లు',
+    'Special assistance for retailers, businesses, events and bulk requirements.': 'రిటైలర్లు, వ్యాపారాలు, కార్యక్రమాలు మరియు బల్క్ అవసరాలకు ప్రత్యేక సహాయం.',
+    'Product Tasting': 'ఉత్పత్తి రుచి పరీక్ష', 'Custom Gift Boxes': 'కస్టమ్ గిఫ్ట్ బాక్స్‌లు', 'Wholesale Orders': 'హోల్‌సేల్ ఆర్డర్లు', 'Premium Collection': 'ప్రీమియం సేకరణ',
+    'Get Directions →': 'దారి పొందండి →', 'Call AJR ☎': 'AJR‌కు కాల్ చేయండి ☎',
+    'AJR Virudhunagar services': 'AJR విరుదునగర్ సేవలు', 'AJR Virudhunagar location map': 'AJR విరుదునగర్ స్థల పటం',
+    'Find AJR in Virudhunagar': 'విరుదునగర్‌లో AJR‌ను కనుగొనండి', 'Open the map for directions to AJR — Virudhunagar.': 'AJR — విరుదునగర్‌కు దారి కోసం పటాన్ని తెరవండి.',
+  },
+  hi: {
+    'AJR • Virudhunagar': 'AJR • विरुधुनगर',
+    'AJR — Virudhunagar': 'AJR — विरुधुनगर',
+    'Premium Dry Fruits • Nuts • Seeds • Honey': 'प्रीमियम ड्राई फ्रूट्स • मेवे • बीज • शहद',
+    'Discover the world of AJR in person. Explore our premium collection, taste selected products, customise gift boxes, and find the perfect choice for your everyday needs or special occasions.': 'AJR की दुनिया को स्वयं जानें। हमारे प्रीमियम संग्रह को देखें, चुनिंदा उत्पादों का स्वाद लें, गिफ्ट बॉक्स को अपनी पसंद के अनुसार बनवाएँ और रोज़मर्रा की ज़रूरतों या खास अवसरों के लिए सही विकल्प खोजें।',
+    'Taste & Discover': 'स्वाद लें और जानें',
+    'Experience selected AJR nuts, dry fruits and speciality products.': 'चुनिंदा AJR मेवों, ड्राई फ्रूट्स और खास उत्पादों का अनुभव करें।',
+    'Create Your Own Gift Box': 'अपना गिफ्ट बॉक्स बनाएँ',
+    'Choose your favourites and build a personalised AJR gift box.': 'अपने पसंदीदा उत्पाद चुनें और निजी AJR गिफ्ट बॉक्स बनाएँ।',
+    'Explore Our Collection': 'हमारा संग्रह देखें',
+    'Premium cashews, almonds, seeds, honey, dry fruits and exclusive varieties.': 'प्रीमियम काजू, बादाम, बीज, शहद, ड्राई फ्रूट्स और खास किस्में।',
+    'Bulk & Wholesale Orders': 'बल्क और थोक ऑर्डर',
+    'Special assistance for retailers, businesses, events and bulk requirements.': 'रिटेलर, व्यवसाय, कार्यक्रमों और बल्क ज़रूरतों के लिए विशेष सहायता।',
+    'Product Tasting': 'उत्पाद चखना', 'Custom Gift Boxes': 'कस्टम गिफ्ट बॉक्स', 'Wholesale Orders': 'थोक ऑर्डर', 'Premium Collection': 'प्रीमियम संग्रह',
+    'Get Directions →': 'रास्ता पाएँ →', 'Call AJR ☎': 'AJR को कॉल करें ☎',
+    'AJR Virudhunagar services': 'AJR विरुधुनगर सेवाएँ', 'AJR Virudhunagar location map': 'AJR विरुधुनगर स्थान मानचित्र',
+    'Find AJR in Virudhunagar': 'विरुधुनगर में AJR खोजें', 'Open the map for directions to AJR — Virudhunagar.': 'AJR — विरुधुनगर का रास्ता जानने के लिए मानचित्र खोलें।',
+  },
+}
+
 // Complete Hindi copy for the richer editorial, support, account, and admin
 // surfaces. Product and customer-entered proper names remain untranslated.
 const hindiExperienceTranslations: Record<string, string> = {
@@ -1622,6 +1700,7 @@ function translateCopy(language: Language, text: string) {
   const dictionary = {
     ...translations[language],
     ...supplementalTranslations[language],
+    ...studioLocationTranslations[language],
     ...(language === 'ml' ? malayalamUiCompletionTranslations : {}),
     ...(language === 'ta' ? tamilExperienceTranslations : {}),
     ...(language === 'te' ? { ...teluguExperienceTranslations, ...teluguFinalTranslations } : {}),

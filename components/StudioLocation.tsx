@@ -1,87 +1,72 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { MapPin, Clock, Navigation, Phone, Check, Coffee } from 'lucide-react'
+import { MapPin, Navigation, Check } from 'lucide-react'
 import { useLanguage } from './LanguageProvider'
 
 export default function StudioLocation() {
   const { t } = useLanguage()
-  const [isOpen, setIsOpen] = useState(true)
 
-  useEffect(() => {
-    const checkOpen = () => {
-      const now = new Date()
-      const day = now.getDay()
-      const hour = now.getHours()
-      // Mon (1) to Sat (6), 10 AM (10) to 7 PM (19)
-      if (day >= 1 && day <= 6 && hour >= 10 && hour < 19) {
-        setIsOpen(true)
-      } else {
-        setIsOpen(false)
-      }
-    }
-    checkOpen()
-  }, [])
+  const capabilities = [
+    ['🥜', 'Taste & Discover', 'Experience selected AJR nuts, dry fruits and speciality products.'],
+    ['🎁', 'Create Your Own Gift Box', 'Choose your favourites and build a personalised AJR gift box.'],
+    ['🍯', 'Explore Our Collection', 'Premium cashews, almonds, seeds, honey, dry fruits and exclusive varieties.'],
+    ['📦', 'Bulk & Wholesale Orders', 'Special assistance for retailers, businesses, events and bulk requirements.'],
+  ] as const
+
+  const features = ['Product Tasting', 'Custom Gift Boxes', 'Wholesale Orders', 'Premium Collection']
 
   return (
     <div className="studio-location-container">
       <div className="section-head">
         <div>
           <p className="eyebrow">
-            <MapPin size={14} /> {t('Visit Our Studio & Tasting Room')}
+            <MapPin size={14} /> {t('AJR • Virudhunagar')}
           </p>
           <h2>
-            {t('Experience the Harvest')} <em>{t('In Person')}</em>
+            {t('AJR — Virudhunagar')}
           </h2>
+          <p className="studio-subtitle">{t('Premium Dry Fruits • Nuts • Seeds • Honey')}</p>
         </div>
         <p className="section-intro">
-          {t('Step into our Virudhunagar studio to taste fresh dry fruit batches, inspect royal wooden gift hampers, and consult with our master tasters.')}
+          {t('Discover the world of AJR in person. Explore our premium collection, taste selected products, customise gift boxes, and find the perfect choice for your everyday needs or special occasions.')}
         </p>
       </div>
 
       <div className="studio-card-grid">
-        {/* Left Side: Address & Live Status */}
+        {/* Left side: AJR discovery point information and actions */}
         <div className="studio-info-card">
           <div className="studio-status-row">
-            <span className={`status-badge ${isOpen ? 'open' : 'closed'}`}>
-              <span className="dot" />
-              {t(isOpen ? 'Studio Open Now (Until 7:00 PM IST)' : 'Studio Currently Closed (Opens 10:00 AM IST)')}
-            </span>
-            <span className="city-tag">{t('Virudhunagar Flagship')}</span>
+            <span className="city-tag">{t('AJR • Virudhunagar')}</span>
           </div>
 
-          <h3>{t('AJR Essence of Nature Studio')}</h3>
+          <h3>{t('AJR — Virudhunagar')}</h3>
+          <p className="studio-card-subtitle">{t('Premium Dry Fruits • Nuts • Seeds • Honey')}</p>
           <p className="studio-address">
             <MapPin size={16} /> 14, TC Godown Street, Vadiyan St, Virudhunagar, Tamil Nadu 626001
           </p>
 
-          <div className="hours-grid">
-            <div className="hour-item">
-              <Clock size={16} />
-              <div>
-                <strong>{t('Studio & Tasting Counter')}</strong>
-                <span>{t('Studio hours')}</span>
-              </div>
-            </div>
-            <div className="hour-item">
-              <Coffee size={16} />
-              <div>
-                <strong>{t('Complimentary Saffron Almond Milk')}</strong>
-                <span>{t('Saffron milk hours')}</span>
-              </div>
-            </div>
+          <p className="studio-discovery-intro">
+            {t('Discover the world of AJR in person. Explore our premium collection, taste selected products, customise gift boxes, and find the perfect choice for your everyday needs or special occasions.')}
+          </p>
+
+          <div className="studio-capabilities" aria-label={t('AJR Virudhunagar services')}>
+            {capabilities.map(([icon, title, description]) => (
+              <article className="studio-capability" key={title}>
+                <span className="studio-capability-icon" aria-hidden="true">{icon}</span>
+                <div>
+                  <h4>{t(title)}</h4>
+                  <p>{t(description)}</p>
+                </div>
+              </article>
+            ))}
           </div>
 
           <div className="studio-features-list">
-            <span>
-              <Check size={13} className="text-emerald-600" /> {t('Free Private Parking')}
-            </span>
-            <span>
-              <Check size={13} className="text-emerald-600" /> {t('Sample Tasting Counter')}
-            </span>
-            <span>
-              <Check size={13} className="text-emerald-600" /> {t('Same-Day Custom Engraving')}
-            </span>
+            {features.map((feature) => (
+              <span key={feature}>
+                <Check size={13} className="text-emerald-600" /> {t(feature)}
+              </span>
+            ))}
           </div>
 
           <div className="studio-actions-row">
@@ -91,10 +76,10 @@ export default function StudioLocation() {
               rel="noreferrer"
               className="button button-dark"
             >
-              {t('Get Directions on Google Maps')} <Navigation size={16} />
+              {t('Get Directions →')}
             </a>
             <a href="tel:+919876543210" className="button button-ghost">
-              {t('Call Studio')} <Phone size={15} />
+              {t('Call AJR ☎')}
             </a>
           </div>
         </div>
@@ -103,7 +88,7 @@ export default function StudioLocation() {
         <div className="studio-visual-card">
           <iframe
             className="studio-map-frame"
-            title={t('AJR Essence of Nature studio location in Virudhunagar')}
+            title={t('AJR Virudhunagar location map')}
             src="https://www.google.com/maps?q=14%20TC%20Godown%20Street%2C%20Vadiyan%20St%2C%20Virudhunagar%2C%20Tamil%20Nadu%20626001&z=16&output=embed"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
@@ -111,8 +96,8 @@ export default function StudioLocation() {
           <div className="visual-overlay">
             <Navigation size={18} className="text-lime" />
             <div>
-              <strong>{t('Find us in Virudhunagar')}</strong>
-              <p>{t('Open the map for directions to our studio and tasting counter.')}</p>
+              <strong>{t('Find AJR in Virudhunagar')}</strong>
+              <p>{t('Open the map for directions to AJR — Virudhunagar.')}</p>
             </div>
           </div>
         </div>

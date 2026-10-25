@@ -39,7 +39,6 @@ import NutritionMatch from '@/components/NutritionMatch'
 import FarmOrigins from '@/components/FarmOrigins'
 import QualityComparison from '@/components/QualityComparison'
 import StudioLocation from '@/components/StudioLocation'
-import CorporateEstimator from '@/components/CorporateEstimator'
 import { PACK_SIZE_OPTIONS } from '@/lib/supabase'
 
 const logo = '/ajr-logo.png'
@@ -2475,7 +2474,10 @@ function About({ go }: { go: (v: View) => void }) {
       <section className="about-split section about-story">
         <Reveal className="about-story-media-reveal">
           <div className="about-image">
-            <img src="/nut-selection.png" alt={t('Handpicked nuts and dry fruits')} />
+            <img
+              src="/founding-story-nuts-and-dried-fruits.png"
+              alt="A premium spread of nuts and dried fruits"
+            />
           </div>
         </Reveal>
         <div className="about-copy">
@@ -3054,11 +3056,6 @@ function Contact({ sent, setSent }: any) {
       {/* Interactive Studio Visit & Location Guide Component */}
       <Reveal>
         <StudioLocation />
-      </Reveal>
-
-      {/* Interactive Corporate Gifting Cost Estimator Component */}
-      <Reveal>
-        <CorporateEstimator onFillForm={handleFillCorporateForm} />
       </Reveal>
 
       {/* Tabbed Interactive Contact Form Section */}
