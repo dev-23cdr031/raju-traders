@@ -120,8 +120,11 @@ function orderEmailText(order: OrderForEmail, appUrl: string) {
 
 export async function sendOrderConfirmationEmail(order: OrderForEmail, recipientOverride?: string) {
   const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
-    return { skipped: true, reason: 'Email notifications are not configured.' }
+  if (process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
+    return { skipped: true, reason: 'Email notifications are disabled. Set NOTIFICATIONS_EMAIL_ENABLED=true or remove that setting.' }
+  }
+  if (!apiKey) {
+    return { skipped: true, reason: 'RESEND_API_KEY is missing. Add it to the app .env.local file, then restart the server.' }
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000'
