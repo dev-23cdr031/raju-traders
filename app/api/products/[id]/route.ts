@@ -46,8 +46,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (body.image !== undefined) patch.image = String(body.image)
     if (body.detail !== undefined) patch.detail = String(body.detail)
     if (body.description !== undefined) patch.detail = String(body.description)
-    if (body.rating !== undefined) patch.rating = Number(body.rating)
-    if (body.reviews_count !== undefined) patch.reviews_count = Number(body.reviews_count)
+    if (body.rating !== undefined) {
+      const rating = Number(body.rating)
+      if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
+        return NextResponse.json({ message: 'Rating must be between 0 and 5.' }, { status: 400 })
+      }
+      patch.rating = rating
+    }
+    if (body.reviews_count !== undefined || body.reviewsCount !== undefined) {
+      const reviewsCount = Number(body.reviews_count ?? body.reviewsCount)
+      if (!Number.isFinite(reviewsCount) || !Number.isInteger(reviewsCount) || reviewsCount < 0) {
+        return NextResponse.json({ message: 'Review count must be a non-negative whole number.' }, { status: 400 })
+      }
+      patch.reviews_count = reviewsCount
+    }
     if (body.origin !== undefined) patch.origin = String(body.origin)
     if (body.nutrients !== undefined) patch.nutrients = Array.isArray(body.nutrients) ? body.nutrients.map(String) : []
     if (body.active !== undefined) patch.active = Boolean(body.active)

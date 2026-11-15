@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
 import { ORDER_STATUSES, optionalUser, PAYMENT_METHODS, PAYMENT_STATUSES, requireAdmin, supabaseAdmin } from '@/lib/supabase'
+import { sendOrderConfirmationEmail } from '@/lib/order-email'
 
 function makeOrderNumber() {
   const d = new Date()
@@ -110,6 +111,15 @@ export async function POST(request: NextRequest) {
       if (existing) return NextResponse.json({ order: existing, duplicate: true }, { status: 200 })
     }
     if (error) throw error
+    // This runs only after a brand-new order was persisted. It is deliberately
+    // isolated from checkout: an email failure never reverses a valid order.
+    after(async () => {
+      try {
+        await sendOrderConfirmationEmail(data)
+      } catch (notificationError) {
+        console.error('Order confirmation email failed:', notificationError)
+      }
+    })
     return NextResponse.json({ order: data }, { status: 201 })
   } catch (e: any) {
     console.error('POST /api/orders error:', e)

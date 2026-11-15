@@ -104,7 +104,17 @@ export type OrderRow = {
   created_at: string
 }
 
-export type VarietyRow = { name: string; price: number } // price is per 1 kg (₹)
+// A variety is a purchasable SKU within a product. The optional fields were
+// added after the original name/price-only catalogue, so older rows remain
+// completely valid and simply inherit the product image/availability.
+export type VarietyRow = {
+  id?: string
+  name: string
+  price: number // price is per 1 kg (₹)
+  image?: string
+  stock?: number
+  active?: boolean
+}
 
 // ---- Pack sizes -----------------------------------------------------------
 // The gram options a product may be sold in. This is the single source of truth
@@ -200,11 +210,29 @@ export type ProductRow = {
 export function normalizeVarieties(input: unknown, fallbackPerKg?: unknown): VarietyRow[] {
   const list = Array.isArray(input) ? input : []
   const cleaned = list
-    .map((v: any) => ({ name: String(v?.name ?? '').trim(), price: Number(v?.price ?? v?.perKg ?? 0) }))
+    .map((v: any, index: number) => {
+      const name = String(v?.name ?? '').trim()
+      const stockValue = v?.stock
+      const stock = stockValue === undefined || stockValue === null || String(stockValue).trim() === ''
+        ? undefined
+        : Math.max(0, Math.floor(Number(stockValue)))
+      const suppliedId = String(v?.id ?? '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80)
+      const generatedId = name
+        ? `variety-${index + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 48)}`
+        : ''
+      return {
+        id: suppliedId || generatedId || undefined,
+        name,
+        price: Number(v?.price ?? v?.perKg ?? 0),
+        image: String(v?.image ?? '').trim() || undefined,
+        stock: Number.isFinite(stock) ? stock : undefined,
+        active: v?.active !== false,
+      }
+    })
     .filter((v) => v.name.length > 0 && Number.isFinite(v.price) && v.price > 0)
   if (cleaned.length > 0) return cleaned
   const perKg = Number(fallbackPerKg)
-  if (Number.isFinite(perKg) && perKg > 0) return [{ name: 'Standard', price: perKg }]
+  if (Number.isFinite(perKg) && perKg > 0) return [{ id: 'standard', name: 'Standard', price: perKg, active: true }]
   return []
 }
 

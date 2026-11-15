@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { type CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, type CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
+import { resolveVarietyImage } from '@/lib/variety-images'
 import './style.css'
 import {
   ADMIN_EMAILS,
@@ -31,6 +32,7 @@ import {
   CircleDollarSign,
   ClipboardList,
   CreditCard,
+  Download,
   DollarSign,
   Eye,
   EyeOff,
@@ -59,7 +61,14 @@ import {
 
 type InventoryStatus = 'In stock' | 'Low stock' | 'Out of stock'
 
-type Variety = { name: string; price: number } // price per 1 kg (₹)
+type Variety = {
+  id?: string
+  name: string
+  price: number
+  image?: string
+  stock?: number
+  active?: boolean
+}
 
 type Product = {
   id: number
@@ -70,6 +79,8 @@ type Product = {
   status: InventoryStatus
   image: string
   detail?: string
+  rating?: number
+  reviewsCount?: number
   origin?: string
   nutrients?: string[]
   varieties?: Variety[]
@@ -124,7 +135,14 @@ function AvailabilitySwitch({
   )
 }
 
-type VarietyDraft = { name: string; price: string }
+type VarietyDraft = {
+  id: string
+  name: string
+  price: string
+  image: string
+  stock: string
+  active: boolean
+}
 
 type ProductDraft = {
   name: string
@@ -138,8 +156,21 @@ type ProductDraft = {
   status: string
   origin: string
   nutrients: string
+  rating: string
+  reviewsCount: string
   active: boolean
 }
+
+const createVarietyId = () => `variety-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const newVarietyDraft = (price = ''): VarietyDraft => ({
+  id: createVarietyId(),
+  name: '',
+  price,
+  image: '',
+  stock: '',
+  active: true,
+})
 
 const emptyProductDraft = (): ProductDraft => ({
   name: '',
@@ -153,6 +184,8 @@ const emptyProductDraft = (): ProductDraft => ({
   status: 'In stock',
   origin: 'India',
   nutrients: '',
+  rating: '4.9',
+  reviewsCount: '0',
   active: true,
 })
 
@@ -162,12 +195,14 @@ const draftFromProduct = (p: Product): ProductDraft => ({
   image: p.image || '',
   detail: p.detail || '',
   perKg: String(p.varieties?.[0]?.price ?? p.price * 4),
-  varieties: (p.varieties || []).map((v) => ({ name: v.name, price: String(v.price) })),
+  varieties: (p.varieties || []).map((v) => ({ id: v.id || createVarietyId(), name: v.name, price: String(v.price), image: v.image || '', stock: v.stock === undefined ? '' : String(v.stock), active: v.active !== false })),
   packSizes: [...(p.packSizes || [])],
   stock: String(p.stock),
   status: p.status,
   origin: p.origin || 'India',
   nutrients: (p.nutrients || []).join(', '),
+  rating: String(p.rating ?? 4.9),
+  reviewsCount: String(p.reviewsCount ?? 0),
   active: p.active !== false,
 })
 
@@ -229,6 +264,63 @@ type Message = {
   read: boolean
   time: string
   created_at?: string
+}
+
+type StoreSettings = {
+  shopName: string
+  tagline: string
+  logoUrl: string
+}
+
+const defaultStoreSettings: StoreSettings = {
+  shopName: 'AJR',
+  tagline: 'ALWAYS JUST ROYAL',
+  logoUrl: '/ajr-logo.png',
+}
+
+type SpreadsheetValue = string | number | boolean | null | undefined
+type SpreadsheetRow = Record<string, SpreadsheetValue>
+
+const xmlEscape = (value: SpreadsheetValue) => String(value ?? '')
+  .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;')
+
+const spreadsheetValue = (value: SpreadsheetValue) => {
+  const text = String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+  // Excel evaluates cells beginning with these characters as formulas. Prefix
+  // a quote to retain the data as text when an export is opened.
+  return /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text
+}
+
+function downloadExcelWorkbook(sheetName: string, columns: { key: string; label: string }[], rows: SpreadsheetRow[]) {
+  const cells = (row: SpreadsheetRow, isHeader = false) => columns
+    .map((column) => `<Cell ss:StyleID="${isHeader ? 'header' : 'cell'}"><Data ss:Type="String">${xmlEscape(isHeader ? column.label : spreadsheetValue(row[column.key]))}</Data></Cell>`)
+    .join('')
+  const workbook = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#173C31" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>
+    <Style ss:ID="cell"><Alignment ss:Vertical="Top" ss:WrapText="1"/></Style>
+  </Styles>
+  <Worksheet ss:Name="${xmlEscape(sheetName).slice(0, 31)}"><Table>
+    <Row>${cells({}, true)}</Row>
+    ${rows.map((row) => `<Row>${cells(row)}</Row>`).join('')}
+  </Table></Worksheet>
+</Workbook>`
+  const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8' })
+  const link = document.createElement('a')
+  const stamp = new Date().toISOString().slice(0, 10)
+  link.href = URL.createObjectURL(blob)
+  link.download = `ajr-${sheetName.toLowerCase().replace(/\s+/g, '-')}-${stamp}.xls`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 0)
 }
 
 const SUBJECT_LABELS: Record<string, string> = {
@@ -294,6 +386,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const [loginBusy, setLoginBusy] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [productVisibilityFilter, setProductVisibilityFilter] = useState<'All' | 'Visible' | 'Hidden'>('All')
+  const [productQuery, setProductQuery] = useState('')
+  const [expandedVariantProductIds, setExpandedVariantProductIds] = useState<Set<number>>(() => new Set())
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [ordersError, setOrdersError] = useState('')
@@ -312,6 +406,21 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const [messageQuery, setMessageQuery] = useState('')
   const [messageFilter, setMessageFilter] = useState('All')
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultStoreSettings)
+  const [brandingDraft, setBrandingDraft] = useState<StoreSettings>(defaultStoreSettings)
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
+  const [settingsNotice, setSettingsNotice] = useState('')
+  const [emailOrderId, setEmailOrderId] = useState('')
+  const [emailSendBusy, setEmailSendBusy] = useState(false)
+  const [emailSendError, setEmailSendError] = useState('')
+  const [emailSendNotice, setEmailSendNotice] = useState('')
+  const [smsOrderId, setSmsOrderId] = useState('')
+  const [smsSendBusy, setSmsSendBusy] = useState(false)
+  const [smsSendError, setSmsSendError] = useState('')
+  const [smsSendNotice, setSmsSendNotice] = useState('')
   const [dashboard, setDashboard] = useState<any>(null)
   const [dashboardLoading, setDashboardLoading] = useState(false)
   const [dashboardError, setDashboardError] = useState('')
@@ -395,9 +504,19 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   }, [orders, dashboard])
 
   const lowStock = useMemo(() => products.filter((product) => product.status !== 'In stock').length, [products])
+  const visibleProductCount = useMemo(() => products.filter((product) => product.active !== false).length, [products])
+  const hiddenProductCount = useMemo(() => products.filter((product) => product.active === false).length, [products])
+  const availableProductCount = useMemo(() => products.filter(isAvailableForSale).length, [products])
   const filteredProducts = useMemo(
-    () => products.filter((product) => productVisibilityFilter === 'All' || (product.active !== false) === (productVisibilityFilter === 'Visible')),
-    [products, productVisibilityFilter]
+    () => products.filter((product) => {
+      const query = productQuery.trim().toLowerCase()
+      const matchesVisibility = productVisibilityFilter === 'All' || (product.active !== false) === (productVisibilityFilter === 'Visible')
+      const matchesQuery = !query || [product.name, product.category, product.origin, product.detail, ...(product.nutrients || []), ...(product.varieties || []).map((variety) => variety.name)]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query))
+      return matchesVisibility && matchesQuery
+    }),
+    [products, productVisibilityFilter, productQuery]
   )
 
   const filteredOrders = useMemo(() => {
@@ -413,6 +532,15 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
       return matchQ && matchS && matchP
     })
   }, [orders, orderQuery, orderStatusFilter, paymentStatusFilter])
+
+  const emailableOrders = useMemo(
+    () => orders.filter((order) => Boolean(order.dbId && order.email) && order.status !== 'Cancelled'),
+    [orders],
+  )
+  const smsableOrders = useMemo(
+    () => orders.filter((order) => Boolean(order.dbId && order.phone) && order.status !== 'Cancelled'),
+    [orders],
+  )
 
   const unreadCount = useMemo(() => messages.filter((m) => !m.read).length, [messages])
 
@@ -460,6 +588,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           loadOrders(token)
           loadProducts()
           loadExtras(token)
+          loadStoreSettings(token)
         } else {
           setAuthorized(false)
         }
@@ -578,6 +707,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
             status: (r.status || 'In stock') as InventoryStatus,
             image: r.image || '/nut-selection.png',
             detail: r.detail || '',
+            rating: Number(r.rating ?? 4.9),
+            reviewsCount: Number(r.reviews_count ?? r.reviewsCount ?? 0),
             origin: r.origin || 'India',
             nutrients: Array.isArray(r.nutrients) ? r.nutrients : [],
             varieties: Array.isArray(r.varieties) ? r.varieties : [],
@@ -589,6 +720,174 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
       setProductsError(e?.message || 'Could not load products.')
     } finally {
       setLoadingProducts(false)
+    }
+  }
+
+  const loadStoreSettings = async (token?: string) => {
+    setSettingsLoading(true)
+    setSettingsError('')
+    try {
+      const accessToken = token ?? (typeof window !== 'undefined' ? localStorage.getItem('ajr-access-token') || '' : '')
+      const res = await fetch('/api/settings', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || 'Could not load store settings.')
+      const next: StoreSettings = {
+        shopName: String(data.settings?.shopName || defaultStoreSettings.shopName),
+        tagline: String(data.settings?.tagline || defaultStoreSettings.tagline),
+        logoUrl: String(data.settings?.logoUrl || defaultStoreSettings.logoUrl),
+      }
+      setStoreSettings(next)
+      setBrandingDraft(next)
+    } catch (error: any) {
+      setSettingsError(error?.message || 'Could not load store settings.')
+    } finally {
+      setSettingsLoading(false)
+    }
+  }
+
+  const saveStoreSettings = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSettingsSaving(true)
+    setSettingsError('')
+    setSettingsNotice('')
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify(brandingDraft),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || 'Could not save store settings.')
+      const next: StoreSettings = {
+        shopName: String(data.settings?.shopName || brandingDraft.shopName),
+        tagline: String(data.settings?.tagline || brandingDraft.tagline),
+        logoUrl: String(data.settings?.logoUrl || brandingDraft.logoUrl),
+      }
+      setStoreSettings(next)
+      setBrandingDraft(next)
+      setSettingsNotice('Brand details saved.')
+    } catch (error: any) {
+      setSettingsError(error?.message || 'Could not save store settings.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  const uploadStoreLogo = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setSettingsError('')
+    setSettingsNotice('')
+    if (!file.type.startsWith('image/')) {
+      setSettingsError('Choose an image file for the shop logo.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSettingsError('Logo image must be smaller than 5 MB.')
+      return
+    }
+    setLogoUploading(true)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: authHeaders().Authorization },
+        body,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.url) throw new Error(data?.message || 'Logo upload failed.')
+      setBrandingDraft((current) => ({ ...current, logoUrl: String(data.url) }))
+      setSettingsNotice('Logo uploaded. Save your brand details to publish it.')
+    } catch (error: any) {
+      setSettingsError(error?.message || 'Logo upload failed.')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
+  const exportProducts = () => downloadExcelWorkbook('Products', [
+    { key: 'id', label: 'Product ID' }, { key: 'name', label: 'Product name' }, { key: 'category', label: 'Category' },
+    { key: 'pricePerKg', label: 'Price per kg (INR)' }, { key: 'stock', label: 'Stock units' }, { key: 'status', label: 'Inventory status' },
+    { key: 'visibility', label: 'Shop visibility' }, { key: 'origin', label: 'Origin' }, { key: 'varieties', label: 'Varieties' },
+    { key: 'packSizes', label: 'Pack sizes' }, { key: 'nutrients', label: 'Nutrients' }, { key: 'detail', label: 'Description' },
+  ], products.map((product) => ({
+    id: product.id, name: product.name, category: product.category, pricePerKg: product.varieties?.[0]?.price ?? product.price * 4,
+    stock: product.stock, status: product.status, visibility: product.active === false ? 'Hidden' : 'Visible', origin: product.origin || '',
+    varieties: product.varieties?.map((variety) => `${variety.name} (₹${variety.price}/kg)`).join(', ') || 'Standard',
+    packSizes: product.packSizes?.join(', ') || '', nutrients: product.nutrients?.join(', ') || '', detail: product.detail || '',
+  })))
+
+  const exportOrders = () => downloadExcelWorkbook('Orders', [
+    { key: 'orderNumber', label: 'Order number' }, { key: 'date', label: 'Order date' }, { key: 'customer', label: 'Customer' },
+    { key: 'email', label: 'Email' }, { key: 'phone', label: 'Phone' }, { key: 'address', label: 'Delivery address' },
+    { key: 'items', label: 'Items' }, { key: 'channel', label: 'Channel' }, { key: 'status', label: 'Order status' },
+    { key: 'paymentMethod', label: 'Payment method' }, { key: 'paymentStatus', label: 'Payment status' }, { key: 'subtotal', label: 'Subtotal (INR)' },
+    { key: 'shipping', label: 'Shipping (INR)' }, { key: 'total', label: 'Total (INR)' },
+  ], orders.map((order) => ({
+    orderNumber: order.id, date: order.date, customer: order.customer, email: order.email, phone: order.phone || '', address: order.address || '',
+    items: order.items?.map((item) => `${item.quantity} × ${item.name} (₹${item.price})`).join('; ') || '', channel: order.channel,
+    status: order.status, paymentMethod: order.paymentMethod || 'COD', paymentStatus: order.paymentStatus || 'Pending',
+    subtotal: order.subtotal ?? order.total, shipping: order.shipping ?? 0, total: order.total,
+  })))
+
+  const exportMessages = () => downloadExcelWorkbook('Messages', [
+    { key: 'receivedAt', label: 'Received at' }, { key: 'customer', label: 'Customer' }, { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' }, { key: 'subject', label: 'Subject' }, { key: 'message', label: 'Message' }, { key: 'status', label: 'Status' },
+  ], messages.map((message) => ({
+    receivedAt: message.created_at || message.time, customer: message.customer, email: message.email, phone: message.phone || '',
+    subject: subjectLabel(message.subject), message: message.detail, status: message.read ? 'Read' : 'Unread',
+  })))
+
+  const sendOrderEmail = async (mode: 'customer' | 'preview') => {
+    setEmailSendError('')
+    setEmailSendNotice('')
+    if (!emailOrderId) {
+      setEmailSendError('Select an order before sending an email.')
+      return
+    }
+    setEmailSendBusy(true)
+    try {
+      const res = await fetch('/api/admin/order-emails', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ orderId: emailOrderId, mode }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || 'Could not send the order email.')
+      setEmailSendNotice(String(data.message || 'Order email sent.'))
+    } catch (error: any) {
+      setEmailSendError(error?.message || 'Could not send the order email.')
+    } finally {
+      setEmailSendBusy(false)
+    }
+  }
+
+  const sendOrderSms = async () => {
+    setSmsSendError('')
+    setSmsSendNotice('')
+    if (!smsOrderId) {
+      setSmsSendError('Select an order before sending an SMS.')
+      return
+    }
+    setSmsSendBusy(true)
+    try {
+      const res = await fetch('/api/admin/order-sms', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ orderId: smsOrderId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || 'Could not send the order SMS.')
+      setSmsSendNotice(String(data.message || 'Order SMS submitted.'))
+    } catch (error: any) {
+      setSmsSendError(error?.message || 'Could not send the order SMS.')
+    } finally {
+      setSmsSendBusy(false)
     }
   }
 
@@ -619,6 +918,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
       loadOrders(token)
       loadProducts()
       loadExtras(token)
+      loadStoreSettings(token)
     } catch (e: any) {
       setLoginError(e?.message || 'Login failed.')
     } finally {
@@ -835,7 +1135,14 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
     try {
       const perKg = Number(productDraft.perKg)
       const varieties = productDraft.varieties
-        .map((v) => ({ name: v.name.trim(), price: Number(v.price) }))
+        .map((v) => ({
+          id: v.id,
+          name: v.name.trim(),
+          price: Number(v.price),
+          image: v.image.trim() || undefined,
+          stock: v.stock.trim() === '' ? undefined : Number(v.stock),
+          active: v.active,
+        }))
         .filter((v) => v.name.length > 0 && Number.isFinite(v.price) && v.price > 0)
       const stock = Number(productDraft.stock)
       const type = productDraft.type.trim() || 'Snacking'
@@ -848,6 +1155,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
         description: productDraft.detail,
         origin: productDraft.origin.trim() || 'India',
         nutrients: productDraft.nutrients.split(',').map((n) => n.trim()).filter(Boolean),
+        rating: Number(productDraft.rating),
+        reviews_count: Number(productDraft.reviewsCount),
         stock: Number.isFinite(stock) ? stock : 0,
         status: productDraft.status || (stock <= 0 ? 'Out of stock' : stock <= 8 ? 'Low stock' : 'In stock'),
         active: productDraft.active,
@@ -902,6 +1211,20 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
     }
   }
 
+  // Each /admin/[section] navigation mounts a fresh dashboard instance. Keep the
+  // access gate hidden until the saved session has been verified, otherwise it
+  // briefly flashes between authenticated admin pages.
+  if (checkingAuth) {
+    return (
+      <main className="admin-page admin-studio admin-session-check" aria-busy="true" aria-live="polite">
+        <div className="admin-session-check-card">
+          <span className="admin-session-check-mark"><Leaf size={19} aria-hidden="true" /></span>
+          <span>{t('Opening your workspace…')}</span>
+        </div>
+      </main>
+    )
+  }
+
   if (!authorized) {
     return (
       <main className="admin-access-gate admin-studio">
@@ -919,7 +1242,6 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           <form className="admin-form" onSubmit={adminLogin}>
             <label><span>{t('Email address')}</span><input type="email" autoComplete="username" placeholder="you@example.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required suppressHydrationWarning /></label>
             <label><span>{t('Password')}</span><input type="password" autoComplete="current-password" placeholder={t('Enter your password')} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required suppressHydrationWarning /></label>
-            {checkingAuth && <p style={{ fontSize: 12 }}>Checking session…</p>}
             {loginError && <p style={{ color: '#b91c1c', fontSize: 13 }}>{loginError}</p>}
             <button className="button button-dark" type="submit" disabled={loginBusy} suppressHydrationWarning>
               {loginBusy ? 'Signing in…' : 'Enter your workspace'} <ArrowRight size={16} />
@@ -1336,26 +1658,71 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
             </div>
           </section>
         ) : section === 'products' ? (
-          <section className="admin-panel admin-panel-table">
+          <section className="admin-panel admin-panel-table products-page">
             <section className="admin-topbar">
               <div><span className="admin-kicker">Shop catalogue · {products.filter((product) => product.active !== false).length} visible · {products.filter((product) => product.active === false).length} hidden</span><h1>Products</h1></div>
               <div className="admin-topbar-actions"><button className="button button-light" onClick={() => loadProducts()} disabled={loadingProducts}>Refresh</button><button className="button button-dark" onClick={openCreateProduct}><Plus size={16} /> Add product</button></div>
             </section>
+            <section className="catalogue-health" aria-label="Catalogue health overview">
+              <div className="catalogue-health-lead"><span className="catalogue-health-eyebrow">Catalogue health</span><strong>{products.length || '—'}</strong><span>total products</span></div>
+              <div className="catalogue-health-metric"><span>Published</span><strong>{visibleProductCount}</strong><small>{products.length ? `${Math.round((visibleProductCount / products.length) * 100)}% of catalogue` : 'No products yet'}</small></div>
+              <div className="catalogue-health-metric"><span>Available now</span><strong>{availableProductCount}</strong><small>{products.length ? `${Math.round((availableProductCount / products.length) * 100)}% ready to sell` : 'No products yet'}</small></div>
+              <div className={`catalogue-health-metric attention ${lowStock ? 'has-attention' : ''}`}><span>Needs attention</span><strong>{lowStock}</strong><small>{lowStock ? 'Low or unavailable stock' : 'Inventory looks healthy'}</small></div>
+            </section>
             {productsError && <p className="messages-error">{productsError}</p>}
             {loadingProducts && <p>Loading products…</p>}
+            <section className="products-command-bar" aria-label="Product catalogue controls">
+              <label className="product-search">
+                <Search size={17} aria-hidden="true" />
+                <span className="sr-only">Search products</span>
+                <input placeholder="Search products, categories, origins…" value={productQuery} onChange={(event) => setProductQuery(event.target.value)} />
+                {productQuery && <button type="button" className="clear-product-search" onClick={() => setProductQuery('')} aria-label="Clear product search"><X size={14} /></button>}
+              </label>
             <div className="product-visibility-filters" role="group" aria-label="Filter products by shop visibility">
               {(['All', 'Visible', 'Hidden'] as const).map((filter) => (
                 <button key={filter} type="button" className={`chip ${productVisibilityFilter === filter ? 'active' : ''}`} aria-pressed={productVisibilityFilter === filter} onClick={() => setProductVisibilityFilter(filter)}>
-                  {filter} ({filter === 'All' ? products.length : products.filter((product) => (product.active !== false) === (filter === 'Visible')).length})
+                  {filter} <span>{filter === 'All' ? products.length : filter === 'Visible' ? visibleProductCount : hiddenProductCount}</span>
                 </button>
               ))}
             </div>
+            </section>
+            <div className="products-list-heading"><span>Catalogue records</span><strong>{filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} shown</strong></div>
             {!loadingProducts && filteredProducts.length === 0 ? <div className="messages-empty"><Package size={40} /><h3>{products.length === 0 ? 'No products yet' : 'No products in this view'}</h3><p>{products.length === 0 ? 'Products from the shop catalogue will appear here.' : 'Choose another visibility filter to see products.'}</p></div> : (
               <div className="products-list">
                 {filteredProducts.map((product) => (
                   <article className="product-admin-row" key={product.id}>
                     <span className="product-admin-image">{product.image ? <img src={product.image} alt={product.name} /> : <Image size={22} />}</span>
                     <div className="product-admin-info"><strong>{product.name}</strong><span>{product.category} · ₹{product.varieties?.[0]?.price ?? product.price * 4}/kg</span><span>{product.varieties?.length ? `Varieties: ${product.varieties.map((variety) => variety.name).join(', ')}` : 'Standard variety'} · Packs: {product.packSizes?.length ? product.packSizes.join(', ') : 'Shop defaults'}</span><span>{product.origin || 'India'}{product.detail ? ` · ${product.detail}` : ''}{product.nutrients?.length ? ` · ${product.nutrients.join(', ')}` : ''}</span></div>
+                    <div className="product-variant-summary">
+                      <button
+                        type="button"
+                        className="variant-summary-toggle"
+                        aria-expanded={expandedVariantProductIds.has(product.id)}
+                        onClick={() => setExpandedVariantProductIds((current) => {
+                          const next = new Set(current)
+                          if (next.has(product.id)) next.delete(product.id)
+                          else next.add(product.id)
+                          return next
+                        })}
+                      >
+                        <span><Package size={13} /> {product.varieties?.length || 1} {product.varieties?.length === 1 ? 'variety' : 'varieties'}</span>
+                        <ChevronRight size={14} />
+                      </button>
+                      {expandedVariantProductIds.has(product.id) && (
+                        <div className="product-variant-list" aria-label={`${product.name} varieties`}>
+                          {(product.varieties?.length ? product.varieties : [{ id: 'standard', name: 'Standard', price: product.price * 4, active: true }]).map((variety) => {
+                            const unavailable = variety.active === false || (variety.stock !== undefined && variety.stock <= 0)
+                            const varietyImage = resolveVarietyImage(product.name, product.image, variety)
+                            return <div className={`product-variant-item ${unavailable ? 'is-unavailable' : ''}`} key={variety.id || variety.name}>
+                              <span className="product-variant-thumb">{varietyImage ? <img src={varietyImage} alt="" /> : <Image size={12} />}</span>
+                              <span><strong>{variety.name}</strong><small>{variety.stock === undefined ? 'Uses product stock' : `${variety.stock} units`} · {unavailable ? 'Unavailable' : 'Available'}</small></span>
+                              <b>₹{variety.price}/kg</b>
+                            </div>
+                          })}
+                          <button type="button" className="variant-summary-edit" onClick={() => openEditProduct(product)}>Manage varieties <ArrowRight size={13} /></button>
+                        </div>
+                      )}
+                    </div>
                     <section className="product-availability" aria-label={`${product.name} availability`}>
                       <span className="inventory-block-label">Availability</span>
                       <AvailabilitySwitch product={product} pending={pendingStockIds.has(product.id)} feedback={stockFeedback[product.id]} onToggle={toggleStock} />
@@ -1395,9 +1762,112 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           </section>
         ) : (
           <section className="admin-panel settings-page">
-            <section className="admin-topbar"><div><span className="admin-kicker">Workspace access</span><h1>Settings</h1></div></section>
-            <section className="settings-group"><h2>Signed-in administrator</h2><p>{loginEmail || ADMIN_EMAILS[0]}</p><button className="button button-light" onClick={adminLogout}><X size={14} /> Sign out</button></section>
-            <section className="settings-group"><h2>Administrator access list</h2><p>These accounts are permitted to open the admin workspace.</p><ul>{ADMIN_EMAILS.map((email) => <li key={email}>{email}</li>)}</ul></section>
+            <section className="admin-topbar settings-topbar">
+              <div><span className="admin-kicker"><span className="admin-kicker-line" /> Store control room</span><h1>Settings <em>&amp; stewardship</em></h1><p className="admin-page-description">Shape the face of your store and keep its records close at hand.</p></div>
+              <button className="button button-dark" form="store-branding-form" type="submit" disabled={settingsSaving || logoUploading || settingsLoading}>
+                {settingsSaving ? 'Saving…' : <><Check size={16} /> Save brand details</>}
+              </button>
+            </section>
+
+            {settingsError && <p className="messages-error" role="alert">{settingsError}</p>}
+            {settingsNotice && <p className="settings-notice" role="status"><CheckCircle size={15} /> {settingsNotice}</p>}
+
+            <div className="settings-control-grid">
+              <form id="store-branding-form" className="branding-studio" onSubmit={saveStoreSettings}>
+                <header className="settings-section-head">
+                  <span className="settings-section-icon"><Store size={18} /></span>
+                  <div><span className="panel-eyebrow">Brand atelier</span><h2>Your storefront identity</h2><p>Preview a considered masthead before you save it for the team.</p></div>
+                </header>
+                <div className="branding-studio-layout">
+                  <aside className="storefront-preview" aria-label="Storefront branding preview">
+                    <span className="preview-eyebrow">Live storefront preview</span>
+                    <div className="preview-masthead">
+                      <span className="preview-logo">{brandingDraft.logoUrl ? <img src={brandingDraft.logoUrl} alt="Shop logo preview" /> : <Leaf size={24} />}</span>
+                      <span className="preview-brand"><strong>{brandingDraft.shopName || 'Your shop name'}</strong><small>{brandingDraft.tagline || 'Your store tagline'}</small></span>
+                    </div>
+                    <div className="preview-shelf"><span /><span /><span /></div>
+                    <p><Leaf size={13} /> Quietly crafted for everyday rituals.</p>
+                  </aside>
+                  <div className="branding-fields">
+                    <label><span>Shop name</span><input value={brandingDraft.shopName} onChange={(event) => setBrandingDraft((current) => ({ ...current, shopName: event.target.value }))} maxLength={80} placeholder="AJR" required /></label>
+                    <label><span>Short tagline</span><input value={brandingDraft.tagline} onChange={(event) => setBrandingDraft((current) => ({ ...current, tagline: event.target.value }))} maxLength={140} placeholder="ALWAYS JUST ROYAL" /></label>
+                    <div className="logo-upload-control">
+                      <div><span className="inventory-block-label">Shop logo</span><small>PNG, JPG, WEBP or SVG · up to 5 MB</small></div>
+                      <label className="button button-light logo-upload-button"><Upload size={15} /> {logoUploading ? 'Uploading…' : 'Upload logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={uploadStoreLogo} disabled={logoUploading} /></label>
+                    </div>
+                    <p className="branding-save-note">Saved identity: <strong>{storeSettings.shopName}</strong>{settingsLoading ? ' · loading saved details…' : ''}</p>
+                  </div>
+                </div>
+              </form>
+
+              <section className="data-vault" aria-labelledby="data-vault-title">
+                <header className="settings-section-head">
+                  <span className="settings-section-icon data"><ClipboardList size={18} /></span>
+                  <div><span className="panel-eyebrow">Data vault</span><h2 id="data-vault-title">Take your records with you</h2><p>Download clean, Excel-ready records from your current workspace.</p></div>
+                </header>
+                <div className="export-card-stack">
+                  <article className="settings-export-card product-export">
+                    <span className="export-icon"><Package size={18} /></span><div><strong>Product catalogue</strong><small>{products.length} {products.length === 1 ? 'product' : 'products'} · stock, pricing &amp; visibility</small></div>
+                    <button className="icon-button export-download" type="button" onClick={exportProducts} disabled={loadingProducts} aria-label="Download products Excel file"><Download size={16} /></button>
+                  </article>
+                  <article className="settings-export-card order-export">
+                    <span className="export-icon"><ShoppingBag size={18} /></span><div><strong>Order ledger</strong><small>{orders.length} {orders.length === 1 ? 'order' : 'orders'} · customer, payment &amp; fulfilment</small></div>
+                    <button className="icon-button export-download" type="button" onClick={exportOrders} disabled={loadingOrders} aria-label="Download orders Excel file"><Download size={16} /></button>
+                  </article>
+                  <article className="settings-export-card message-export">
+                    <span className="export-icon"><MessageCircle size={18} /></span><div><strong>Message archive</strong><small>{messages.length} {messages.length === 1 ? 'message' : 'messages'} · customer enquiries &amp; status</small></div>
+                    <button className="icon-button export-download" type="button" onClick={exportMessages} disabled={loadingMessages} aria-label="Download messages Excel file"><Download size={16} /></button>
+                  </article>
+                </div>
+                <p className="export-footnote"><span>Excel-ready .xls</span> Data is prepared in your browser and never sent to another service.</p>
+              </section>
+            </div>
+
+            <section className="order-email-desk" aria-labelledby="order-email-desk-title">
+              <header className="settings-section-head">
+                <span className="settings-section-icon dispatch"><Mail size={18} /></span>
+                <div><span className="panel-eyebrow">Order email desk</span><h2 id="order-email-desk-title">Send a considered confirmation</h2><p>Choose a saved order to send its complete AJR confirmation to the customer, or send the same template safely to yourself for review.</p></div>
+              </header>
+              <div className="order-email-desk-controls">
+                <label className="order-email-select"><span>Order &amp; recipient</span><select value={emailOrderId} onChange={(event) => setEmailOrderId(event.target.value)} disabled={emailSendBusy || loadingOrders}>
+                  <option value="">Select an order to prepare its email</option>
+                  {emailableOrders.map((order) => <option key={order.dbId} value={order.dbId}>{order.id} · {order.customer} · {order.email}</option>)}
+                </select></label>
+                <div className="order-email-actions">
+                  <button className="button button-light" type="button" onClick={() => sendOrderEmail('preview')} disabled={!emailOrderId || emailSendBusy}><Eye size={15} /> {emailSendBusy ? 'Sending…' : 'Send me a preview'}</button>
+                  <button className="button button-dark" type="button" onClick={() => sendOrderEmail('customer')} disabled={!emailOrderId || emailSendBusy}><Mail size={15} /> {emailSendBusy ? 'Sending…' : 'Send confirmation'}</button>
+                </div>
+              </div>
+              {loadingOrders ? <p className="order-email-note">Loading saved orders…</p> : emailableOrders.length === 0 ? <p className="order-email-note">No eligible saved orders are available yet.</p> : <p className="order-email-note"><ShieldCheck size={14} /> The recipient and contents come from the saved order, never from this form.</p>}
+              {emailSendError && <p className="messages-error order-email-feedback" role="alert">{emailSendError}</p>}
+              {emailSendNotice && <p className="settings-notice order-email-feedback" role="status"><CheckCircle size={15} /> {emailSendNotice}</p>}
+            </section>
+
+            <section className="order-sms-desk" aria-labelledby="order-sms-desk-title">
+              <header className="settings-section-head">
+                <span className="settings-section-icon dispatch sms"><MessageCircle size={18} /></span>
+                <div><span className="panel-eyebrow">Order SMS desk</span><h2 id="order-sms-desk-title">Send a clear delivery update</h2><p>Send the approved AJR order SMS to the mobile number already saved with a customer order.</p></div>
+              </header>
+              <div className="order-email-desk-controls">
+                <label className="order-email-select"><span>Order &amp; mobile recipient</span><select value={smsOrderId} onChange={(event) => setSmsOrderId(event.target.value)} disabled={smsSendBusy || loadingOrders}>
+                  <option value="">Select an order to prepare its SMS</option>
+                  {smsableOrders.map((order) => <option key={order.dbId} value={order.dbId}>{order.id} Â· {order.customer} Â· â€¢â€¢â€¢â€¢ {String(order.phone || '').replace(/\D/g, '').slice(-4)}</option>)}
+                </select></label>
+                <div className="order-email-actions">
+                  <button className="button button-dark" type="button" onClick={sendOrderSms} disabled={!smsOrderId || smsSendBusy}><MessageCircle size={15} /> {smsSendBusy ? 'Sendingâ€¦' : 'Send SMS confirmation'}</button>
+                </div>
+              </div>
+              <p className="order-sms-template">AJR: Hello <b>{'{customer_name}'}</b>, your order <b>{'{order_number}'}</b> is received. Total: Rs <b>{'{total_amount}'}</b>. Payment: <b>{'{payment_status}'}</b>. Track: <b>{'{tracking_url}'}</b>. Thank you.</p>
+              {loadingOrders ? <p className="order-email-note">Loading saved ordersâ€¦</p> : smsableOrders.length === 0 ? <p className="order-email-note">No eligible saved mobile numbers are available yet.</p> : <p className="order-email-note"><ShieldCheck size={14} /> Recipient, DLT template, and message values are resolved securely from the saved order.</p>}
+              {smsSendError && <p className="messages-error order-email-feedback" role="alert">{smsSendError}</p>}
+              {smsSendNotice && <p className="settings-notice order-email-feedback" role="status"><CheckCircle size={15} /> {smsSendNotice}</p>}
+            </section>
+
+            <section className="settings-access-panel">
+              <div className="settings-access-intro"><span className="settings-section-icon secure"><ShieldCheck size={18} /></span><div><span className="panel-eyebrow">Workspace access</span><h2>Store stewardship is protected.</h2><p>Only approved administrators can access orders, customer messages, exports, and your saved brand identity.</p></div></div>
+              <div className="settings-active-admin"><span>Signed in as</span><strong>{loginEmail || ADMIN_EMAILS[0]}</strong><button className="button button-light" onClick={adminLogout}><X size={14} /> Sign out</button></div>
+              <details className="settings-admin-list"><summary>View approved administrators <ChevronRight size={15} /></summary><ul>{ADMIN_EMAILS.map((email) => <li key={email}>{email}</li>)}</ul></details>
+            </section>
           </section>
         )}
         {selectedOrder && (
@@ -1539,7 +2009,9 @@ function ProductForm({
   uploadImage: (file: File) => Promise<string | null>
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const varietyFileRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const [uploading, setUploading] = useState(false)
+  const [uploadingVarietyId, setUploadingVarietyId] = useState<string | null>(null)
   const patch = (part: Partial<ProductDraft>) => setDraft({ ...draft, ...part })
 
   const setVariety = (index: number, part: Partial<VarietyDraft>) =>
@@ -1608,13 +2080,13 @@ function ProductForm({
         </p>
       </div>
 
-      <div className="variety-block">
+      <div className="variety-block variety-workshop">
         <div className="variety-head">
-          <span>Varieties (price per kg)</span>
+          <div><span>Variety workshop</span><p className="form-hint">Every variety can have its own price, photo, stock, and shop availability.</p></div>
           <button
             type="button"
             className="button button-light small-button"
-            onClick={() => patch({ varieties: [...draft.varieties, { name: '', price: draft.perKg }] })}
+            onClick={() => patch({ varieties: [...draft.varieties, newVarietyDraft(draft.perKg)] })}
           >
             <Plus size={13} /> Add variety
           </button>
@@ -1622,20 +2094,43 @@ function ProductForm({
         {draft.varieties.length === 0 ? (
           <p className="form-hint">No varieties yet — every pack size will use the price above.</p>
         ) : (
-          draft.varieties.map((v, i) => (
-            <div className="variety-row" key={i}>
+          draft.varieties.map((v, i) => {
+            const varietyPreview = resolveVarietyImage(draft.name, draft.image, v)
+            return <article className={`variety-editor ${v.active ? '' : 'is-paused'}`} key={v.id}>
               <input value={v.name} onChange={(e) => setVariety(i, { name: e.target.value })} placeholder="Variety name" />
+              <input
+                ref={(node) => { varietyFileRefs.current[v.id] = node }}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setUploadingVarietyId(v.id)
+                  const url = await uploadImage(file)
+                  setUploadingVarietyId(null)
+                  if (url) setVariety(i, { image: url })
+                  if (varietyFileRefs.current[v.id]) varietyFileRefs.current[v.id]!.value = ''
+                }}
+              />
+              <button type="button" className="variety-upload" disabled={uploadingVarietyId === v.id} onClick={() => varietyFileRefs.current[v.id]?.click()}>
+                {varietyPreview ? <img src={varietyPreview} alt="" /> : <Image size={13} />} {uploadingVarietyId === v.id ? 'Uploading…' : 'Photo'}
+              </button>
               <input type="number" min={1} value={v.price} onChange={(e) => setVariety(i, { price: e.target.value })} placeholder="₹ / kg" />
+              <input type="number" min={0} step={1} value={v.stock} onChange={(e) => setVariety(i, { stock: e.target.value })} placeholder="Stock" aria-label={`${v.name || 'Variety'} stock`} />
+              <button type="button" className={`mini-availability ${v.active ? 'is-on' : ''}`} role="switch" aria-checked={v.active} title={v.active ? 'Available in shop' : 'Hidden from shop'} onClick={() => setVariety(i, { active: !v.active })}>
+                <span aria-hidden="true" /> {v.active ? 'On' : 'Off'}
+              </button>
               <button
                 type="button"
-                className="icon-button small"
+                className="icon-button small destructive-action"
                 title="Remove variety"
                 onClick={() => patch({ varieties: draft.varieties.filter((_, idx) => idx !== i) })}
               >
                 <Trash2 size={14} />
               </button>
-            </div>
-          ))
+            </article>
+          })
         )}
       </div>
 
@@ -1693,6 +2188,17 @@ function ProductForm({
         <label>
           <span>Nutrients (comma separated)</span>
           <input value={draft.nutrients} onChange={(e) => patch({ nutrients: e.target.value })} placeholder="Vitamin E, Magnesium" />
+        </label>
+      </div>
+
+      <div className="form-grid-2">
+        <label>
+          <span>Rating (0–5)</span>
+          <input type="number" min={0} max={5} step="0.1" value={draft.rating} onChange={(e) => patch({ rating: e.target.value })} placeholder="4.9" />
+        </label>
+        <label>
+          <span>Review count</span>
+          <input type="number" min={0} step={1} value={draft.reviewsCount} onChange={(e) => patch({ reviewsCount: e.target.value })} placeholder="128" />
         </label>
       </div>
 

@@ -45,6 +45,14 @@ export async function POST(request: NextRequest) {
     const packSizes = normalizePackSizes(body.pack_sizes ?? body.packSizes)
     const perKg = varieties[0]?.price ?? Number(body.price ?? 0)
     const basePrice = Number.isFinite(perKg) ? Math.round(perKg / 4) : 0
+    const rating = Number(body.rating ?? 4.9)
+    const reviewsCount = Number(body.reviews_count ?? body.reviewsCount ?? 0)
+    if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
+      return NextResponse.json({ message: 'Rating must be between 0 and 5.' }, { status: 400 })
+    }
+    if (!Number.isFinite(reviewsCount) || !Number.isInteger(reviewsCount) || reviewsCount < 0) {
+      return NextResponse.json({ message: 'Review count must be a non-negative whole number.' }, { status: 400 })
+    }
 
     const row: Record<string, any> = {
       name,
@@ -55,8 +63,8 @@ export async function POST(request: NextRequest) {
       status: String(body.status || (stock <= 0 ? 'Out of stock' : stock <= 8 ? 'Low stock' : 'In stock')),
       image: String(body.image || '/nut-selection.png'),
       detail: String(body.detail ?? body.description ?? ''),
-      rating: Number(body.rating ?? 4.9),
-      reviews_count: Number(body.reviews_count ?? 0),
+      rating,
+      reviews_count: reviewsCount,
       origin: String(body.origin || 'India'),
       nutrients: Array.isArray(body.nutrients) ? body.nutrients.map(String) : [],
       active: body.active !== false,

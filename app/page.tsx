@@ -40,6 +40,7 @@ import FarmOrigins from '@/components/FarmOrigins'
 import QualityComparison from '@/components/QualityComparison'
 import StudioLocation from '@/components/StudioLocation'
 import { PACK_SIZE_OPTIONS } from '@/lib/supabase'
+import { resolveVarietyImage } from '@/lib/variety-images'
 
 const logo = '/ajr-logo.png'
 
@@ -55,7 +56,14 @@ type Flight = {
   dy: number
   target: FlightTarget
 }
-export type Variety = { name: string; price: number }
+export type Variety = {
+  id?: string
+  name: string
+  price: number
+  image?: string
+  stock?: number
+  active?: boolean
+}
 
 export type Product = {
   id: number
@@ -102,8 +110,15 @@ const formatCurrency = (value: number) =>
 
 const selectedVarietyOf = (product: Product): Variety | undefined => {
   if (!product.varieties?.length) return undefined
-  return product.varieties.find((v) => v.name === product.selectedVariety) || product.varieties[0]
+  const available = product.varieties.filter((v) => v.active !== false && (v.stock === undefined || v.stock > 0))
+  return available.find((v) => v.name === product.selectedVariety) || available[0]
 }
+
+const purchasableVarieties = (product: Product): Variety[] =>
+  (product.varieties || []).filter((v) => v.active !== false && (v.stock === undefined || v.stock > 0))
+
+const defaultVarietyName = (product: Product): string =>
+  purchasableVarieties(product)[0]?.name || ''
 
 const priceForWeight = (product: Product, weight: Weight): number => {
   const variety = selectedVarietyOf(product)
@@ -117,71 +132,10 @@ const productAtWeight = (product: Product, weight: Weight): Product => ({
   selectedWeight: weight,
 })
 
-// Product rows keep their normal catalogue image. This small resolver applies
-// imagery that belongs to a selected variety without changing its price,
-// weight, or the source product data.
-const ALMOND_VARIETY_IMAGES: Record<string, string> = {
-  'Blanched Almonds': '/blanched-almonds.jpg',
-  'Roasted Almonds': '/roasted-almonds.jpg',
-}
-
-const CASHEW_VARIETY_IMAGES: Record<string, string> = {
-  'Cashew W240': '/cashew-w240.jpeg',
-  'Cashew W320': '/cashew-w320.webp',
-  'Cashew Jumbo Splits': '/cashew-jumbo-splits.webp',
-  'Cashew Splits': '/cashew-splits.jpg',
-  'Roasted Cashews': '/roasted-cashews.jpg',
-  'Chilli Cashews': '/roasted-cashews.jpg',
-  'Pepper Cashews': '/pepper-cashews.webp',
-  'Salted Cashews': '/salted-cashews.webp',
-  'BBQ Cashews': '/bbq-cashews.png',
-  'Chilli Garlic Cashews': '/chilli-garlic-cashews.jpeg',
-  'Cheese Cashews': '/cheese-cashews.jpg',
-  'Tangy Tomato Cashews': '/tangy-tomato-cashews.jpg',
-  'Mint Cashews': '/mint-cashews.jpg',
-  'Peri Peri Cashews': '/peri-peri-cashews.jpg',
-}
-
-const PISTACHIO_VARIETY_IMAGES: Record<string, string> = {
-  'Salted Pistachios': '/salted-pistachios.jpg',
-}
-
-const WALNUT_VARIETY_IMAGES: Record<string, string> = {
-  'Kashmiri Walnut': '/kashmiri-walnut.jpg',
-}
-
-const FIG_VARIETY_IMAGES: Record<string, string> = {
-  'Figs Bold': '/figs-bold.webp',
-}
-
-const RAISIN_VARIETY_IMAGES: Record<string, string> = {
-  'Black Raisins': '/black-raisins.jpg',
-}
-
-const DATE_VARIETY_IMAGES: Record<string, string> = {
-  'Deseeded Wet Dates': '/deseeded-wet-dates.webp',
-  'Mebroom Dates': '/mebroom-dates.jpg',
-  'Medjool Dates': '/medjool-dates.jpg',
-}
-
 const productWithSelectedVarietyImage = (product: Product): Product => {
   const baseImage = product.baseImage || product.image
-  const varietyImage =
-    product.name === 'Almonds'
-      ? ALMOND_VARIETY_IMAGES[product.selectedVariety || '']
-      : product.name === 'Cashews'
-        ? CASHEW_VARIETY_IMAGES[product.selectedVariety || '']
-        : product.name === 'Pistachios'
-          ? PISTACHIO_VARIETY_IMAGES[product.selectedVariety || '']
-          : product.name === 'Walnuts'
-            ? WALNUT_VARIETY_IMAGES[product.selectedVariety || '']
-            : product.name === 'Figs'
-              ? FIG_VARIETY_IMAGES[product.selectedVariety || '']
-              : product.name === 'Raisins'
-                ? RAISIN_VARIETY_IMAGES[product.selectedVariety || '']
-                : product.name === 'Dates'
-                  ? DATE_VARIETY_IMAGES[product.selectedVariety || '']
-                  : undefined
+  const selectedVariety = selectedVarietyOf(product)
+  const varietyImage = resolveVarietyImage(product.name, baseImage, selectedVariety)
 
   return {
     ...product,
@@ -201,7 +155,11 @@ const colorForType = (type: string): string => {
 const varietiesFromRow = (value: unknown): Variety[] => {
   const list = Array.isArray(value) ? value : []
   return list
-    .map((v: any) => ({ name: String(v?.name ?? '').trim(), price: Number(v?.price ?? 0) }))
+    .map((v: any) => {
+      const rawStock = v?.stock
+      const stock = rawStock === undefined || rawStock === null || String(rawStock).trim() === '' ? undefined : Number(rawStock)
+      return { id: String(v?.id ?? '').trim() || undefined, name: String(v?.name ?? '').trim(), price: Number(v?.price ?? 0), image: String(v?.image ?? '').trim() || undefined, stock: Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : undefined, active: v?.active !== false }
+    })
     .filter((v: Variety) => v.name.length > 0 && Number.isFinite(v.price) && v.price > 0)
 }
 
@@ -251,11 +209,11 @@ const mergeRowIntoProduct = (base: Product, row: any): Product => {
     name: mapped.name || base.name,
     type: mapped.type || base.type,
     image,
-    detail: mapped.detail || base.detail,
-    nutrients: mapped.nutrients && mapped.nutrients.length ? mapped.nutrients : base.nutrients,
-    origin: mapped.origin && mapped.origin !== 'India' ? mapped.origin : base.origin,
-    rating: base.rating ?? mapped.rating,
-    reviewsCount: base.reviewsCount ?? mapped.reviewsCount,
+    detail: mapped.detail,
+    nutrients: mapped.nutrients,
+    origin: mapped.origin,
+    rating: mapped.rating,
+    reviewsCount: mapped.reviewsCount,
     varieties: mapped.varieties ?? base.varieties,
     packSizes: mapped.packSizes ?? base.packSizes,
     price: mapped.price || base.price,
@@ -2368,11 +2326,17 @@ function ProductCard({
 }) {
   const { t } = useLanguage()
   const [weight, setWeight] = useState<Weight>(product.selectedWeight || defaultWeightFor(product))
-  const [variety, setVariety] = useState<string>(product.selectedVariety || product.varieties?.[0]?.name || '')
+  const [variety, setVariety] = useState<string>(product.selectedVariety && purchasableVarieties(product).some((option) => option.name === product.selectedVariety) ? product.selectedVariety : defaultVarietyName(product))
+  useEffect(() => {
+    setWeight(product.selectedWeight || defaultWeightFor(product))
+    setVariety(product.selectedVariety && purchasableVarieties(product).some((option) => option.name === product.selectedVariety) ? product.selectedVariety : defaultVarietyName(product))
+  }, [product.id, product.selectedWeight, product.selectedVariety, product.varieties])
   const withVariety = product.varieties?.length ? { ...product, selectedVariety: variety } : product
   const selectedProduct = productAtWeight(productWithSelectedVarietyImage(withVariety), weight)
+  const varietyUnavailable = Boolean(product.varieties?.length) && !selectedVarietyOf(withVariety)
+  const unavailable = Boolean(outOfStock) || varietyUnavailable
   return (
-    <article className="product-card product-card--catalogue" style={outOfStock ? { opacity: 0.75 } : undefined}>
+    <article className="product-card product-card--catalogue" style={unavailable ? { opacity: 0.75 } : undefined}>
       <button type="button" className="product-card-link" onClick={() => onSelect(selectedProduct)} aria-label={`${t('View details')}: ${t(product.name)}`} />
       <div className={`product-photo ${product.color}`}>
         <img src={selectedProduct.image} alt={t(product.name)} />
@@ -2389,7 +2353,7 @@ function ProductCard({
           <Heart size={18} fill={wished ? 'currentColor' : 'none'} />
         </button>
         <span className="product-tag">{t(product.type)}</span>
-        {outOfStock && <span className="stock-note">{t('Out of stock')}</span>}
+        {unavailable && <span className="stock-note">{t('Out of stock')}</span>}
       </div>
       <div className="product-card-copy">
         <div className="product-card-title-row">
@@ -2411,7 +2375,10 @@ function ProductCard({
               onChange={(event) => setVariety(event.target.value)}
               aria-label={`${t('Variety')}: ${t(product.name)}`}
             >
-              {product.varieties.map((option) => <option key={option.name} value={option.name}>{t(option.name)}</option>)}
+              {product.varieties.map((option) => {
+                const disabled = option.active === false || (option.stock !== undefined && option.stock <= 0)
+                return <option key={option.id || option.name} value={option.name} disabled={disabled}>{t(option.name)}{disabled ? ` — ${t('Out of stock')}` : ''}</option>
+              })}
             </select>
           </label>
         ) : <div className="pack-select-placeholder" aria-hidden="true" />}
@@ -2431,14 +2398,14 @@ function ProductCard({
         <button
           type="button"
           className="quick-add"
-          disabled={outOfStock}
-          title={outOfStock ? t('Out of stock') : t('Add to bag')}
+          disabled={unavailable}
+          title={unavailable ? t('Out of stock') : t('Add to bag')}
           onClick={(event) => {
             event.stopPropagation()
-            if (!outOfStock) addToCart(selectedProduct, 1, event.currentTarget)
+            if (!unavailable) addToCart(selectedProduct, 1, event.currentTarget)
           }}
         >
-          {outOfStock ? t('Out of stock') : <>{t('Add')} <Plus size={15} aria-hidden="true" /></>}
+          {unavailable ? t('Out of stock') : <>{t('Add')} <Plus size={15} aria-hidden="true" /></>}
         </button>
         </div>
       </div>
@@ -2828,15 +2795,17 @@ function Shop({
 function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished, go, outOfStock }: any) {
   const { language, t } = useLanguage()
   const [weight, setWeight] = useState<Weight>(product.selectedWeight || defaultWeightFor(product))
-  const [variety, setVariety] = useState<string>(product.selectedVariety || product.varieties?.[0]?.name || '')
+  const [variety, setVariety] = useState<string>(product.selectedVariety && purchasableVarieties(product).some((option) => option.name === product.selectedVariety) ? product.selectedVariety : defaultVarietyName(product))
 
   useEffect(() => {
     setWeight(product.selectedWeight || defaultWeightFor(product))
-    setVariety(product.selectedVariety || product.varieties?.[0]?.name || '')
-  }, [product.id, product.selectedWeight, product.selectedVariety])
+    setVariety(product.selectedVariety && purchasableVarieties(product).some((option) => option.name === product.selectedVariety) ? product.selectedVariety : defaultVarietyName(product))
+  }, [product.id, product.selectedWeight, product.selectedVariety, product.varieties])
 
   const withVariety = product.varieties?.length ? { ...product, selectedVariety: variety } : product
   const weightedProduct = productAtWeight(productWithSelectedVarietyImage(withVariety), weight)
+  const varietyUnavailable = Boolean(product.varieties?.length) && !selectedVarietyOf(withVariety)
+  const unavailable = Boolean(outOfStock) || varietyUnavailable
   return (
     <main className="detail-page">
       <button className="back-link" onClick={() => go('product')}>
@@ -2876,7 +2845,10 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
             <label className="pack-select-label detail-pack-selector">
               <span>{t('Variety')}</span>
               <select value={variety} onChange={(event) => setVariety(event.target.value)} aria-label={`${t('Variety')}: ${t(product.name)}`}>
-                {product.varieties.map((option: Variety) => <option key={option.name} value={option.name}>{t(option.name)}</option>)}
+                {product.varieties.map((option: Variety) => {
+                  const disabled = option.active === false || (option.stock !== undefined && option.stock <= 0)
+                  return <option key={option.id || option.name} value={option.name} disabled={disabled}>{t(option.name)}{disabled ? ` — ${t('Out of stock')}` : ''}</option>
+                })}
               </select>
             </label>
           )}
@@ -2902,9 +2874,9 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
             </div>
             <button
               className="button button-dark grow"
-              disabled={outOfStock}
+              disabled={unavailable}
               onClick={(event) => {
-                if (outOfStock) return
+                if (unavailable) return
                 const flightStatus = addToCart(weightedProduct, quantity, event.currentTarget)
                 // A repeated press while a confirmation is still in flight is
                 // intentionally ignored for navigation. It can never pull the
@@ -2915,7 +2887,7 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
                 window.setTimeout(() => go('cart'), flightStatus === 'started' ? 575 : 0)
               }}
             >
-              {outOfStock ? t('Out of stock') : <>{t('Add to bag')} <ShoppingBag size={17} /></>}
+              {unavailable ? t('Out of stock') : <>{t('Add to bag')} <ShoppingBag size={17} /></>}
             </button>
             <button
               className={wished ? 'detail-wish wished' : 'detail-wish'}
