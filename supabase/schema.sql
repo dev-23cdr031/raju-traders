@@ -13,6 +13,8 @@ create table if not exists public.orders (
   total numeric not null default 0,
   status text not null default 'Pending',
   channel text not null default 'Online',
+  whatsapp_opt_in boolean not null default false,
+  whatsapp_opt_in_at timestamptz,
   created_at timestamptz not null default now()
 );
 create index if not exists orders_created_at_idx on public.orders (created_at desc);

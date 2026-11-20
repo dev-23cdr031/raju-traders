@@ -13,7 +13,7 @@ export default function StudioLocation() {
     ['📦', 'Bulk & Wholesale Orders', 'Special assistance for retailers, businesses, events and bulk requirements.'],
   ] as const
 
-  const features = ['Product Tasting', 'Custom Gift Boxes', 'Wholesale Orders', 'Premium Collection']
+  const features = ['Custom Gift Boxes', 'Wholesale Orders', 'Premium Collection']
 
   return (
     <div className="studio-location-container">

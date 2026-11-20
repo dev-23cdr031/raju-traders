@@ -5,39 +5,45 @@ import { useLanguage } from './LanguageProvider'
 
 const COMPARISONS = [
   {
-    feature: 'Kernel Grade & Sizing',
-    ajr: 'Hand-sorted Jumbo W240 Cashews & Mammoth Kashmiri Walnuts',
-    market: 'Mixed size fragments, split kernels, & Grade-B defect pieces',
+    feature: 'Cashew Quality',
+    ajr: 'We focus on good-quality cashews with great taste.',
+    market: 'Cashews that taste fresh and have a pleasant crunch.',
     ajrGood: true,
   },
   {
-    feature: 'Chemical Bleaching & Treatment',
-    ajr: '100% Unbleached & Chemical-Free natural shade',
-    market: 'Chlorine bleached or sulfur dioxide treated for artificial shine',
+    feature: 'Almond Quality',
+    ajr: 'We aim to offer tasty almonds for everyday snacking.',
+    market: 'Almonds with a natural flavour and good texture.',
     ajrGood: true,
   },
   {
-    feature: 'Moisture Control & Crispness',
-    ajr: 'Nitrogen-flushed small batches within 24h of roasting',
-    market: 'Stored in open burlap sacks in warehouses for 6–12 months',
+    feature: 'Freshness',
+    ajr: 'We focus on delivering products in good condition.',
+    market: 'Dry fruits that smell fresh and taste good.',
     ajrGood: true,
   },
   {
-    feature: 'Additives & Preservatives',
-    ajr: 'Zero mineral oil, no added sugar, zero synthetic glazes',
-    market: 'Coated in cheap vegetable oil or glucose syrup to add weight',
+    feature: 'Taste & Crunch',
+    ajr: 'We value natural flavour and satisfying crunch.',
+    market: "Nuts that aren't stale or unpleasantly soft.",
     ajrGood: true,
   },
   {
-    feature: 'Packaging & Shelf Preservation',
-    ajr: 'Eco Jute Pouches, Reusable Glass Jars & Laser Wood Hampers',
-    market: 'Thin single-use plastic bags susceptible to oxidation',
+    feature: 'Cleanliness',
+    ajr: 'We aim to maintain cleanliness when handling our products.',
+    market: 'Clean products without visible dirt or unwanted particles.',
     ajrGood: true,
   },
   {
-    feature: 'Farmer Pay & Traceability',
-    ajr: 'Direct Fair-Trade contracts guaranteeing 25% above market rate',
-    market: 'Complex middleman supply chains exploiting small growers',
+    feature: 'Packaging',
+    ajr: 'We focus on packaging that keeps products protected.',
+    market: 'Properly sealed packs with clear product information.',
+    ajrGood: true,
+  },
+  {
+    feature: 'Customer Satisfaction',
+    ajr: 'We value customer trust and feedback.',
+    market: 'Clear communication and helpful customer service.',
     ajrGood: true,
   },
 ]
@@ -64,13 +70,13 @@ export default function QualityComparison() {
         <table className="comparison-table">
           <thead>
             <tr>
-              <th className="feature-col">{t('Quality Benchmark')}</th>
+              <th className="feature-col">{t('Quality Factors')}</th>
               <th className="ajr-col">
                 <div className="col-header-badge">
-                  <Sparkles size={14} /> {t('AJR Pure Sourcing')}
+                  <Sparkles size={14} /> {t('AJR Nature')}
                 </div>
               </th>
-              <th className="market-col">{t('Generic Market Brands')}</th>
+              <th className="market-col">{t('What Customers Should Look For')}</th>
             </tr>
           </thead>
           <tbody>

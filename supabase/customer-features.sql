@@ -10,6 +10,8 @@ alter table public.orders add column if not exists payment_method text not null 
 alter table public.orders add column if not exists payment_status text not null default 'Pending';
 alter table public.orders add column if not exists idempotency_key text;
 alter table public.orders add column if not exists updated_at timestamptz not null default now();
+alter table public.orders add column if not exists whatsapp_opt_in boolean not null default false;
+alter table public.orders add column if not exists whatsapp_opt_in_at timestamptz;
 
 create index if not exists orders_user_id_idx on public.orders (user_id, created_at desc);
 create unique index if not exists orders_idempotency_key_key
@@ -65,4 +67,10 @@ select
             and column_name = 'payment_method')          as orders_has_payment_method,
   exists (select 1 from information_schema.columns
           where table_schema = 'public' and table_name = 'orders'
-            and column_name = 'idempotency_key')         as orders_has_idempotency_key;
+            and column_name = 'idempotency_key')         as orders_has_idempotency_key,
+  exists (select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = 'orders'
+            and column_name = 'whatsapp_opt_in')          as orders_has_whatsapp_opt_in,
+  exists (select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = 'orders'
+            and column_name = 'whatsapp_opt_in_at')      as orders_has_whatsapp_opt_in_at;

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   ArrowRight,
@@ -41,11 +42,22 @@ import QualityComparison from '@/components/QualityComparison'
 import StudioLocation from '@/components/StudioLocation'
 import { PACK_SIZE_OPTIONS } from '@/lib/supabase'
 import { resolveVarietyImage } from '@/lib/variety-images'
+import { getAnalyticsConsent, trackAnalytics, type AnalyticsPage } from '@/lib/visitor-analytics-client'
 
 const logo = '/ajr-logo.png'
 
 type View = 'home' | 'about' | 'product' | 'contact' | 'cart' | 'wishlist' | 'detail' | 'orders'
 type FlightTarget = 'cart' | 'wishlist'
+const ANALYTICS_PAGE_FOR_VIEW: Record<View, AnalyticsPage> = {
+  home: 'home',
+  about: 'about',
+  product: 'shop',
+  contact: 'contact',
+  cart: 'cart',
+  wishlist: 'wishlist',
+  detail: 'product-detail',
+  orders: 'orders',
+}
 type FlightLaunchResult = 'started' | 'skipped' | 'locked'
 type Flight = {
   id: number
@@ -1067,7 +1079,9 @@ const mergeWishlist = (server: any[], guest: any[]) => {
 
 export default function Page() {
   const { t } = useLanguage()
+  const pathname = usePathname()
   const [view, setView] = useState<View>('home')
+  const [analyticsConsentRevision, setAnalyticsConsentRevision] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([])
   const [wishlist, setWishlist] = useState<Product[]>([])
@@ -1085,6 +1099,63 @@ export default function Page() {
   const flightLockRef = useRef<Set<FlightTarget>>(new Set())
   const flightIdRef = useRef(0)
   const pulseTimeoutRef = useRef<number | null>(null)
+  const analyticsPageRef = useRef<{ key: string; page: AnalyticsPage; productId?: number; startedAt: number; durationSent: boolean } | null>(null)
+
+  useEffect(() => {
+    const handleConsent = () => setAnalyticsConsentRevision((revision) => revision + 1)
+    window.addEventListener('ajr-analytics-consent', handleConsent)
+    window.addEventListener('storage', handleConsent)
+    setAnalyticsConsentRevision((revision) => revision + 1)
+    return () => {
+      window.removeEventListener('ajr-analytics-consent', handleConsent)
+      window.removeEventListener('storage', handleConsent)
+    }
+  }, [])
+
+  const flushAnalyticsDuration = () => {
+    const current = analyticsPageRef.current
+    if (!current || current.durationSent) return
+    current.durationSent = true
+    const duration = Date.now() - current.startedAt
+    if (duration > 1000) trackAnalytics('page_duration', current.page, duration, current.productId)
+  }
+
+  useEffect(() => {
+    const flush = () => flushAnalyticsDuration()
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      flush()
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (getAnalyticsConsent() !== 'accepted') {
+      flushAnalyticsDuration()
+      analyticsPageRef.current = null
+      return
+    }
+    const page = ANALYTICS_PAGE_FOR_VIEW[view]
+    const productId = view === 'detail' ? selected.id : undefined
+    const key = `${pathname}:${view}${productId === undefined ? '' : `:${productId}`}`
+    if (analyticsPageRef.current?.key === key) return
+    flushAnalyticsDuration()
+    analyticsPageRef.current = { key, page, productId, startedAt: Date.now(), durationSent: false }
+    trackAnalytics('page_view', page, undefined, productId)
+  }, [analyticsConsentRevision, pathname, selected.id, view])
+
+  useEffect(() => {
+    if (getAnalyticsConsent() !== 'accepted') return
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === 'visible') trackAnalytics('heartbeat', ANALYTICS_PAGE_FOR_VIEW[view])
+    }, 60_000)
+    return () => window.clearInterval(heartbeat)
+  }, [analyticsConsentRevision, view])
 
   // Signed-in customer. null = anonymous visitor.
   const [session, setSession] = useState<{
@@ -1311,6 +1382,7 @@ export default function Page() {
 
   const addToCart = (product: Product, qty = 1, origin?: HTMLElement | null) => {
     const selectedProduct = productWithSelectedVarietyImage(product)
+    trackAnalytics('cart_add', ANALYTICS_PAGE_FOR_VIEW[view])
     setCart((items) => {
       const found = items.find((item) => sameVariant(item.product, selectedProduct))
       return found
@@ -1576,34 +1648,37 @@ const processSteps = [
   },
   {
     step: '02',
-    title: 'Strict Size & Quality Grading',
-    text: 'Every batch is sorted by hand and optical scanners. Only whole, generous kernels make it into our signature pouches.',
+    title: 'Carefully Selected for Quality',
+    text: 'We believe great taste begins with great ingredients. Our focus is on bringing you quality nuts that deliver freshness, flavour, and satisfaction in every bite.',
   },
   {
     step: '03',
-    title: 'Small-Batch Nitrogen Flush',
-    text: 'Packed in small batches within hours of roasting to lock in natural moisture, crunch, and aroma without preservatives.',
+    title: 'Freshness in Every Bite',
+    text: 'From our collection to your hands, we aim to deliver a delightful snacking experience with rich taste, natural goodness, and quality you can trust.',
   },
 ]
 
 const recipes = [
   {
-    title: 'Saffron & Almond Golden Elixir',
-    desc: 'Warm almond milk infused with Kashmiri saffron strands, cardamom, and crushed AJR Royal Almonds for bedtime calm.',
-    time: '10 mins prep',
-    image: '/nut-selection.png',
+    title: 'Homemade Dry Fruit Ladoo',
+    desc: 'A delicious homemade treat made with dates, cashews, almonds, and pistachios. Naturally sweet, nutty, and perfect for sharing with family.',
+    ingredients: 'Dates, Almonds, Cashews, Pistachios',
+    time: '15 mins',
+    image: '/recipe-dry-fruit-ladoo.png',
   },
   {
-    title: 'Honey Date & Walnut Energy Bites',
-    desc: 'No-bake protein balls made with Medjool Date Reserve, raw walnuts, chia seeds, and a drizzle of wild forest honey.',
-    time: '15 mins prep',
-    image: '/dates-apricots.png',
+    title: 'Creamy Badam Milk',
+    desc: 'Turn everyday milk into a delicious drink with almonds, cardamom, and a touch of saffron. Enjoy it warm or chilled.',
+    ingredients: 'Almonds, Milk, Cardamom, Saffron',
+    time: '10 mins',
+    image: '/recipe-creamy-badam-milk.png',
   },
   {
-    title: 'Herb-Roasted Cashew Snack Bowl',
-    desc: 'Jumbo golden cashews tossed with rosemary, pink Himalayan salt, and cold-pressed extra virgin olive oil.',
-    time: '8 mins prep',
-    image: '/pistachio-premium.png',
+    title: 'Crunchy Masala Cashews',
+    desc: 'Give your cashews a tasty twist with a little spice and seasoning. A crunchy snack for tea time, movie nights, or anytime cravings.',
+    ingredients: 'Cashews, Ghee, Chilli Powder, Curry Leaves',
+    time: '10 mins',
+    image: '/recipe-crunchy-masala-cashews.png',
   },
 ]
 
@@ -2073,12 +2148,6 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
                 {t('Elevate weddings, festive celebrations, and corporate milestones with AJR handcrafted wooden presentation boxes, embossed gold foils, and custom handwritten cards.')}
               </p>
 
-              <div className="festive-pills">
-                <span className="festive-pill">✦ {t('Laser Engraved Wood')}</span>
-                <span className="festive-pill">✦ {t('Airtight Glass Jars')}</span>
-                <span className="festive-pill">✦ {t('Custom Bulk Pricing')}</span>
-              </div>
-
               <button
                 className="button button-light"
                 onClick={() => go('product')}
@@ -2126,6 +2195,8 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
           </section>
         </Reveal>
 
+        <LoveReasons />
+
         {/* Culinary Journal & Recipe Pairings */}
         <Reveal>
           <section className="journal section">
@@ -2147,6 +2218,9 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
                   <div className="recipe-body">
                     <h3>{t(r.title)}</h3>
                     <p>{t(r.desc)}</p>
+                    <p className="recipe-ingredients">
+                      {t('Ingredients')}: {t(r.ingredients)}
+                    </p>
                     <button
                       className="text-link"
                       onClick={() => go('product')}
@@ -2480,54 +2554,7 @@ function About({ go }: { go: (v: View) => void }) {
         </section>
       </Reveal>
 
-      {/* Core Principles */}
-      <section className="values section">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">{t('Uncompromising Standards')}</p>
-            <h2>{t('6 Purity Commitments')}</h2>
-          </div>
-          <p className="section-intro">{t('From harvest selection to eco packaging, we keep our standards non-negotiable.')}</p>
-        </div>
-        <div className="value-grid">
-          <Value
-            delay={0}
-            icon={<Leaf />}
-            title={t('100% Unbleached')}
-            text={t('Zero chlorine, no sulfur dioxide, and no artificial color processing. Just natural shade.')}
-          />
-          <Value
-            delay={90}
-            icon={<Sparkles />}
-            title={t('Nitrogen-Flush Packed')}
-            text={t('Sealed in small batches weekly to lock in crispness and protect natural Vitamin E & ALA.')}
-          />
-          <Value
-            delay={180}
-            icon={<ShieldCheck />}
-            title={t('Direct Farmer Trade')}
-            text={t('Fair trade contracts that pay 25% above market rates directly to single-origin growers.')}
-          />
-          <Value
-            delay={270}
-            icon={<Award />}
-            title={t('Optically Size Graded')}
-            text={t('Only hand-selected Jumbo W240 cashews & Mammoth Kashmiri walnuts make the cut.')}
-          />
-          <Value
-            delay={360}
-            icon={<Heart />}
-            title={t('Zero Oil Glazes')}
-            text={t('No cheap palm oil coats, no glucose weight additives. Pure dry roasted goodness.')}
-          />
-          <Value
-            delay={450}
-            icon={<Gift />}
-            title={t('Eco Jute & Glass')}
-            text={t('Sustainable, zero-plastic packaging options designed for reuse and lower carbon footprint.')}
-          />
-        </div>
-      </section>
+      <LoveReasons />
 
       {/* Heritage Timeline Section */}
       <Reveal>
@@ -2599,6 +2626,59 @@ function About({ go }: { go: (v: View) => void }) {
         </button>
       </section>
     </main>
+  )
+}
+
+function LoveReasons() {
+  const { t } = useLanguage()
+
+  return (
+    <section className="values love-reasons section">
+      <div className="section-head">
+        <div>
+          <h2>{t('6 Reasons to Love AJR Nature')}</h2>
+        </div>
+        <p className="section-intro">{t('Good quality, great taste, and thoughtful service. At AJR Nature, we believe every customer deserves a delightful dry fruit experience.')}</p>
+      </div>
+      <div className="value-grid">
+        <Value
+          delay={0}
+          icon={<Leaf />}
+          title={t('Naturally Delicious')}
+          text={t('Enjoy the rich flavours and natural goodness of dry fruits, perfect for every craving.')}
+        />
+        <Value
+          delay={90}
+          icon={<Sparkles />}
+          title={t('Quality You Can Trust')}
+          text={t('We focus on offering quality dry fruits that bring great taste and satisfaction to every purchase.')}
+        />
+        <Value
+          delay={180}
+          icon={<ShieldCheck />}
+          title={t('Freshness Matters')}
+          text={t('Because every bite should be enjoyable, we give importance to freshness, taste, and texture.')}
+        />
+        <Value
+          delay={270}
+          icon={<Award />}
+          title={t('Carefully Chosen')}
+          text={t('From crunchy cashews to flavourful almonds, we aim to bring you products worth choosing.')}
+        />
+        <Value
+          delay={360}
+          icon={<Heart />}
+          title={t('Perfect for Every Occasion')}
+          text={t("Whether it's a daily snack, a thoughtful gift, or a family celebration, there's something for everyone.")}
+        />
+        <Value
+          delay={450}
+          icon={<Gift />}
+          title={t('Customers Come First')}
+          text={t('Your trust matters to us. We value honest service, clear communication, and your satisfaction.')}
+        />
+      </div>
+    </section>
   )
 }
 
@@ -3246,6 +3326,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('COD')
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
@@ -3291,6 +3372,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
           email,
           phone,
           address,
+          whatsapp_opt_in: whatsappOptIn,
           payment_method: paymentMethod,
           payment_status: 'Pending',
           idempotency_key: idempotencyKey.current,
@@ -3313,6 +3395,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.message || 'Failed to place order.')
       const order = data.order
+      trackAnalytics('purchase', 'cart')
 
       // The cart is ONLY touched after the order row exists, and only the lines
       // that actually made it into the order are taken out of the bag.
@@ -3331,6 +3414,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
       )
 
       idempotencyKey.current = ''
+      setWhatsappOptIn(false)
       setPlacedOrder(order)
       setShowCheckout(false)
     } catch (err: any) {
@@ -3463,7 +3547,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
             </div>
             {!showCheckout ? (
               session ? (
-                <button className="button button-dark full" onClick={() => setShowCheckout(true)}>
+                <button className="button button-dark full" onClick={() => { trackAnalytics('checkout_start', 'cart'); setShowCheckout(true) }}>
                   {t('Proceed to Checkout')} <ArrowRight size={17} />
                 </button>
               ) : (
@@ -3506,6 +3590,15 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
                 <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 600 }}>
                   {t('Delivery address')}
                   <textarea required value={address} onChange={(e: any) => setAddress(e.target.value)} placeholder={t('Door no, street, city, pincode')} rows={3} suppressHydrationWarning style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontWeight: 400, fontFamily: 'inherit' }} />
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, fontWeight: 400, lineHeight: 1.5 }}>
+                  <input
+                    type="checkbox"
+                    checked={whatsappOptIn}
+                    onChange={(event) => setWhatsappOptIn(event.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  <span>I agree to receive WhatsApp updates about this order at the phone number above. This is optional and used only for order updates.</span>
                 </label>
                 <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 600 }}>
                   {t('Payment method')}

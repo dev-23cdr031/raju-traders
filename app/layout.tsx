@@ -1,7 +1,7 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { LanguageProvider } from '@/components/LanguageProvider'
 import RibbonCutIntro from '@/components/RibbonCutIntro'
+import VisitorAnalyticsClient from '@/components/VisitorAnalyticsClient'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -16,5 +16,5 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className="bg-background"><body className="antialiased"><LanguageProvider><RibbonCutIntro />{children}{process.env.NODE_ENV === 'production' && <Analytics />}</LanguageProvider></body></html>
+  return <html lang="en" className="bg-background"><body className="antialiased"><LanguageProvider><RibbonCutIntro />{children}<VisitorAnalyticsClient /></LanguageProvider></body></html>
 }

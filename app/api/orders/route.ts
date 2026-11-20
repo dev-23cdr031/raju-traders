@@ -1,6 +1,22 @@
 import { after, NextRequest, NextResponse } from 'next/server'
 import { ORDER_STATUSES, optionalUser, PAYMENT_METHODS, PAYMENT_STATUSES, requireAdmin, supabaseAdmin } from '@/lib/supabase'
 import { sendOrderConfirmationEmail } from '@/lib/order-email'
+import { sendOrderConfirmationSms } from '@/lib/order-sms'
+import { sendOrderConfirmationWhatsApp } from '@/lib/order-whatsapp'
+
+async function attemptOrderNotification(
+  channel: string,
+  send: () => Promise<{ skipped?: boolean; reason?: string }>,
+) {
+  try {
+    const result = await send()
+    if (result.skipped) {
+      console.warn(`Order ${channel} notification skipped: ${result.reason || 'not configured.'}`)
+    }
+  } catch (notificationError) {
+    console.error(`Order confirmation ${channel} failed:`, notificationError)
+  }
+}
 
 function makeOrderNumber() {
   const d = new Date()
@@ -62,6 +78,7 @@ export async function POST(request: NextRequest) {
     const payment_status = PAYMENT_STATUSES.includes(String(body.payment_status || '') as any)
       ? String(body.payment_status)
       : 'Pending'
+    const whatsapp_opt_in = body.whatsapp_opt_in === true
     const idempotency_key = body.idempotency_key ? String(body.idempotency_key).slice(0, 80) : null
 
     // ---- Duplicate-order protection -------------------------------------
@@ -95,6 +112,8 @@ export async function POST(request: NextRequest) {
         user_id,
         payment_method,
         payment_status,
+        whatsapp_opt_in,
+        whatsapp_opt_in_at: whatsapp_opt_in ? new Date().toISOString() : null,
         idempotency_key,
       })
       .select('*')
@@ -111,20 +130,22 @@ export async function POST(request: NextRequest) {
       if (existing) return NextResponse.json({ order: existing, duplicate: true }, { status: 200 })
     }
     if (error) throw error
-    // This runs only after a brand-new order was persisted. It is deliberately
-    // isolated from checkout: an email failure never reverses a valid order.
+    // This runs only after a brand-new order was persisted. Notification
+    // failures are isolated from checkout and from each other.
     after(async () => {
-      try {
-        await sendOrderConfirmationEmail(data)
-      } catch (notificationError) {
-        console.error('Order confirmation email failed:', notificationError)
-      }
+      await Promise.all([
+        attemptOrderNotification('email', () => sendOrderConfirmationEmail(data)),
+        attemptOrderNotification('SMS', () => sendOrderConfirmationSms(data)),
+        data.whatsapp_opt_in
+          ? attemptOrderNotification('WhatsApp', () => sendOrderConfirmationWhatsApp(data))
+          : Promise.resolve(),
+      ])
     })
     return NextResponse.json({ order: data }, { status: 201 })
   } catch (e: any) {
     console.error('POST /api/orders error:', e)
     const msg = String(e?.message || '')
-    if (/column .* (user_id|payment_method|idempotency_key)/i.test(msg) || /does not exist/i.test(msg)) {
+    if (/column .* (user_id|payment_method|idempotency_key|whatsapp_opt_in(?:_at)?)/i.test(msg) || /does not exist/i.test(msg)) {
       return NextResponse.json(
         { message: 'Database not upgraded yet — run supabase/customer-features.sql in the Supabase SQL editor, then retry.' },
         { status: 500 }

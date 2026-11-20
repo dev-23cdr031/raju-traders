@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
 import { resolveVarietyImage } from '@/lib/variety-images'
+import VisitorAnalytics from './VisitorAnalytics'
 import './style.css'
 import {
   ADMIN_EMAILS,
@@ -370,7 +371,7 @@ const relativeTime = (iso?: string) => {
   return new Date(then).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'settings'
+export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'analytics' | 'settings'
 
 export default function AdminDashboardPage({ section = 'overview' }: { section?: AdminSection }) {
   const { t } = useLanguage()
@@ -1328,7 +1329,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const lowStockCount = products.filter((product) => product.status === 'Low stock').length
   const healthyStockPercent = products.length ? Math.round((inStockCount / products.length) * 100) : 0
   const pendingOrders = dashboard?.pending ?? orders.filter((order) => order.status === 'Pending').length
-  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), settings: t('Settings') }
+  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), analytics: 'Visitor Analytics', settings: t('Settings') }
   const refreshOverview = () => { void loadOrders(); void loadProducts(); void loadExtras() }
 
   return (
@@ -1359,6 +1360,9 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           <Link className={section === 'messages' ? 'active' : ''} aria-current={section === 'messages' ? 'page' : undefined} href="/admin/messages">
             <MessageCircle size={18} /> {t('Messages')}
             {unreadCount > 0 && <span className="admin-nav-badge">{unreadCount}</span>}
+          </Link>
+          <Link className={section === 'analytics' ? 'active' : ''} aria-current={section === 'analytics' ? 'page' : undefined} href="/admin/analytics">
+            <BarChart3 size={18} /> Visitor Analytics
           </Link>
           <Link className={section === 'settings' ? 'active' : ''} aria-current={section === 'settings' ? 'page' : undefined} href="/admin/settings">
             <Settings size={18} /> {t('Settings')}
@@ -1760,6 +1764,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
               {!loadingProducts && products.length === 0 && <div className="messages-empty"><Box size={40} /><h3>Inventory is empty</h3><p>Add a product to start tracking stock.</p></div>}
             </div>
           </section>
+        ) : section === 'analytics' ? (
+          <VisitorAnalytics />
         ) : (
           <section className="admin-panel settings-page">
             <section className="admin-topbar settings-topbar">
