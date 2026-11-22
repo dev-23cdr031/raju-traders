@@ -1,5 +1,7 @@
 import 'server-only'
 
+export class OrderEmailRejectedError extends Error {}
+
 type OrderLine = {
   name?: string
   type?: string
@@ -141,6 +143,6 @@ export async function sendOrderConfirmationEmail(order: OrderForEmail, recipient
     }),
   })
   const result = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(String(result?.message || result?.name || `Resend request failed (${response.status})`))
+  if (!response.ok) throw new OrderEmailRejectedError(String(result?.message || result?.name || `Resend request failed (${response.status})`))
   return { id: String(result?.id || '') }
 }

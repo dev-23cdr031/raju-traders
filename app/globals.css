@@ -2330,6 +2330,37 @@ html[lang='ta'] .shop-page .shop-hero h1 {
   opacity: 0.82;
 }
 
+.auth-google {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid #d5ded2;
+  border-radius: 16px;
+  background: #fff;
+  color: #173b28;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-google:hover:not(:disabled) {
+  background: #f5f8f2;
+}
+
+.auth-google:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.auth-google-icon {
+  color: #4285f4;
+  font-size: 19px;
+  font-weight: 800;
+}
+
 .auth-message {
   margin: 14px 0 16px;
   padding: 11px 14px;

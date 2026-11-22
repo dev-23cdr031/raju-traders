@@ -17,3 +17,4 @@ node_modules
 /payload.json
 /dev-run*.log
 /dev-server.log
+/build-test.log

@@ -10,6 +10,9 @@ export async function POST(request: NextRequest) {
   if (typeof body.consent !== 'boolean') {
     return NextResponse.json({ message: 'Choose whether to receive one cart reminder.' }, { status: 400 })
   }
+  if (body.whatsappMarketingConsent !== undefined && typeof body.whatsappMarketingConsent !== 'boolean') {
+    return NextResponse.json({ message: 'Choose whether to receive WhatsApp cart reminders.' }, { status: 400 })
+  }
 
   try {
     const admin = supabaseAdmin()
@@ -20,6 +23,7 @@ export async function POST(request: NextRequest) {
       user: gate.user,
       items: body.items === undefined ? cart?.items || [] : body.items,
       consent: body.consent,
+      whatsappMarketingConsent: body.whatsappMarketingConsent,
       userAgent: request.headers.get('user-agent'),
     })
     return NextResponse.json({ consent: result.consent })

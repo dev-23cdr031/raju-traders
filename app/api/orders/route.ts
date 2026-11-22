@@ -1,10 +1,9 @@
 import { after, NextRequest, NextResponse } from 'next/server'
 import { requireAdmin, optionalUser, supabaseAdmin } from '@/lib/supabase'
-import { sendOrderConfirmationEmail } from '@/lib/order-email'
 import { sendOrderConfirmationSms } from '@/lib/order-sms'
-import { sendOrderConfirmationWhatsApp } from '@/lib/order-whatsapp'
 import { associatePersistedOrder } from '@/lib/abandoned-carts'
 import { CouponCartValidationError, quoteCoupon } from '@/lib/coupon-pricing'
+import { dispatchOrderNotifications } from '@/lib/notification-automation'
 
 async function attemptOrderNotification(
   channel: string,
@@ -164,12 +163,9 @@ export async function POST(request: NextRequest) {
         } catch (associationError) {
           console.error('Coupon order cart association failed:', associationError)
         }
-        await Promise.all([
-          attemptOrderNotification('email', () => sendOrderConfirmationEmail(order)),
+        await Promise.allSettled([
+          dispatchOrderNotifications(admin, order),
           attemptOrderNotification('SMS', () => sendOrderConfirmationSms(order)),
-          order.whatsapp_opt_in
-            ? attemptOrderNotification('WhatsApp', () => sendOrderConfirmationWhatsApp(order))
-            : Promise.resolve(),
         ])
       })
       return NextResponse.json({ order }, { status: 201 })
@@ -223,12 +219,9 @@ export async function POST(request: NextRequest) {
       } catch (associationError) {
         console.error('Persisted order cart association failed:', associationError)
       }
-      await Promise.all([
-        attemptOrderNotification('email', () => sendOrderConfirmationEmail(data)),
+      await Promise.allSettled([
+        dispatchOrderNotifications(admin, data),
         attemptOrderNotification('SMS', () => sendOrderConfirmationSms(data)),
-        data.whatsapp_opt_in
-          ? attemptOrderNotification('WhatsApp', () => sendOrderConfirmationWhatsApp(data))
-          : Promise.resolve(),
       ])
     })
     return NextResponse.json({ order: data }, { status: 201 })

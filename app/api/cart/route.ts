@@ -25,19 +25,21 @@ export async function GET(request: NextRequest) {
     const { data, error } = await admin.from('carts').select('items').eq('user_id', gate.user.id).maybeSingle()
     if (error) throw error
     let recoveryEmailConsent = false
+    let whatsappCartMarketingConsent = false
     try {
       const { data: tracking } = await admin.from('abandoned_carts')
-        .select('recovery_email_consent')
+        .select('recovery_email_consent,whatsapp_marketing_consent')
         .eq('user_id', gate.user.id)
         .is('closed_at', null)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
       recoveryEmailConsent = Boolean(tracking?.recovery_email_consent)
+      whatsappCartMarketingConsent = Boolean(tracking?.whatsapp_marketing_consent)
     } catch (trackingError) {
       console.error('GET /api/cart reminder preference unavailable:', trackingError)
     }
-    return NextResponse.json({ items: cleanLines(data?.items), recoveryEmailConsent })
+    return NextResponse.json({ items: cleanLines(data?.items), recoveryEmailConsent, whatsappCartMarketingConsent })
   } catch (e: any) {
     console.error('GET /api/cart error:', e)
     return NextResponse.json(

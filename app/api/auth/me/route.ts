@@ -18,12 +18,14 @@ export async function GET(request: NextRequest) {
       .map((part) => String(part || '').trim())
       .filter(Boolean)
       .join(' ')
+    const google = user.identities?.find((identity) => identity.provider === 'google')?.identity_data
 
     return NextResponse.json({
       user: {
         id: user.id,
         email: String(user.email || '').toLowerCase(),
-        name: name || String(user.email || '').split('@')[0],
+        name: name || String(meta.full_name || meta.name || google?.full_name || google?.name || '').trim() || String(user.email || '').split('@')[0],
+        avatar_url: String(meta.avatar_url || meta.picture || google?.avatar_url || google?.picture || ''),
         phone: String(meta.phone || ''),
         created_at: user.created_at,
       },

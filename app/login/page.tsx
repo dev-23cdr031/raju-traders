@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
-import { isAdminEmail } from '@/lib/supabase'
+import { cleanSupabaseUrl, isAdminEmail, supabase } from '@/lib/supabase'
 import { persistAuthSession } from '@/lib/auth-session-client'
 
 export default function LoginPage() {
@@ -11,6 +11,35 @@ export default function LoginPage() {
   const [message, setMessage] = useState('')
   const [unverifiedEmail, setUnverifiedEmail] = useState('')
   const [loading, setLoading] = useState(false)
+
+  async function handleGoogleLogin() {
+    setLoading(true)
+    setMessage('')
+    try {
+      const settings = await fetch(`${cleanSupabaseUrl}/auth/v1/settings`, {
+        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' },
+        cache: 'no-store',
+      })
+      if (!settings.ok) throw new Error('Supabase Auth settings could not be loaded.')
+      const configuration = await settings.json()
+      if (configuration.external?.google !== true) {
+        throw new Error('Google provider is not enabled in Supabase Auth.')
+      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      })
+      if (error) {
+        console.error('Google sign-in could not be started:', error.message)
+        setMessage(t('Google sign-in could not be started. Please try again or use your email and password.'))
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('Google sign-in could not be started:', error)
+      setMessage(t('Google sign-in could not be started. Please try again or use your email and password.'))
+      setLoading(false)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -111,7 +140,7 @@ export default function LoginPage() {
                 <input type="checkbox" name="remember" suppressHydrationWarning />
                 <span>{t('Remember me')}</span>
               </label>
-              <Link className="auth-link" href="/">{t('Forgot password?')}</Link>
+              <Link className="auth-link" href="/forgot-password">{t('Forgot password?')}</Link>
             </div>
 
             {message && <div className="auth-message">{message}</div>}
@@ -127,6 +156,11 @@ export default function LoginPage() {
           </form>
 
           <div className="auth-separator"><span>{t('or')}</span></div>
+
+          <button className="auth-google" type="button" onClick={handleGoogleLogin} disabled={loading}>
+            <span aria-hidden="true" className="auth-google-icon">G</span>
+            {t('Continue with Google')}
+          </button>
 
           <div className="auth-switch">
             <span>{t('New to AJR?')}</span>

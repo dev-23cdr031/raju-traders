@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import AdminDashboard, { type AdminSection } from '../AdminDashboard'
 
-const ADMIN_SECTIONS: AdminSection[] = ['orders', 'products', 'inventory', 'messages', 'login-users', 'analytics', 'abandoned-carts', 'coupons-offers', 'website-content', 'settings']
+const ADMIN_SECTIONS: AdminSection[] = ['orders', 'products', 'inventory', 'messages', 'login-users', 'analytics', 'abandoned-carts', 'notification-automation', 'coupons-offers', 'website-content', 'settings']
 
 export default async function AdminSectionPage({
   params,

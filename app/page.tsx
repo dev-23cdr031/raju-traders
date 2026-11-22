@@ -41,7 +41,7 @@ import FarmOrigins from '@/components/FarmOrigins'
 import QualityComparison from '@/components/QualityComparison'
 import StudioLocation from '@/components/StudioLocation'
 import OfferShowcase from '@/components/OfferShowcase'
-import { PACK_SIZE_OPTIONS } from '@/lib/supabase'
+import { PACK_SIZE_OPTIONS, supabase } from '@/lib/supabase'
 import { resolveVarietyImage } from '@/lib/variety-images'
 import { getAnalyticsConsent, trackAnalytics, type AnalyticsPage } from '@/lib/visitor-analytics-client'
 import { DEFAULT_WEBSITE_CONTENT, mergeWebsiteContent, type WebsiteContent } from '@/lib/website-content'
@@ -1131,6 +1131,7 @@ export default function Page() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([])
   const [recoveryEmailConsent, setRecoveryEmailConsent] = useState(false)
+  const [whatsappCartMarketingConsent, setWhatsappCartMarketingConsent] = useState(false)
   const [guestTrackingConsent, setGuestTrackingConsent] = useState(false)
   const [trackingConsentError, setTrackingConsentError] = useState('')
   const guestTrackingRequests = useRef<Set<Promise<void>>>(new Set())
@@ -1255,13 +1256,19 @@ export default function Page() {
   // the empty first render would overwrite a stored cart / wishlist.
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [cartSyncError, setCartSyncError] = useState(false)
+  const [logoutError, setLogoutError] = useState(false)
 
   const authHeaders = (token: string) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` })
 
   useEffect(() => {
     const boot = async () => {
-      const token = typeof window !== 'undefined' ? window.localStorage.getItem('ajr-access-token') || '' : ''
+      const { data: authData, error: authError } = await supabase.auth.getSession()
+      if (authError) console.error('Could not refresh the customer session:', authError.message)
+      const token = authData.session?.access_token || (typeof window !== 'undefined' ? window.localStorage.getItem('ajr-access-token') || '' : '')
+      if (authData.session?.access_token) window.localStorage.setItem('ajr-access-token', authData.session.access_token)
       let user: any = null
+      let readyToSave = true
 
       if (token) {
         try {
@@ -1291,6 +1298,7 @@ export default function Page() {
             const cartData = await cartRes.json()
             serverCart = cartData.items || []
             setRecoveryEmailConsent(cartData.recoveryEmailConsent === true)
+            setWhatsappCartMarketingConsent(cartData.whatsappCartMarketingConsent === true)
           }
           if (wishRes.ok) serverWish = (await wishRes.json()).items || []
           serverReachable = cartRes.ok && wishRes.ok
@@ -1316,13 +1324,25 @@ export default function Page() {
         dropKey(GUEST_TRACKING_CONSENT_KEY)
         dropKey(GUEST_TRACKING_CAPABILITY_KEY)
         setGuestTrackingConsent(false)
-        if (guestCart.length > 0 || guestWish.length > 0) {
-          dropKey(GUEST_CART_KEY)
-          dropKey(GUEST_WISH_KEY)
-          if (serverReachable) {
-            fetch('/api/cart', { method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ items: mergedCart }) }).catch(() => {})
-            fetch('/api/wishlist', { method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ items: mergedWish }) }).catch(() => {})
+        if (serverReachable) {
+          try {
+            if (guestCart.length > 0) {
+              const response = await fetch('/api/cart', { method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ items: mergedCart }) })
+              if (!response.ok) throw new Error('Could not save your cart.')
+              dropKey(GUEST_CART_KEY)
+            }
+            if (guestWish.length > 0) {
+              const response = await fetch('/api/wishlist', { method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ items: mergedWish }) })
+              if (!response.ok) throw new Error('Could not save your wishlist.')
+              dropKey(GUEST_WISH_KEY)
+            }
+          } catch (error) {
+            console.error('Could not merge guest shopping data:', error)
+            readyToSave = false
           }
+        } else {
+          console.error('Could not load the account cart and wishlist.')
+          readyToSave = false
         }
       } else {
         setCart(Array.isArray(guestCart) ? guestCart : [])
@@ -1332,10 +1352,22 @@ export default function Page() {
       }
 
       setSessionLoaded(true)
-      setDataLoaded(true)
+      setCartSyncError(!readyToSave)
+      setDataLoaded(readyToSave)
     }
 
     boot()
+  }, [])
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (event === 'TOKEN_REFRESHED' && currentSession?.access_token) {
+        setSession((current) => current && current.id === currentSession.user.id
+          ? { ...current, token: currentSession.access_token }
+          : current)
+      }
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   // Persist the cart whenever it changes (server for members, browser for guests).
@@ -1608,13 +1640,17 @@ export default function Page() {
   // the account and come back on the next sign-in.
   const logout = async () => {
     const token = window.localStorage.getItem('ajr-access-token') || ''
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch (error) {
+      console.error('Could not sign out:', error)
+      setLogoutError(true)
+      return
+    }
     if (token) {
       void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {})
     }
-    try {
-      const { supabase } = await import('@/lib/supabase')
-      await supabase.auth.signOut()
-    } catch {}
     try {
       window.localStorage.removeItem('ajr-access-token')
       window.localStorage.removeItem('adminAccessEmail')
@@ -1623,6 +1659,9 @@ export default function Page() {
     dropKey(GUEST_CART_KEY)
     dropKey(GUEST_WISH_KEY)
     setSession(null)
+    setLogoutError(false)
+    setCartSyncError(false)
+    setDataLoaded(true)
     setCart([])
     setWishlist([])
     if (view === 'orders' || view === 'cart') setView('home')
@@ -1631,6 +1670,8 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {cartSyncError && <div role="alert" style={{ padding: '12px 20px', background: '#fff3d4', color: '#573d12', textAlign: 'center' }}>Your cart and wishlist could not be synchronized. Changes will not be saved; please refresh and try again.</div>}
+      {logoutError && <div role="alert" style={{ padding: '12px 20px', background: '#fff3d4', color: '#573d12', textAlign: 'center' }}>We could not sign you out. Please check your connection and try again.</div>}
       {/* Top Announcement Bar */}
       {websiteContent.announcement.enabled && <div
         className={`top-ticker ${websiteContent.announcement.color.startsWith('#') ? 'top-ticker--custom' : `top-ticker--${websiteContent.announcement.color}`}`}
@@ -1806,6 +1847,8 @@ export default function Page() {
           session={session}
           recoveryEmailConsent={recoveryEmailConsent}
           onRecoveryEmailConsentChange={setRecoveryEmailConsent}
+          whatsappCartMarketingConsent={whatsappCartMarketingConsent}
+          onWhatsappCartMarketingConsentChange={setWhatsappCartMarketingConsent}
           guestTrackingConsent={guestTrackingConsent}
           onGuestTrackingConsentChange={updateGuestTrackingConsent}
           trackingConsentError={trackingConsentError}
@@ -3647,6 +3690,8 @@ function Cart({
   session,
   recoveryEmailConsent,
   onRecoveryEmailConsentChange,
+  whatsappCartMarketingConsent,
+  onWhatsappCartMarketingConsentChange,
   guestTrackingConsent,
   onGuestTrackingConsentChange,
   trackingConsentError,
@@ -3749,7 +3794,7 @@ function Cart({
     setCouponMessage('')
   }
 
-  const updateReminderConsent = async (consent: boolean) => {
+  const updateReminderConsent = async (consent: boolean, whatsappMarketingConsent?: boolean) => {
     if (!session || consentSaving) return
     setConsentSaving(true)
     setConsentError('')
@@ -3757,7 +3802,7 @@ function Cart({
       const response = await fetch('/api/cart/recovery-consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
-        body: JSON.stringify({ consent, items: cart }),
+        body: JSON.stringify({ consent, items: cart, whatsappMarketingConsent }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data?.message || 'Could not save your reminder preference.')
@@ -4005,8 +4050,12 @@ function Cart({
             {session ? (
               <div className="cart-recovery-consent">
                 <label>
-                  <input type="checkbox" checked={recoveryEmailConsent} disabled={consentSaving} onChange={(event) => void updateReminderConsent(event.target.checked)} />
+                  <input type="checkbox" checked={recoveryEmailConsent} disabled={consentSaving} onChange={(event) => void updateReminderConsent(event.target.checked, whatsappCartMarketingConsent)} />
                   <span><strong>One cart reminder by email</strong><small>Optional. Only if this bag is left behind, and only to your verified account email. No promotions.</small></span>
+                </label>
+                <label style={{ marginTop: 10 }}>
+                  <input type="checkbox" checked={whatsappCartMarketingConsent} disabled={consentSaving} onChange={(event) => void updateReminderConsent(recoveryEmailConsent, event.target.checked)} />
+                  <span><strong>WhatsApp cart reminder</strong><small>Optional marketing message. Sent only if you also leave this bag behind and have enabled the email recovery reminder.</small></span>
                 </label>
                 {consentSaving && <small className="cart-consent-feedback">Saving your preference…</small>}
                 {consentError && <small className="cart-consent-feedback error" role="alert">{consentError}</small>}

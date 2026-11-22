@@ -73,8 +73,8 @@ export function matchedOrderItemTotal(cartItems: unknown, orderItems: unknown) {
 }
 
 export function abandonmentMinutes() {
-  const value = Number(process.env.ABANDONED_CART_MINUTES || 30)
-  return Number.isInteger(value) && value >= 10 && value <= 1440 ? value : 30
+  const value = Number(process.env.ABANDONED_CART_MINUTES || 60)
+  return Number.isInteger(value) && value >= 10 && value <= 1440 ? value : 60
 }
 
 export function deviceCategory(userAgent: string | null) {
@@ -106,12 +106,14 @@ export async function persistSignedInCartSnapshot({
   user,
   items,
   consent,
+  whatsappMarketingConsent,
   userAgent,
 }: {
   admin: any
   user: any
   items: unknown
   consent?: boolean
+  whatsappMarketingConsent?: boolean
   userAgent: string | null
 }) {
   const lines = normalizeTrackedLines(items)
@@ -136,6 +138,7 @@ export async function persistSignedInCartSnapshot({
     inherited = latest
   }
   const hasExplicitConsent = typeof consent === 'boolean'
+  const hasExplicitWhatsappConsent = typeof whatsappMarketingConsent === 'boolean'
   // Consent belongs to the currently open bag. Do not carry it from a closed
   // bag into a newly-created one: otherwise an opt-out racing with creation
   // could cause a new bag to be mailed without the customer's current choice.
@@ -154,6 +157,10 @@ export async function persistSignedInCartSnapshot({
       recovery_email_consent: requestedConsent,
       recovery_email_consent_at: requestedConsent ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
+    }
+    if (hasExplicitWhatsappConsent) {
+      preferenceUpdate.whatsapp_marketing_consent = whatsappMarketingConsent === true
+      preferenceUpdate.whatsapp_marketing_consent_at = whatsappMarketingConsent ? new Date().toISOString() : null
     }
     // Opting out revokes any unused link. Do not reset reminder fields when
     // opting back in: an old delivery must never become eligible again.
@@ -248,6 +255,8 @@ export async function persistSignedInCartSnapshot({
       ...row,
       recovery_email_consent: optedIn,
       recovery_email_consent_at: consentAt,
+      whatsapp_marketing_consent: hasExplicitWhatsappConsent && whatsappMarketingConsent === true,
+      whatsapp_marketing_consent_at: hasExplicitWhatsappConsent && whatsappMarketingConsent ? new Date().toISOString() : null,
     }
     const { error } = await admin.from('abandoned_carts').insert(insertRow)
     if (error) throw error
@@ -256,7 +265,10 @@ export async function persistSignedInCartSnapshot({
 }
 
 export async function associatePersistedOrder(admin: any, order: any) {
-  if (!order?.user_id || String(order.status || '').toLowerCase() === 'cancelled') return false
+  const method = String(order?.payment_method || '').trim().toLowerCase()
+  const payment = String(order?.payment_status || '').trim().toLowerCase()
+  const confirmed = method === 'cod' || method === 'cash on delivery' || payment === 'paid' || payment === 'confirmed'
+  if (!order?.user_id || String(order.status || '').toLowerCase() === 'cancelled' || !confirmed) return false
   const { data: cart, error } = await admin
     .from('abandoned_carts')
     .select('id,cart_items,last_activity_at,order_id')

@@ -1,0 +1,87 @@
+.recovery-page .recovery-password-control {
+  position: relative;
+  display: block;
+}
+
+.recovery-page .recovery-password-control input {
+  padding-right: 72px;
+}
+
+.recovery-page .recovery-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  border: 0;
+  padding: 6px 2px;
+  background: transparent;
+  color: var(--forest);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recovery-page .recovery-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.recovery-page .recovery-hint,
+.recovery-page .recovery-strength,
+.recovery-page .recovery-field-error {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.recovery-page .recovery-field-error,
+.recovery-page .auth-message.recovery-error {
+  color: #8d342b;
+}
+
+.recovery-page .auth-message.recovery-error {
+  border-left-color: #b64c3f;
+  background: #faefeb;
+}
+
+.recovery-page .recovery-action {
+  margin-top: 12px;
+  text-decoration: none;
+}
+
+.recovery-page .recovery-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: recovery-spin 0.75s linear infinite;
+}
+
+@keyframes recovery-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .recovery-page.auth-page {
+    padding: 16px 10px;
+  }
+
+  .recovery-page .auth-card {
+    width: 100%;
+    border-radius: 20px;
+  }
+
+  .recovery-page .auth-side,
+  .recovery-page .auth-form-panel {
+    padding: 26px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recovery-page .recovery-spinner {
+    animation: none;
+  }
+}

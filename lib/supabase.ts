@@ -22,7 +22,9 @@ if (!cleanSupabaseUrl || !supabaseAnonKey) {
 }
 
 // Browser / client-side Supabase (anon key, safe to expose)
-export const supabase = createClient(cleanSupabaseUrl, supabaseAnonKey)
+export const supabase = createClient(cleanSupabaseUrl, supabaseAnonKey, {
+  auth: { flowType: 'pkce', detectSessionInUrl: false },
+})
 
 // ---- Admin access control ----
 // These emails may use the admin dashboard / admin API routes.

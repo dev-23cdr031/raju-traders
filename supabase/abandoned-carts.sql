@@ -194,7 +194,8 @@ grant execute on function public.ajr_redeem_cart_recovery(text, uuid) to service
 -- Atomically reserve a small batch for the server-side cron. Row locks let
 -- overlapping cron runs work without double-sending. A stale sending record is
 -- recoverable only before a token was persisted, when no email could have sent.
-create or replace function public.ajr_claim_cart_recovery_reminders(
+drop function if exists public.ajr_claim_cart_recovery_reminders(timestamptz, timestamptz, integer);
+create function public.ajr_claim_cart_recovery_reminders(
   p_cutoff timestamptz,
   p_stale_before timestamptz,
   p_limit integer default 20
@@ -203,7 +204,10 @@ create or replace function public.ajr_claim_cart_recovery_reminders(
   user_id uuid,
   customer_name text,
   customer_email text,
+  customer_phone text,
   item_count integer,
+  cart_items jsonb,
+  whatsapp_marketing_consent boolean,
   attempt_at timestamptz
 )
 language plpgsql
@@ -247,9 +251,9 @@ begin
           updated_at = now()
       from candidates
       where ac.id = candidates.id
-      returning ac.id, ac.user_id, ac.customer_name, ac.customer_email, ac.item_count, ac.reminder_attempt_at
+       returning ac.id, ac.user_id, ac.customer_name, ac.customer_email, ac.customer_phone, ac.item_count, ac.cart_items, ac.whatsapp_marketing_consent, ac.reminder_attempt_at
   )
-  select claimed.id, claimed.user_id, claimed.customer_name, claimed.customer_email, claimed.item_count, claimed.reminder_attempt_at
+  select claimed.id, claimed.user_id, claimed.customer_name, claimed.customer_email, claimed.customer_phone, claimed.item_count, claimed.cart_items, claimed.whatsapp_marketing_consent, claimed.reminder_attempt_at
     from claimed;
 end;
 $$;

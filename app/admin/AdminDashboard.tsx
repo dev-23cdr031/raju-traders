@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
@@ -9,8 +10,7 @@ import { persistAuthSession } from '@/lib/auth-session-client'
 import VisitorAnalytics from './VisitorAnalytics'
 import LoginUsers from './LoginUsers'
 import AbandonedCarts from './AbandonedCarts'
-import CouponsOffers from './CouponsOffers'
-import WebsiteContentManager from './WebsiteContentManager'
+import NotificationAutomation from './NotificationAutomation'
 import './style.css'
 import {
   ADMIN_EMAILS,
@@ -67,6 +67,12 @@ import {
   User,
   X,
 } from 'lucide-react'
+
+// These are sizeable, independent admin workspaces. Loading them on demand
+// keeps navigation chunks coherent across deploys and avoids serving a stale
+// factory after a client-side Fast Refresh or production rollout.
+const CouponsOffers = dynamic(() => import('./CouponsOffers'), { ssr: false })
+const WebsiteContentManager = dynamic(() => import('./WebsiteContentManager'), { ssr: false })
 
 type InventoryStatus = 'In stock' | 'Low stock' | 'Out of stock'
 
@@ -405,7 +411,7 @@ const relativeTime = (iso?: string) => {
   return new Date(then).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'login-users' | 'analytics' | 'abandoned-carts' | 'coupons-offers' | 'website-content' | 'settings'
+export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'login-users' | 'analytics' | 'abandoned-carts' | 'notification-automation' | 'coupons-offers' | 'website-content' | 'settings'
 
 export default function AdminDashboardPage({ section = 'overview' }: { section?: AdminSection }) {
   const { t } = useLanguage()
@@ -1419,7 +1425,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const lowStockCount = products.filter((product) => product.status === 'Low stock').length
   const healthyStockPercent = products.length ? Math.round((inStockCount / products.length) * 100) : 0
   const pendingOrders = dashboard?.pending ?? orders.filter((order) => order.status === 'Pending').length
-  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), 'login-users': 'Login Users', analytics: 'Visitor Analytics', 'abandoned-carts': 'Abandoned Carts', 'coupons-offers': 'Coupons & Offers', 'website-content': 'Website Content', settings: t('Settings') }
+  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), 'login-users': 'Login Users', analytics: 'Visitor Analytics', 'abandoned-carts': 'Abandoned Carts', 'notification-automation': 'Notification Automation', 'coupons-offers': 'Coupons & Offers', 'website-content': 'Website Content', settings: t('Settings') }
   const refreshOverview = () => { void loadOrders(); void loadProducts(); void loadExtras() }
 
   return (
@@ -1450,6 +1456,9 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           </Link>
           <Link className={section === 'abandoned-carts' ? 'active' : ''} aria-current={section === 'abandoned-carts' ? 'page' : undefined} href="/admin/abandoned-carts">
             <ShoppingCart size={18} /> Abandoned Carts
+          </Link>
+          <Link className={section === 'notification-automation' ? 'active' : ''} aria-current={section === 'notification-automation' ? 'page' : undefined} href="/admin/notification-automation">
+            <Bell size={17} /><span>Notifications</span>
           </Link>
           <Link className={section === 'products' ? 'active' : ''} aria-current={section === 'products' ? 'page' : undefined} href="/admin/products">
             <Package size={18} /> {t('Products')}
@@ -1878,6 +1887,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           <LoginUsers />
         ) : section === 'abandoned-carts' ? (
           <AbandonedCarts />
+        ) : section === 'notification-automation' ? (
+          <NotificationAutomation />
         ) : section === 'coupons-offers' ? (
           <CouponsOffers />
         ) : section === 'website-content' ? (

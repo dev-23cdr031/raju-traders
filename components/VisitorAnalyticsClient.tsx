@@ -86,7 +86,7 @@ export default function VisitorAnalyticsClient() {
     return () => window.clearInterval(heartbeat)
   }, [consent, page])
 
-  if (!ready || pathname.startsWith('/admin') || pathname.startsWith('/api')) return null
+  if (!ready || pathname.startsWith('/admin') || pathname.startsWith('/api') || pathname === '/auth/callback' || pathname === '/reset-password') return null
 
   const showConsent = consent === null || editing
   return (

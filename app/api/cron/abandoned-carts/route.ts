@@ -1,7 +1,9 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, sha256 } from '@/lib/abandoned-carts'
+import { abandonmentMinutes, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
 import { CartRecoveryEmailRejectedError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { beginCartNotificationEvent, recordNotificationEvent } from '@/lib/notification-automation'
+import { sendAbandonedCartWhatsApp, WhatsAppProviderRejectedError } from '@/lib/order-whatsapp'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +64,14 @@ export async function GET(request: NextRequest) {
     const attemptAt = String(row.attempt_at || '')
     const userId = String(row.user_id || '')
     const expectedEmail = String(row.customer_email || '').trim().toLowerCase()
+    const emailEvent = await beginCartNotificationEvent(admin, row, 'email').catch((error) => {
+      console.error('GET /api/cron/abandoned-carts event creation error:', error)
+      return null
+    })
+    if (!emailEvent || emailEvent.status !== 'sending') {
+      summary.blocked += 1
+      continue
+    }
 
     const markFailed = async (message: string) => {
       const { error } = await admin.from('abandoned_carts').update({
@@ -113,6 +123,7 @@ export async function GET(request: NextRequest) {
         email: verifiedEmail,
         name: String(row.customer_name || ''),
         itemCount: Number(row.item_count || 1),
+        items: Array.isArray(row.cart_items) ? row.cart_items : [],
         token,
       })
       const { data: recorded, error: recordError } = await admin.from('abandoned_carts').update({
@@ -127,12 +138,35 @@ export async function GET(request: NextRequest) {
         console.error('GET /api/cron/abandoned-carts accepted send not recorded:', recordError)
         summary.uncertain += 1
       } else {
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'sent', provider_message_id: sent.id || null, sent_at: new Date().toISOString(), error: null })
+        // Consent, cart state and purchase status can change while email is
+        // being delivered. Re-read immediately before any marketing message.
+        const { data: freshCart, error: freshCartError } = await admin.from('abandoned_carts')
+          .select('id,customer_name,customer_phone,customer_email,item_count,cart_total,cart_items,whatsapp_marketing_consent,recovery_email_consent,last_activity_at,closed_at,order_id,reminder_sent_at')
+          .eq('id', id).eq('whatsapp_marketing_consent', true).eq('recovery_email_consent', true)
+          .is('closed_at', null).is('order_id', null).not('reminder_sent_at', 'is', null)
+          .lte('last_activity_at', cutoff.toISOString()).maybeSingle()
+        if (freshCartError) console.error('GET /api/cron/abandoned-carts WhatsApp eligibility recheck failed:', freshCartError)
+        if (freshCart?.customer_phone) {
+          const whatsappEvent = await beginCartNotificationEvent(admin, freshCart, 'whatsapp').catch(() => null)
+          if (whatsappEvent?.status === 'sending') {
+            try {
+              const whatsapp = await sendAbandonedCartWhatsApp({ phone: String(freshCart.customer_phone), customer_name: String(freshCart.customer_name || ''), items: Array.isArray(freshCart.cart_items) ? freshCart.cart_items : [], recoveryUrl: safeRecoveryBaseUrl() + '/cart/recover?token=' + encodeURIComponent(token) })
+              if (whatsapp.skipped) await recordNotificationEvent(admin, whatsappEvent.id, { status: 'skipped', error: whatsapp.reason || 'Not configured' })
+              else await recordNotificationEvent(admin, whatsappEvent.id, { status: 'sent', provider_message_id: whatsapp.id, sent_at: new Date().toISOString() })
+            } catch (whatsappError) {
+              const known = whatsappError instanceof WhatsAppProviderRejectedError
+              await recordNotificationEvent(admin, whatsappEvent.id, { status: known ? 'failed' : 'uncertain', error: compactError(whatsappError), failed_at: new Date().toISOString() })
+            }
+          }
+        }
         summary.sent += 1
       }
     } catch (error) {
       const message = compactError(error)
       if (error instanceof CartRecoveryEmailRejectedError) {
         await markFailed(message)
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: message, failed_at: new Date().toISOString() })
         summary.failed += 1
       } else {
         // Do not retry an uncertain provider outcome: duplicate emails are worse
@@ -143,6 +177,7 @@ export async function GET(request: NextRequest) {
         }).eq('id', id).eq('reminder_result', 'sending').eq('recovery_token_hash', tokenHash)
         if (recordError) console.error('GET /api/cron/abandoned-carts uncertain result recording error:', recordError)
         summary.uncertain += 1
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'uncertain', error: 'Provider result uncertain: ' + message, failed_at: new Date().toISOString() })
         console.error('GET /api/cron/abandoned-carts delivery result uncertain:', error)
       }
     }
