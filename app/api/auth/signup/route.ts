@@ -8,9 +8,6 @@ function describeSignupError(message: string) {
   if (/rate limit/i.test(message)) {
     return 'Too many signup emails were requested right now. Please wait a few minutes and try again.'
   }
-  if (/already registered|already exists|user already/i.test(message)) {
-    return 'An account already exists for that email. Please log in instead.'
-  }
   return message
 }
 
@@ -64,6 +61,9 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorMessage = data?.msg || data?.error_description || 'Unable to create account.'
+      if (/already registered|already exists|user already|email_exists|user_already_exists/i.test(errorMessage)) {
+        return NextResponse.json({ needsConfirmation: true })
+      }
       return NextResponse.json({ message: describeSignupError(errorMessage) }, { status: response.status })
     }
 
@@ -71,11 +71,7 @@ export async function POST(request: NextRequest) {
     // confirm their email first, so the caller can tell the two cases apart.
     const user = data?.user || (data?.id ? data : null)
     const session = data?.session || (data?.access_token ? data : null)
-    return NextResponse.json({
-      user,
-      session,
-      needsConfirmation: Boolean(user) && !session,
-    })
+    return NextResponse.json({ session, needsConfirmation: Boolean(user) && !session })
   } catch (error) {
     console.error('Signup route error:', error)
     return NextResponse.json({ message: 'Unable to create account.' }, { status: 500 })

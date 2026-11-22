@@ -1,0 +1,19 @@
+Subject: Your AJR verification code
+
+AJR — Always Just Royal
+
+SECURE ACCOUNT VERIFICATION
+
+Hello,
+
+Thank you for creating an AJR account. Enter the verification code below on our website to complete your registration.
+
+Your 6-digit verification code:
+
+{{ .Token }}
+
+This 6-digit code expires in 1 hour.
+
+If you did not create an AJR account, you can safely ignore this email.
+
+Need help? Contact our support team.

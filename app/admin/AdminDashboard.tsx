@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
 import { resolveVarietyImage } from '@/lib/variety-images'
+import { persistAuthSession } from '@/lib/auth-session-client'
 import VisitorAnalytics from './VisitorAnalytics'
+import LoginUsers from './LoginUsers'
+import AbandonedCarts from './AbandonedCarts'
+import CouponsOffers from './CouponsOffers'
+import WebsiteContentManager from './WebsiteContentManager'
 import './style.css'
 import {
   ADMIN_EMAILS,
@@ -37,6 +42,7 @@ import {
   DollarSign,
   Eye,
   EyeOff,
+  Globe2,
   Image,
   Inbox,
   Leaf,
@@ -51,7 +57,9 @@ import {
   Settings,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Store,
+  Tag,
   TrendingUp,
   Trash2,
   Truck,
@@ -84,6 +92,10 @@ type Product = {
   reviewsCount?: number
   origin?: string
   nutrients?: string[]
+  benefits?: string[]
+  ingredients?: string[]
+  seoTitle?: string
+  seoDescription?: string
   varieties?: Variety[]
   // Gram options offered for this product. Empty = shop defaults for the category.
   packSizes?: string[]
@@ -157,6 +169,10 @@ type ProductDraft = {
   status: string
   origin: string
   nutrients: string
+  benefits: string
+  ingredients: string
+  seoTitle: string
+  seoDescription: string
   rating: string
   reviewsCount: string
   active: boolean
@@ -185,6 +201,10 @@ const emptyProductDraft = (): ProductDraft => ({
   status: 'In stock',
   origin: 'India',
   nutrients: '',
+  benefits: '',
+  ingredients: '',
+  seoTitle: '',
+  seoDescription: '',
   rating: '4.9',
   reviewsCount: '0',
   active: true,
@@ -202,6 +222,10 @@ const draftFromProduct = (p: Product): ProductDraft => ({
   status: p.status,
   origin: p.origin || 'India',
   nutrients: (p.nutrients || []).join(', '),
+  benefits: (p.benefits || []).join(', '),
+  ingredients: (p.ingredients || []).join(', '),
+  seoTitle: p.seoTitle || '',
+  seoDescription: p.seoDescription || '',
   rating: String(p.rating ?? 4.9),
   reviewsCount: String(p.reviewsCount ?? 0),
   active: p.active !== false,
@@ -218,6 +242,11 @@ type Order = {
   total: number
   subtotal?: number
   shipping?: number
+  couponCode?: string
+  couponName?: string
+  couponDiscount?: number
+  couponShippingDiscount?: number
+  couponOriginalSubtotal?: number
   items?: { id: number | string; name: string; price: number; quantity: number }[]
   status: OrderStatus
   paymentMethod?: PaymentMethod
@@ -248,6 +277,11 @@ const mapDbOrder = (r: any): Order => ({
   total: Number(r.total),
   subtotal: Number(r.subtotal ?? 0),
   shipping: Number(r.shipping ?? 0),
+  couponCode: String(r.coupon_code || ''),
+  couponName: String(r.coupon_name || ''),
+  couponDiscount: Number(r.coupon_discount_amount || 0),
+  couponShippingDiscount: Number(r.coupon_shipping_discount || 0),
+  couponOriginalSubtotal: r.coupon_original_subtotal == null ? undefined : Number(r.coupon_original_subtotal),
   items: Array.isArray(r.items) ? r.items : [],
   status: asOrderStatus(r.status),
   paymentMethod: asPaymentMethod(r.payment_method),
@@ -371,12 +405,13 @@ const relativeTime = (iso?: string) => {
   return new Date(then).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'analytics' | 'settings'
+export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'login-users' | 'analytics' | 'abandoned-carts' | 'coupons-offers' | 'website-content' | 'settings'
 
 export default function AdminDashboardPage({ section = 'overview' }: { section?: AdminSection }) {
   const { t } = useLanguage()
   const router = useRouter()
   const [authorized, setAuthorized] = useState(false)
+  const [contentOnly, setContentOnly] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
@@ -571,6 +606,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   }
 
   useEffect(() => {
+    setCheckingAuth(true)
+    setAuthorized(false)
     const check = async () => {
       try {
         const { data } = await supabase.auth.getSession()
@@ -578,29 +615,53 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
         if (!token && typeof window !== 'undefined') {
           token = localStorage.getItem('ajr-access-token') || ''
         }
+        if (token && data.session?.access_token) {
+          try {
+            localStorage.setItem('ajr-access-token', token)
+          } catch {
+            console.error('Could not synchronize the current authentication session.')
+          }
+        }
         const response = token
           ? await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
           : null
         const result = response ? await response.json().catch(() => ({})) : {}
         const email = String(result.user?.email || '').trim().toLowerCase()
-        if (response?.ok && isAdminEmail(email)) {
+        const isAdministrator = Boolean(response?.ok && isAdminEmail(email))
+        if (isAdministrator) {
           setLoginEmail(email)
+          setContentOnly(false)
           setAuthorized(true)
           loadOrders(token)
           loadProducts()
           loadExtras(token)
           loadStoreSettings(token)
+        } else if (response?.ok && section === 'website-content') {
+          const cmsResponse = await fetch('/api/admin/content', {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          })
+          if (cmsResponse.ok) {
+            setLoginEmail(email)
+            setContentOnly(true)
+            setAuthorized(true)
+          } else {
+            setContentOnly(false)
+            setAuthorized(false)
+          }
         } else {
+          setContentOnly(false)
           setAuthorized(false)
         }
       } catch {
+        setContentOnly(false)
         setAuthorized(false)
       } finally {
         setCheckingAuth(false)
       }
     }
     check()
-  }, [])
+  }, [section])
 
   const loadOrders = async (token?: string) => {
     setLoadingOrders(true)
@@ -623,12 +684,12 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   }
 
   useEffect(() => {
-    if (!authorized) return
+    if (!authorized || section === 'website-content') return
     const refreshTimer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void loadOrders()
     }, 15000)
     return () => window.clearInterval(refreshTimer)
-  }, [authorized])
+  }, [authorized, section])
 
   const loadMessages = async (token?: string) => {
     setLoadingMessages(true)
@@ -683,12 +744,12 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   }
 
   useEffect(() => {
-    if (!authorized) return
+    if (!authorized || section === 'website-content') return
     const refreshTimer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void loadExtras()
     }, 15000)
     return () => window.clearInterval(refreshTimer)
-  }, [authorized])
+  }, [authorized, section])
 
   const loadProducts = async () => {
     setLoadingProducts(true)
@@ -712,6 +773,10 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
             reviewsCount: Number(r.reviews_count ?? r.reviewsCount ?? 0),
             origin: r.origin || 'India',
             nutrients: Array.isArray(r.nutrients) ? r.nutrients : [],
+            benefits: Array.isArray(r.benefits) ? r.benefits : [],
+            ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+            seoTitle: String(r.seo_title || ''),
+            seoDescription: String(r.seo_description || ''),
             varieties: Array.isArray(r.varieties) ? r.varieties : [],
             packSizes: Array.isArray(r.pack_sizes) ? r.pack_sizes : [],
             active: r.active !== false,
@@ -895,7 +960,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const adminLogin = async (event: FormEvent) => {
     event.preventDefault()
     setLoginError('')
-    if (!isAdminEmail(loginEmail)) {
+    if (section !== 'website-content' && !isAdminEmail(loginEmail)) {
       setLoginError(`Only ${ADMIN_EMAILS.join(' or ')} can access.`)
       return
     }
@@ -909,17 +974,32 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.message || 'Login failed.')
       const email = String(data.user?.email || loginEmail).toLowerCase()
-      if (!isAdminEmail(email)) throw new Error('Not an admin account.')
       const token = data.session?.access_token || ''
+      const isAdministrator = isAdminEmail(email)
+      if (!isAdministrator) {
+        if (section !== 'website-content') throw new Error('Not an admin account.')
+        const cmsResponse = await fetch('/api/admin/content', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        })
+        const cmsData = await cmsResponse.json().catch(() => ({}))
+        if (!cmsResponse.ok) throw new Error(cmsData?.message || 'This account does not have Website Content Manager access.')
+      }
+      if (!await persistAuthSession(data.session || {})) {
+        throw new Error('Sign-in succeeded, but session renewal could not be initialized. Please sign in again.')
+      }
       try {
-        localStorage.setItem('ajr-access-token', token)
         localStorage.setItem('adminAccessEmail', email)
       } catch {}
+      setLoginEmail(email)
+      setContentOnly(!isAdministrator)
       setAuthorized(true)
-      loadOrders(token)
-      loadProducts()
-      loadExtras(token)
-      loadStoreSettings(token)
+      if (isAdministrator) {
+        loadOrders(token)
+        loadProducts()
+        loadExtras(token)
+        loadStoreSettings(token)
+      }
     } catch (e: any) {
       setLoginError(e?.message || 'Login failed.')
     } finally {
@@ -928,6 +1008,10 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   }
 
   const adminLogout = async () => {
+    const token = localStorage.getItem('ajr-access-token') || ''
+    if (token) {
+      void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {})
+    }
     try {
       await supabase.auth.signOut()
       localStorage.removeItem('ajr-access-token')
@@ -1156,6 +1240,10 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
         description: productDraft.detail,
         origin: productDraft.origin.trim() || 'India',
         nutrients: productDraft.nutrients.split(',').map((n) => n.trim()).filter(Boolean),
+        benefits: productDraft.benefits.split(',').map((n) => n.trim()).filter(Boolean),
+        ingredients: productDraft.ingredients.split(',').map((n) => n.trim()).filter(Boolean),
+        seo_title: productDraft.seoTitle.trim(),
+        seo_description: productDraft.seoDescription.trim(),
         rating: Number(productDraft.rating),
         reviews_count: Number(productDraft.reviewsCount),
         stock: Number.isFinite(stock) ? stock : 0,
@@ -1239,7 +1327,9 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           <span className="admin-access-icon"><ShieldCheck size={25} /></span>
           <span className="admin-kicker">{t('Your store, thoughtfully managed')}</span>
           <h1>{t('Welcome back.')}</h1>
-          <p>{t('Sign in with your administrator account to tend to your store.')}</p>
+          <p>{section === 'website-content'
+            ? 'Sign in with an administrator or an assigned content account to manage the storefront.'
+            : t('Sign in with your administrator account to tend to your store.')}</p>
           <form className="admin-form" onSubmit={adminLogin}>
             <label><span>{t('Email address')}</span><input type="email" autoComplete="username" placeholder="you@example.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required suppressHydrationWarning /></label>
             <label><span>{t('Password')}</span><input type="password" autoComplete="current-password" placeholder={t('Enter your password')} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required suppressHydrationWarning /></label>
@@ -1329,7 +1419,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const lowStockCount = products.filter((product) => product.status === 'Low stock').length
   const healthyStockPercent = products.length ? Math.round((inStockCount / products.length) * 100) : 0
   const pendingOrders = dashboard?.pending ?? orders.filter((order) => order.status === 'Pending').length
-  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), analytics: 'Visitor Analytics', settings: t('Settings') }
+  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), 'login-users': 'Login Users', analytics: 'Visitor Analytics', 'abandoned-carts': 'Abandoned Carts', 'coupons-offers': 'Coupons & Offers', 'website-content': 'Website Content', settings: t('Settings') }
   const refreshOverview = () => { void loadOrders(); void loadProducts(); void loadExtras() }
 
   return (
@@ -1338,18 +1428,28 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
       {mobileNavOpen && <button className="admin-nav-scrim" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
       <aside ref={sidebarRef} className={`admin-sidebar ${mobileNavOpen ? 'is-open' : ''}`} role={mobileNavOpen ? 'dialog' : undefined} aria-modal={mobileNavOpen ? true : undefined} aria-label="Store navigation">
         <div className="admin-brand">
-          <Link href="/admin" className="admin-wordmark">AJR<span>ALWAYS JUST ROYAL</span></Link>
+          <Link href={contentOnly ? '/admin/website-content' : '/admin'} className="admin-wordmark">AJR<span>ALWAYS JUST ROYAL</span></Link>
           <span className="admin-workspace-tag">STORE WORKSPACE</span>
           <button className="admin-mobile-close" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)}><X size={20} /></button>
         </div>
 
         <div className="admin-nav-title">{t('Workspace')}</div>
         <nav className="admin-nav" id="admin-navigation" aria-label="Administration" onClick={() => setMobileNavOpen(false)}>
+          {contentOnly && <Link className={section === 'website-content' ? 'active' : ''} aria-current={section === 'website-content' ? 'page' : undefined} href="/admin/website-content">
+            <Globe2 size={18} /> Website Content
+          </Link>}
+          {!contentOnly && <>
           <Link className={section === 'overview' ? 'active' : ''} aria-current={section === 'overview' ? 'page' : undefined} href="/admin">
             <BarChart3 size={18} /> {t('Overview')}
           </Link>
           <Link className={section === 'orders' ? 'active' : ''} aria-current={section === 'orders' ? 'page' : undefined} href="/admin/orders">
             <ShoppingBag size={18} /> {t('Orders')}
+          </Link>
+          <Link className={section === 'coupons-offers' ? 'active' : ''} aria-current={section === 'coupons-offers' ? 'page' : undefined} href="/admin/coupons-offers">
+            <Tag size={18} /> Coupons &amp; Offers
+          </Link>
+          <Link className={section === 'abandoned-carts' ? 'active' : ''} aria-current={section === 'abandoned-carts' ? 'page' : undefined} href="/admin/abandoned-carts">
+            <ShoppingCart size={18} /> Abandoned Carts
           </Link>
           <Link className={section === 'products' ? 'active' : ''} aria-current={section === 'products' ? 'page' : undefined} href="/admin/products">
             <Package size={18} /> {t('Products')}
@@ -1361,12 +1461,19 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
             <MessageCircle size={18} /> {t('Messages')}
             {unreadCount > 0 && <span className="admin-nav-badge">{unreadCount}</span>}
           </Link>
+          <Link className={section === 'login-users' ? 'active' : ''} aria-current={section === 'login-users' ? 'page' : undefined} href="/admin/login-users">
+            <User size={18} /> Login Users
+          </Link>
           <Link className={section === 'analytics' ? 'active' : ''} aria-current={section === 'analytics' ? 'page' : undefined} href="/admin/analytics">
             <BarChart3 size={18} /> Visitor Analytics
+          </Link>
+          <Link className={section === 'website-content' ? 'active' : ''} aria-current={section === 'website-content' ? 'page' : undefined} href="/admin/website-content">
+            <Globe2 size={18} /> Website Content
           </Link>
           <Link className={section === 'settings' ? 'active' : ''} aria-current={section === 'settings' ? 'page' : undefined} href="/admin/settings">
             <Settings size={18} /> {t('Settings')}
           </Link>
+          </>}
         </nav>
 
         <LanguageSwitcher className="admin-language-switcher" />
@@ -1375,7 +1482,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           <div className="admin-profile-top">
             <div className="admin-avatar"><User size={19} /></div>
             <div>
-              <span className="admin-profile-label">Admin</span>
+              <span className="admin-profile-label">{contentOnly ? 'Content Manager' : 'Admin'}</span>
               <span className="admin-profile-mail">{loginEmail || ADMIN_EMAILS[0]}</span>
             </div>
           </div>
@@ -1388,7 +1495,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
       <section className="admin-content" id="admin-workspace" tabIndex={-1} inert={mobileNavOpen}>
         <header className="admin-workspace-bar">
           <div><button ref={navigationTriggerRef} className="admin-menu-toggle" aria-label={t('Open navigation')} aria-expanded={mobileNavOpen} aria-controls="admin-navigation" onClick={() => setMobileNavOpen(!mobileNavOpen)}><Menu size={21} /></button><span className="admin-breadcrumb-brand">{t('Workspace')}</span><ChevronRight size={14} /><span>{sectionNames[section]}</span></div>
-          <div><span className="admin-private-label"><ShieldCheck size={14} /> {t('Private workspace')}</span><Link href="/admin/messages" className="icon-button admin-inbox-shortcut" aria-label={`${t('Messages')}, ${unreadCount} ${t('unread')}`}><Bell size={18} />{unreadCount > 0 && <span className="admin-badge-dot" />}</Link><Link href="/admin/settings" className="admin-header-avatar" aria-label={t('Administrator settings')}><User size={17} /></Link></div>
+          <div><span className="admin-private-label"><ShieldCheck size={14} /> {t('Private workspace')}</span>{!contentOnly && <><Link href="/admin/messages" className="icon-button admin-inbox-shortcut" aria-label={`${t('Messages')}, ${unreadCount} ${t('unread')}`}><Bell size={18} />{unreadCount > 0 && <span className="admin-badge-dot" />}</Link><Link href="/admin/settings" className="admin-header-avatar" aria-label={t('Administrator settings')}><User size={17} /></Link></>}</div>
         </header>
         {section === 'overview' ? (
           <>
@@ -1640,10 +1747,10 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
             </div>
             <div className="admin-table-scroll">
               <table className="orders-table">
-                <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Channel</th><th>Status</th><th>Payment</th><th>Total</th><th>Date</th><th></th></tr></thead>
+                <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Channel</th><th>Status</th><th>Payment</th><th>Coupon</th><th>Total</th><th>Date</th><th></th></tr></thead>
                 <tbody>
                   {filteredOrders.length === 0 ? (
-                    <tr><td colSpan={9} className="empty-table-cell">{loadingOrders ? 'Loading orders…' : 'No orders found.'}</td></tr>
+                    <tr><td colSpan={10} className="empty-table-cell">{loadingOrders ? 'Loading orders…' : 'No orders found.'}</td></tr>
                   ) : filteredOrders.map((order) => (
                     <tr key={order.dbId || order.id}>
                       <td className="order-id"><button className="text-link" onClick={() => setSelectedOrder(order)}>{order.id}</button></td>
@@ -1652,6 +1759,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
                       <td><span className={`channel ${order.channel.toLowerCase()}`}>{order.channel}</span></td>
                       <td><select value={order.status} onChange={(e) => updateOrderStatus(order, e.target.value as OrderStatus)}>{ORDER_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></td>
                       <td><span className="pay-method">{order.paymentMethod || 'COD'}</span><select value={order.paymentStatus || 'Pending'} onChange={(e) => updatePaymentStatus(order, e.target.value as PaymentStatus)} title="Payment status">{PAYMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></td>
+                      <td>{order.couponCode ? <><strong>{order.couponCode}</strong><span className="customer-mail">−₹{(order.couponDiscount || 0) + (order.couponShippingDiscount || 0)}</span></> : '—'}</td>
                       <td className="order-total">₹{order.total}</td>
                       <td className="order-date">{order.date}</td>
                       <td><button className="icon-button small" title="Delete order" onClick={() => deleteOrder(order)}><X size={14} /></button></td>
@@ -1766,6 +1874,14 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           </section>
         ) : section === 'analytics' ? (
           <VisitorAnalytics />
+        ) : section === 'login-users' ? (
+          <LoginUsers />
+        ) : section === 'abandoned-carts' ? (
+          <AbandonedCarts />
+        ) : section === 'coupons-offers' ? (
+          <CouponsOffers />
+        ) : section === 'website-content' ? (
+          <WebsiteContentManager />
         ) : (
           <section className="admin-panel settings-page">
             <section className="admin-topbar settings-topbar">
@@ -1899,7 +2015,9 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
                     ))}
                   </ul>
                 </div>
-                <div><strong>Subtotal:</strong> ₹{selectedOrder.subtotal ?? selectedOrder.total} · <strong>Shipping:</strong> ₹{selectedOrder.shipping ?? 0} · <strong>Total:</strong> ₹{selectedOrder.total}</div>
+                <div><strong>Original order amount:</strong> ₹{selectedOrder.couponOriginalSubtotal ?? selectedOrder.subtotal ?? selectedOrder.total} · <strong>Shipping:</strong> ₹{selectedOrder.shipping ?? 0}</div>
+                {selectedOrder.couponCode && <div><strong>Coupon used:</strong> {selectedOrder.couponCode}{selectedOrder.couponName ? ` · ${selectedOrder.couponName}` : ''} · <strong>Discount:</strong> −₹{selectedOrder.couponDiscount ?? 0}{(selectedOrder.couponShippingDiscount || 0) > 0 ? ` · Shipping waived: −₹${selectedOrder.couponShippingDiscount}` : ''}</div>}
+                <div><strong>Final payable amount:</strong> ₹{selectedOrder.total}</div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <strong>Status:</strong>
                   <select
@@ -2194,6 +2312,26 @@ function ProductForm({
         <label>
           <span>Nutrients (comma separated)</span>
           <input value={draft.nutrients} onChange={(e) => patch({ nutrients: e.target.value })} placeholder="Vitamin E, Magnesium" />
+        </label>
+      </div>
+
+      <label>
+        <span>Benefits (comma separated)</span>
+        <textarea rows={2} maxLength={4000} value={draft.benefits} onChange={(e) => patch({ benefits: e.target.value })} placeholder="Naturally rich in fiber, Source of plant protein" />
+      </label>
+      <label>
+        <span>Ingredients (comma separated)</span>
+        <textarea rows={2} maxLength={4000} value={draft.ingredients} onChange={(e) => patch({ ingredients: e.target.value })} placeholder="Almonds" />
+      </label>
+
+      <div className="form-grid-2">
+        <label>
+          <span>SEO title (up to 70 characters)</span>
+          <input maxLength={70} value={draft.seoTitle} onChange={(e) => patch({ seoTitle: e.target.value })} />
+        </label>
+        <label>
+          <span>SEO description (up to 320 characters)</span>
+          <textarea rows={2} maxLength={320} value={draft.seoDescription} onChange={(e) => patch({ seoDescription: e.target.value })} />
         </label>
       </div>
 

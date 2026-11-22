@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   ArrowRight,
   Award,
@@ -40,13 +40,42 @@ import NutritionMatch from '@/components/NutritionMatch'
 import FarmOrigins from '@/components/FarmOrigins'
 import QualityComparison from '@/components/QualityComparison'
 import StudioLocation from '@/components/StudioLocation'
+import OfferShowcase from '@/components/OfferShowcase'
 import { PACK_SIZE_OPTIONS } from '@/lib/supabase'
 import { resolveVarietyImage } from '@/lib/variety-images'
 import { getAnalyticsConsent, trackAnalytics, type AnalyticsPage } from '@/lib/visitor-analytics-client'
+import { DEFAULT_WEBSITE_CONTENT, mergeWebsiteContent, type WebsiteContent } from '@/lib/website-content'
 
 const logo = '/ajr-logo.png'
+const announcementForeground = (hex: string) => {
+  const value = Number.parseInt(hex.slice(1), 16)
+  const red = (value >> 16) & 255
+  const green = (value >> 8) & 255
+  const blue = value & 255
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 150 ? '#173b28' : '#f5f4ed'
+}
 
 type View = 'home' | 'about' | 'product' | 'contact' | 'cart' | 'wishlist' | 'detail' | 'orders'
+type WebsiteBanner = {
+  id: string
+  title: string
+  description: string
+  desktop_image: string
+  mobile_image: string
+  alt_text: string
+  cta_label: string
+  cta_href: string
+}
+type WebsiteRecipe = {
+  id: string
+  title: string
+  description: string
+  image: string
+  alt_text: string
+  ingredients: string[]
+  prep_minutes: number
+  product_ids: number[]
+}
 type FlightTarget = 'cart' | 'wishlist'
 const ANALYTICS_PAGE_FOR_VIEW: Record<View, AnalyticsPage> = {
   home: 'home',
@@ -92,6 +121,10 @@ export type Product = {
   reviewsCount?: number
   origin?: string
   nutrients?: string[]
+  benefits?: string[]
+  ingredients?: string[]
+  seoTitle?: string
+  seoDescription?: string
   stock?: number
   status?: string
   selectedWeight?: Weight
@@ -170,7 +203,7 @@ const varietiesFromRow = (value: unknown): Variety[] => {
     .map((v: any) => {
       const rawStock = v?.stock
       const stock = rawStock === undefined || rawStock === null || String(rawStock).trim() === '' ? undefined : Number(rawStock)
-      return { id: String(v?.id ?? '').trim() || undefined, name: String(v?.name ?? '').trim(), price: Number(v?.price ?? 0), image: String(v?.image ?? '').trim() || undefined, stock: Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : undefined, active: v?.active !== false }
+      return { id: String(v?.id ?? '').trim() || undefined, name: String(v?.name ?? '').trim(), price: Number(v?.price ?? 0), image: String(v?.image ?? '').trim() || undefined, stock: typeof stock === 'number' && Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : undefined, active: v?.active !== false }
     })
     .filter((v: Variety) => v.name.length > 0 && Number.isFinite(v.price) && v.price > 0)
 }
@@ -200,6 +233,10 @@ const productFromRow = (row: any): Product => {
     reviewsCount: Number(row?.reviews_count ?? 0),
     origin: String(row?.origin || 'India'),
     nutrients: Array.isArray(row?.nutrients) ? row.nutrients.map((n: any) => String(n)) : [],
+    benefits: Array.isArray(row?.benefits) ? row.benefits.map((value: any) => String(value)) : [],
+    ingredients: Array.isArray(row?.ingredients) ? row.ingredients.map((value: any) => String(value)) : [],
+    seoTitle: String(row?.seo_title || ''),
+    seoDescription: String(row?.seo_description || ''),
     varieties: varieties.length ? varieties : undefined,
     packSizes: packSizes.length ? packSizes : undefined,
   }
@@ -223,6 +260,10 @@ const mergeRowIntoProduct = (base: Product, row: any): Product => {
     image,
     detail: mapped.detail,
     nutrients: mapped.nutrients,
+    benefits: mapped.benefits,
+    ingredients: mapped.ingredients,
+    seoTitle: mapped.seoTitle,
+    seoDescription: mapped.seoDescription,
     origin: mapped.origin,
     rating: mapped.rating,
     reviewsCount: mapped.reviewsCount,
@@ -1027,6 +1068,8 @@ const baseNavItems: Array<{ label: string; view?: View; href?: string; action?: 
 // can never be shown to somebody else.
 const GUEST_CART_KEY = 'ajr-guest-cart'
 const GUEST_WISH_KEY = 'ajr-guest-wishlist'
+const GUEST_TRACKING_CONSENT_KEY = 'ajr-abandoned-cart-consent'
+const GUEST_TRACKING_CAPABILITY_KEY = 'ajr-abandoned-cart-capability'
 
 const readJson = (key: string): any => {
   try {
@@ -1081,9 +1124,16 @@ export default function Page() {
   const { t } = useLanguage()
   const pathname = usePathname()
   const [view, setView] = useState<View>('home')
+  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(DEFAULT_WEBSITE_CONTENT)
+  const [websiteBanners, setWebsiteBanners] = useState<WebsiteBanner[]>([])
+  const [websiteRecipes, setWebsiteRecipes] = useState<WebsiteRecipe[]>([])
   const [analyticsConsentRevision, setAnalyticsConsentRevision] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([])
+  const [recoveryEmailConsent, setRecoveryEmailConsent] = useState(false)
+  const [guestTrackingConsent, setGuestTrackingConsent] = useState(false)
+  const [trackingConsentError, setTrackingConsentError] = useState('')
+  const guestTrackingRequests = useRef<Set<Promise<void>>>(new Set())
   const [wishlist, setWishlist] = useState<Product[]>([])
   const [selected, setSelected] = useState<Product>(fallbackProducts[0])
   const [category, setCategory] = useState('All')
@@ -1100,6 +1150,42 @@ export default function Page() {
   const flightIdRef = useRef(0)
   const pulseTimeoutRef = useRef<number | null>(null)
   const analyticsPageRef = useRef<{ key: string; page: AnalyticsPage; productId?: number; startedAt: number; durationSent: boolean } | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/content', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Content request returned ${response.status}`)
+        return response.json()
+      })
+      .then((data) => {
+        if (!active) return
+        setWebsiteContent(mergeWebsiteContent(data.content))
+        setWebsiteBanners(Array.isArray(data.banners) ? data.banners : [])
+        setWebsiteRecipes(Array.isArray(data.recipes) ? data.recipes : [])
+      })
+      .catch((error) => console.warn('Published website content could not be loaded; using existing storefront content.', error))
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (view !== 'detail' || (!selected.seoTitle && !selected.seoDescription)) return
+    const previousTitle = document.title
+    const existingDescription = document.querySelector<HTMLMetaElement>('meta[name="description"]')
+    const previousDescription = existingDescription?.content
+    const description = existingDescription || document.createElement('meta')
+    if (!existingDescription) {
+      description.name = 'description'
+      document.head.appendChild(description)
+    }
+    if (selected.seoTitle) document.title = selected.seoTitle
+    if (selected.seoDescription) description.content = selected.seoDescription
+    return () => {
+      document.title = previousTitle
+      if (previousDescription !== undefined) description.content = previousDescription
+      else if (!existingDescription) description.remove()
+    }
+  }, [selected.id, selected.seoTitle, selected.seoDescription, view])
 
   useEffect(() => {
     const handleConsent = () => setAnalyticsConsentRevision((revision) => revision + 1)
@@ -1201,7 +1287,11 @@ export default function Page() {
             fetch('/api/cart', { headers: authHeaders(token), cache: 'no-store' }),
             fetch('/api/wishlist', { headers: authHeaders(token), cache: 'no-store' }),
           ])
-          if (cartRes.ok) serverCart = (await cartRes.json()).items || []
+          if (cartRes.ok) {
+            const cartData = await cartRes.json()
+            serverCart = cartData.items || []
+            setRecoveryEmailConsent(cartData.recoveryEmailConsent === true)
+          }
           if (wishRes.ok) serverWish = (await wishRes.json()).items || []
           serverReachable = cartRes.ok && wishRes.ok
         } catch {
@@ -1215,6 +1305,17 @@ export default function Page() {
 
         // Anything the visitor built while signed out is pushed up once, then the
         // local copy is dropped so it can never surface for another account.
+        const guestCapability = window.localStorage.getItem(GUEST_TRACKING_CAPABILITY_KEY) || ''
+        if (guestCapability) {
+          fetch('/api/cart-tracking', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ capability: guestCapability }),
+          }).catch(() => {})
+        }
+        dropKey(GUEST_TRACKING_CONSENT_KEY)
+        dropKey(GUEST_TRACKING_CAPABILITY_KEY)
+        setGuestTrackingConsent(false)
         if (guestCart.length > 0 || guestWish.length > 0) {
           dropKey(GUEST_CART_KEY)
           dropKey(GUEST_WISH_KEY)
@@ -1226,6 +1327,8 @@ export default function Page() {
       } else {
         setCart(Array.isArray(guestCart) ? guestCart : [])
         setWishlist(Array.isArray(guestWish) ? guestWish : [])
+        const savedCapability = window.localStorage.getItem(GUEST_TRACKING_CAPABILITY_KEY) || ''
+        setGuestTrackingConsent(window.localStorage.getItem(GUEST_TRACKING_CONSENT_KEY) === 'true' && Boolean(savedCapability))
       }
 
       setSessionLoaded(true)
@@ -1247,6 +1350,82 @@ export default function Page() {
     }, 300)
     return () => clearTimeout(timer)
   }, [cart, session, dataLoaded])
+
+  useEffect(() => {
+    if (!dataLoaded || session || !guestTrackingConsent) return
+    const timer = window.setTimeout(async () => {
+      const capability = window.localStorage.getItem(GUEST_TRACKING_CAPABILITY_KEY) || ''
+      if (!capability) return
+      const request = (async () => {
+        const response = await fetch('/api/cart-tracking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ capability, consent: true, items: cart }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data?.message || 'Anonymous cart tracking could not be saved.')
+      })()
+      guestTrackingRequests.current.add(request)
+      try {
+        await request
+        setTrackingConsentError('')
+      } catch (error: any) {
+        setTrackingConsentError(error?.message || 'Anonymous cart tracking could not be saved.')
+      } finally {
+        guestTrackingRequests.current.delete(request)
+      }
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [cart, session, dataLoaded, guestTrackingConsent])
+
+  const updateGuestTrackingConsent = async (consent: boolean) => {
+    setTrackingConsentError('')
+    if (consent) {
+      try {
+        const previousCapability = window.localStorage.getItem(GUEST_TRACKING_CAPABILITY_KEY) || ''
+        if (previousCapability) {
+          await Promise.all(Array.from(guestTrackingRequests.current, (request) => request.catch(() => {})))
+          const response = await fetch('/api/cart-tracking', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ capability: previousCapability }),
+          })
+          if (!response.ok) throw new Error('The previous anonymous snapshot could not be removed. Try again before enabling tracking.')
+          dropKey(GUEST_TRACKING_CAPABILITY_KEY)
+        }
+        const bytes = new Uint8Array(32)
+        window.crypto.getRandomValues(bytes)
+        const capability = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+        window.localStorage.setItem(GUEST_TRACKING_CAPABILITY_KEY, capability)
+        window.localStorage.setItem(GUEST_TRACKING_CONSENT_KEY, 'true')
+        setGuestTrackingConsent(true)
+      } catch {
+        setTrackingConsentError('This browser could not store a secure anonymous cart key. No tracking was enabled.')
+      }
+      return
+    }
+
+    const capability = window.localStorage.getItem(GUEST_TRACKING_CAPABILITY_KEY) || ''
+    dropKey(GUEST_TRACKING_CONSENT_KEY)
+    setGuestTrackingConsent(false)
+    if (capability) {
+      try {
+        await Promise.all(Array.from(guestTrackingRequests.current, (request) => request.catch(() => {})))
+        const response = await fetch('/api/cart-tracking', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ capability }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data?.message || 'The anonymous snapshot could not be removed.')
+        if (window.localStorage.getItem(GUEST_TRACKING_CAPABILITY_KEY) === capability) {
+          dropKey(GUEST_TRACKING_CAPABILITY_KEY)
+        }
+      } catch {
+        setTrackingConsentError('Tracking is off in this browser, but its saved anonymous snapshot could not be removed. Turn tracking on and off again to retry deletion.')
+      }
+    }
+  }
 
   // Same for the wishlist.
   useEffect(() => {
@@ -1403,20 +1582,35 @@ export default function Page() {
   }
 
   // Signed-in members get the account nav; visitors keep Login / Signup.
+  const cmsNavItems = websiteContent.navigation
+    .filter((item) => item.visible)
+    .map((item) => ({
+      label: item.label,
+      href: item.href,
+      view: ({ '/': 'home', '/about': 'about', '/shop': 'product', '/contact': 'contact' } as Record<string, View>)[item.href],
+    }))
+    .filter((item) => Boolean(item.view) || item.href.startsWith('https://'))
+  const storefrontNavItems = cmsNavItems.length > 0
+    ? cmsNavItems
+    : baseNavItems.filter((item) => item.view)
   const navItems: typeof baseNavItems = !sessionLoaded
-    ? baseNavItems
+    ? storefrontNavItems
     : session
     ? [
-        ...baseNavItems,
+        ...storefrontNavItems,
         { label: 'My Orders', view: 'orders' },
         { label: 'Logout', action: 'logout' },
       ]
-    : [...baseNavItems, { label: 'Login', href: '/login' }, { label: 'Signup', href: '/signup' }]
+    : [...storefrontNavItems, { label: 'Login', href: '/login' }, { label: 'Signup', href: '/signup' }]
 
   // Ends the session on this device and drops every locally cached copy of the
   // customer's data. The server-side cart / wishlist / orders stay attached to
   // the account and come back on the next sign-in.
   const logout = async () => {
+    const token = window.localStorage.getItem('ajr-access-token') || ''
+    if (token) {
+      void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {})
+    }
     try {
       const { supabase } = await import('@/lib/supabase')
       await supabase.auth.signOut()
@@ -1438,10 +1632,29 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top Announcement Bar */}
-      <div className="top-ticker">
+      {websiteContent.announcement.enabled && <div
+        className={`top-ticker ${websiteContent.announcement.color.startsWith('#') ? 'top-ticker--custom' : `top-ticker--${websiteContent.announcement.color}`}`}
+        style={websiteContent.announcement.color.startsWith('#') ? {
+          backgroundColor: websiteContent.announcement.color,
+          color: announcementForeground(websiteContent.announcement.color),
+        } : undefined}
+      >
         <div className="ticker-left">
           <span className="live-dot" />
-          <span>{t('Fresh Harvest Batch Arrived Today')}</span>
+          {websiteContent.announcement.href ? (
+            <button
+              type="button"
+              className="ticker-announcement-button"
+              onClick={() => {
+                const destinations: Record<string, View> = { '/': 'home', '/about': 'about', '/shop': 'product', '/contact': 'contact', '/cart': 'cart' }
+                const destination = destinations[websiteContent.announcement.href]
+                if (destination) go(destination)
+                else if (websiteContent.announcement.href.startsWith('https://')) window.location.assign(websiteContent.announcement.href)
+              }}
+            >
+              {t(websiteContent.announcement.text)}
+            </button>
+          ) : <span>{t(websiteContent.announcement.text)}</span>}
         </div>
         <div className="ticker-right">
           <span>
@@ -1451,7 +1664,7 @@ export default function Page() {
             <ShieldCheck size={13} /> {t('100% Pure & Organic Certified')}
           </span>
         </div>
-      </div>
+      </div>}
 
       <header className="site-header">
         <button
@@ -1478,6 +1691,10 @@ export default function Page() {
               >
                 {t(item.label)}
               </button>
+            ) : item.href?.startsWith('https://') ? (
+              <a key={item.label} className="nav-link" href={item.href} target="_blank" rel="noopener noreferrer">
+                {t(item.label)}
+              </a>
             ) : (
               <Link key={item.label} className="nav-link" href={item.href!}>
                 {t(item.label)}
@@ -1547,9 +1764,12 @@ export default function Page() {
           toggleWish={toggleWish}
           wishlist={wishlist}
           products={products}
+          content={websiteContent}
+          banners={websiteBanners}
+          cmsRecipes={websiteRecipes}
         />
       )}
-      {view === 'about' && <About go={go} />}
+      {view === 'about' && <About go={go} content={websiteContent.about} />}
       {view === 'product' && (
         <Shop
           products={filteredProducts}
@@ -1578,7 +1798,18 @@ export default function Page() {
       )}
       {view === 'contact' && <Contact sent={sent} setSent={setSent} />}
       {view === 'cart' && (
-        <Cart cart={cart} setCart={setCart} subtotal={subtotal} go={go} session={session} />
+        <Cart
+          cart={cart}
+          setCart={setCart}
+          subtotal={subtotal}
+          go={go}
+          session={session}
+          recoveryEmailConsent={recoveryEmailConsent}
+          onRecoveryEmailConsentChange={setRecoveryEmailConsent}
+          guestTrackingConsent={guestTrackingConsent}
+          onGuestTrackingConsentChange={updateGuestTrackingConsent}
+          trackingConsentError={trackingConsentError}
+        />
       )}
       {view === 'wishlist' && (
         <Wishlist
@@ -1592,7 +1823,7 @@ export default function Page() {
       {view === 'orders' && (
         <MyOrders session={session} sessionLoaded={sessionLoaded} go={go} />
       )}
-      <Footer go={go} />
+      <Footer go={go} content={websiteContent.footer} />
       {flight && (
         <img
           key={flight.id}
@@ -1850,7 +2081,7 @@ function FaqItem({ faq, index, initiallyOpen }: { faq: (typeof initialFaqs)[numb
   )
 }
 
-function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list }: any) {
+function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list, content, banners, cmsRecipes }: any) {
   const { t } = useLanguage()
   const products = Array.isArray(list) && list.length > 0 ? list : fallbackProducts
   const [faqSearch, setFaqSearch] = useState('')
@@ -1859,24 +2090,76 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
   const [campaignControlsFocused, setCampaignControlsFocused] = useState(false)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
 
-  const campaignSlides = [
+  const campaignSlides: Array<{ src: string; mobileSrc: string; alt: string; href: string; label: string; title: string; description: string }> = banners.length
+    ? banners.map((banner: WebsiteBanner) => ({
+        src: banner.desktop_image,
+        mobileSrc: banner.mobile_image || banner.desktop_image,
+        alt: banner.alt_text || banner.title,
+        href: banner.cta_href,
+        label: banner.cta_label,
+        title: banner.title,
+        description: banner.description,
+      }))
+    : [
     {
       src: '/ajr-everyday-goodness-snacking.png',
+      mobileSrc: '/ajr-everyday-goodness-snacking.png',
       alt: 'AJR Healthy Snacking for a Happier You campaign banner with a woman enjoying nuts.',
+      href: '',
+      label: '',
+      title: '',
+      description: '',
     },
     {
       src: '/ajr-everyday-goodness-ladoo-banner.png',
+      mobileSrc: '/ajr-everyday-goodness-ladoo-banner.png',
       alt: 'AJR Tradition Meets Innovation campaign banner featuring dry fruit ladoos.',
+      href: '',
+      label: '',
+      title: '',
+      description: '',
     },
     {
       src: '/ajr-everyday-goodness-fitness-banner.png',
+      mobileSrc: '/ajr-everyday-goodness-fitness-banner.png',
       alt: 'AJR Fuel Stronger Days campaign banner featuring premium dry fruits and nuts.',
+      href: '',
+      label: '',
+      title: '',
+      description: '',
     },
     {
       src: '/ajr-everyday-goodness-blanched-almonds.png',
+      mobileSrc: '/ajr-everyday-goodness-blanched-almonds.png',
       alt: 'AJR Blanched Almonds campaign banner.',
+      href: '',
+      label: '',
+      title: '',
+      description: '',
     },
   ]
+  const displayedRecipes = cmsRecipes.length
+    ? cmsRecipes.map((recipe: WebsiteRecipe) => ({
+        key: recipe.id,
+        title: recipe.title,
+        image: recipe.image,
+        alt: recipe.alt_text || recipe.title,
+        time: recipe.prep_minutes ? `${recipe.prep_minutes} min` : '',
+        desc: recipe.description,
+        ingredients: recipe.ingredients.join(', '),
+      }))
+    : recipes.map((recipe) => ({ ...recipe, key: recipe.title, alt: recipe.title }))
+
+  useEffect(() => {
+    setActiveCampaignSlide((current) => Math.min(current, Math.max(0, campaignSlides.length - 1)))
+  }, [campaignSlides.length])
+
+  const openCampaignLink = (href: string) => {
+    const destinations: Record<string, View> = { '/': 'home', '/about': 'about', '/shop': 'product', '/contact': 'contact', '/cart': 'cart' }
+    const destination = destinations[href.split(/[?#]/)[0]]
+    if (destination) go(destination)
+    else if (href.startsWith('/') || href.startsWith('https://')) window.location.assign(href)
+  }
 
   useEffect(() => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -1911,31 +2194,31 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
         <section className="hero">
           <div className="hero-copy">
             <p className="eyebrow hero-rise">
-              {t('Harvest · 100% Organic')}
+              {t(content.home.heroEyebrow)}
             </p>
             <h1 className="hero-rise d1">
-              <span className="sr-only">{t('Goodness worth sharing.')}</span>
+              <span className="sr-only">{t(`${content.home.heroTitle} ${content.home.heroAccent}`)}</span>
               <span className="letter-heading" aria-hidden="true">
-                <LetterReveal text={t('Goodness')} />
+                <LetterReveal text={t(content.home.heroTitle)} />
                 <br />
-                <em><LetterReveal text={t('worth sharing.')} /></em>
+                <em><LetterReveal text={t(content.home.heroAccent)} /></em>
               </span>
             </h1>
             <p className="hero-text hero-rise d2">
-              {t('Handpicked California almonds, jumbo golden cashews, Medjool dates and Kashmiri walnuts — curated for daily wellness and royal gifting.')}
+              {t(content.home.heroDescription)}
             </p>
             <div className="hero-actions hero-rise d3">
               <button
                 className="button button-dark"
                 onClick={() => go('product')}
               >
-                {t('Explore Collection')} <ArrowRight size={17} />
+                {t(content.home.heroPrimaryLabel)} <ArrowRight size={17} />
               </button>
               <button
                 className="button button-ghost"
                 onClick={() => go('about')}
               >
-                {t('Our Farm Story')}
+                {t(content.home.heroSecondaryLabel)}
               </button>
             </div>
 
@@ -1968,19 +2251,21 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
         <Reveal>
           <section className="intro section">
             <div>
-                <p className="eyebrow">{t('The AJR Philosophy')}</p>
+                <p className="eyebrow">{t(content.home.introEyebrow)}</p>
               <h2>
-                  <span className="sr-only">{t('Good food is always worth sharing.')}</span>
-                <span className="letter-heading" aria-hidden="true">
-                  <LetterReveal text={t('Good food is')} />
-                  <br />
-                  <em><LetterReveal text={t('always')} /></em>{' '}<LetterReveal text={t('worth sharing.')} />
-                </span>
+                <span className="sr-only">{t(content.home.introTitle)}</span>
+                {content.home.introTitle === DEFAULT_WEBSITE_CONTENT.home.introTitle ? (
+                  <span className="letter-heading" aria-hidden="true">
+                    <LetterReveal text={t('Good food is')} />
+                    <br />
+                    <em><LetterReveal text={t('always')} /></em>{' '}<LetterReveal text={t('worth sharing.')} />
+                  </span>
+                ) : <span className="letter-heading" aria-hidden="true"><LetterReveal text={t(content.home.introTitle)} /></span>}
               </h2>
             </div>
             <div className="intro-copy">
               <p>
-                {t('We source generous, delicious dry fruits and nuts that bring authentic nourishment to your daily routine. Every handful starts with careful selection at peak harvest, honest ingredients, and zero artificial processing.')}
+                {t(content.home.introDescription)}
               </p>
               <button className="text-link" onClick={() => go('about')}>
                 {t('Read Our Story')} <ArrowRight size={16} />
@@ -2009,26 +2294,36 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
               >
                 {campaignSlides.map((slide, index) => (
                   <div
-                    className="campaign-slide"
-                    key={slide.src}
+                    className={`campaign-slide ${slide.src ? '' : 'campaign-slide-text-only'}`}
+                    key={`${slide.src}-${index}`}
                     aria-hidden={index !== activeCampaignSlide}
                   >
-                    <img
-                      className="campaign-slide-backdrop"
-                      src={slide.src}
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <div className="campaign-slide-art-frame">
+                    {slide.src && <>
                       <img
-                        className="campaign-slide-artwork"
+                        className="campaign-slide-backdrop"
                         src={slide.src}
-                        alt={slide.alt}
-                        width={1680}
-                        height={945}
-                        loading={index === 0 ? 'eager' : 'lazy'}
+                        alt=""
+                        aria-hidden="true"
                       />
-                    </div>
+                      <div className="campaign-slide-art-frame">
+                        <picture className="campaign-slide-picture">
+                          {slide.mobileSrc && <source media="(max-width: 680px)" srcSet={slide.mobileSrc} />}
+                        <img
+                          className="campaign-slide-artwork"
+                          src={slide.src}
+                          alt={slide.alt}
+                          width={1680}
+                          height={945}
+                          loading={index === 0 ? 'eager' : 'lazy'}
+                        />
+                        </picture>
+                      </div>
+                    </>}
+                    {(slide.title || slide.description || slide.label) && <div className="campaign-slide-copy">
+                      {slide.title && <strong>{t(slide.title)}</strong>}
+                      {slide.description && <p>{t(slide.description)}</p>}
+                      {slide.label && <button className="campaign-slide-cta" type="button" tabIndex={index === activeCampaignSlide ? 0 : -1} onClick={() => openCampaignLink(slide.href)}>{t(slide.label)} <ArrowRight size={15} /></button>}
+                    </div>}
                   </div>
                 ))}
               </div>
@@ -2074,6 +2369,13 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
             </div>
           </div>
         </section>
+
+        <Reveal>
+          <OfferShowcase compact onApply={(code) => {
+            sessionStorage.setItem('ajr-pending-coupon', code)
+            go('cart')
+          }} />
+        </Reveal>
 
         {/* Product Catalog Showcase */}
         <Reveal>
@@ -2207,20 +2509,20 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
               </div>
             </div>
             <div className="product-grid">
-              {recipes.map((r) => (
-                <div key={r.title} className="recipe-card">
+              {displayedRecipes.map((r: any) => (
+                <div key={r.key} className="recipe-card">
                   <div className="recipe-img">
-                    <img src={r.image} alt={t(r.title)} />
-                    <span className="recipe-time-tag">
+                    <img src={r.image} alt={t(r.alt)} />
+                    {r.time && <span className="recipe-time-tag">
                       <Clock size={12} /> {t(r.time)}
-                    </span>
+                    </span>}
                   </div>
                   <div className="recipe-body">
                     <h3>{t(r.title)}</h3>
                     <p>{t(r.desc)}</p>
-                    <p className="recipe-ingredients">
+                    {r.ingredients && <p className="recipe-ingredients">
                       {t('Ingredients')}: {t(r.ingredients)}
-                    </p>
+                    </p>}
                     <button
                       className="text-link"
                       onClick={() => go('product')}
@@ -2487,8 +2789,14 @@ function ProductCard({
   )
 }
 
-function About({ go }: { go: (v: View) => void }) {
+function About({ go, content }: { go: (v: View) => void; content: WebsiteContent['about'] }) {
   const { t } = useLanguage()
+  const aboutDetails = [
+    { title: 'Our mission', value: content.mission },
+    { title: 'Our vision', value: content.vision },
+    { title: 'Our quality promise', value: content.quality },
+    { title: 'Our customer promise', value: content.customerPromise },
+  ].filter((item) => item.value.trim())
   return (
     <main className="about-page">
       {/* Hero Header */}
@@ -2500,14 +2808,16 @@ function About({ go }: { go: (v: View) => void }) {
         </div>
         <span className="about-hero-index" aria-hidden="true">{t('01 / HERITAGE')}</span>
         <p className="eyebrow">
-          <Leaf size={14} /> {t('Our Heritage & Sourcing Philosophy')}
+          <Leaf size={14} /> {t(content.heading)}
         </p>
         <h1>
           <LetterReveal text={t('Rooted in nature.')} /><br />
           <em><LetterReveal text={t('Crafted for living.')} /></em>
         </h1>
         <p>
-          We are on a mission to redefine everyday snacking — bringing unbleached, single-origin dry fruits and nuts straight from accredited family orchards to your home.
+          {t('Essence of nature.')}
+          <br />
+          {t(content.description)}
         </p>
       </section>
 
@@ -2524,17 +2834,19 @@ function About({ go }: { go: (v: View) => void }) {
         <div className="about-copy">
           <p className="eyebrow">{t('The AJR Founding Story')}</p>
           <h2>{t('There is magic in an honest handful.')}</h2>
-          <p>
-            AJR began at a family table in Virudhunagar, Tamil Nadu. We noticed that most store-bought dry fruits were dry, over-bleached with sulfur, or sat in open warehouses for over a year before reaching customers.
-          </p>
-          <p>
-            We set out to change that by establishing direct fair-trade relationships with orchards in Kashmir, California, Mangalore, and Kerman. By packing in small weekly batches with zero chemical glazes, we preserve the natural essential oils and authentic crunch that nature intended.
-          </p>
+          {content.story.split(/\n{2,}/).filter(Boolean).map((paragraph, index) => <p key={index}>{t(paragraph)}</p>)}
           <button className="button button-dark" onClick={() => go('product')}>
             {t('Explore Our Collection')} <ArrowRight size={17} />
           </button>
         </div>
       </section>
+
+      {aboutDetails.length > 0 && <section className="cms-about-details section">
+        {aboutDetails.map((item) => <article key={item.title}>
+          <p className="eyebrow">{t(item.title)}</p>
+          <p>{t(item.value)}</p>
+        </article>)}
+      </section>}
 
       {/* Interactive Global Farm Origins Section */}
       <Reveal>
@@ -2915,6 +3227,14 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
               ))}
             </div>
           )}
+          {product.benefits && product.benefits.length > 0 && <section className="detail-product-content">
+            <h2>{t('Benefits')}</h2>
+            <ul>{product.benefits.map((benefit: string) => <li key={benefit}>{t(benefit)}</li>)}</ul>
+          </section>}
+          {product.ingredients && product.ingredients.length > 0 && <section className="detail-product-content">
+            <h2>{t('Ingredients')}</h2>
+            <p>{product.ingredients.map((ingredient: string) => t(ingredient)).join(', ')}</p>
+          </section>}
 
           <div className="detail-divider" />
           <div className="detail-price-row">
@@ -3319,7 +3639,18 @@ function Contact({ sent, setSent }: any) {
   )
 }
 
-function Cart({ cart, setCart, subtotal, go, session }: any) {
+function Cart({
+  cart,
+  setCart,
+  subtotal,
+  go,
+  session,
+  recoveryEmailConsent,
+  onRecoveryEmailConsentChange,
+  guestTrackingConsent,
+  onGuestTrackingConsentChange,
+  trackingConsentError,
+}: any) {
   const { t } = useLanguage()
   const [showCheckout, setShowCheckout] = useState(false)
   const [name, setName] = useState('')
@@ -3331,12 +3662,112 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
   const [placedOrder, setPlacedOrder] = useState<any>(null)
+  const [consentSaving, setConsentSaving] = useState(false)
+  const [consentError, setConsentError] = useState('')
+  const [couponCodeInput, setCouponCodeInput] = useState('')
+  const [appliedCouponCode, setAppliedCouponCode] = useState('')
+  const [couponQuote, setCouponQuote] = useState<any>(null)
+  const [couponBusy, setCouponBusy] = useState(false)
+  const [couponError, setCouponError] = useState('')
+  const [couponMessage, setCouponMessage] = useState('')
+  const [validatedCartKey, setValidatedCartKey] = useState('')
+  const [showAvailableOffers, setShowAvailableOffers] = useState(false)
+  const cartKey = JSON.stringify(cart.map((line: any) => [
+    line?.product?.id,
+    line?.product?.selectedWeight || '250 g',
+    line?.product?.selectedVariety || '',
+    line?.quantity,
+  ]))
+  const effectiveCouponQuote = couponQuote && validatedCartKey === cartKey ? couponQuote : null
   // One key per checkout attempt: double-clicking Place Order can never insert
   // a second order (the API returns the first one instead).
   const idempotencyKey = useRef('')
 
-  const shipping = subtotal >= 999 || subtotal === 0 ? 0 : 99
-  const total = subtotal + shipping
+  const baseShipping = subtotal >= 999 || subtotal === 0 ? 0 : 99
+  const displayedSubtotal = effectiveCouponQuote ? Number(effectiveCouponQuote.subtotal) : subtotal
+  const shipping = effectiveCouponQuote ? Number(effectiveCouponQuote.shipping) : baseShipping
+  const total = effectiveCouponQuote ? Number(effectiveCouponQuote.total) : subtotal + baseShipping
+
+  const validateCouponCode = useCallback(async (rawCode: string, quiet = false) => {
+    const code = rawCode.trim().toUpperCase()
+    if (!session) {
+      setCouponError('Sign in to apply a coupon.')
+      return
+    }
+    if (!code) {
+      setCouponError('Enter a coupon code.')
+      return
+    }
+    setCouponBusy(true)
+    setCouponError('')
+    setCouponMessage('')
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        body: JSON.stringify({ code, items: cart }),
+        cache: 'no-store',
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || 'This coupon could not be applied.')
+      setCouponCodeInput(code)
+      setAppliedCouponCode(code)
+      setCouponQuote(data.quote)
+      setValidatedCartKey(cartKey)
+      setCouponMessage(quiet ? 'Coupon checked against your updated cart.' : 'Coupon applied successfully!')
+    } catch (applyError: any) {
+      setCouponQuote(null)
+      setAppliedCouponCode('')
+      setValidatedCartKey(cartKey)
+      setCouponError(applyError?.message || 'This coupon could not be applied.')
+      setCouponMessage('')
+    } finally {
+      setCouponBusy(false)
+    }
+  }, [cart, cartKey, session])
+
+  useEffect(() => {
+    const pending = sessionStorage.getItem('ajr-pending-coupon')
+    if (!pending) return
+    sessionStorage.removeItem('ajr-pending-coupon')
+    setCouponCodeInput(pending)
+    if (session) void validateCouponCode(pending)
+    else setCouponError('Sign in to apply a coupon.')
+  }, [session, validateCouponCode])
+
+  useEffect(() => {
+    if (!appliedCouponCode || !session || couponBusy || validatedCartKey === cartKey) return
+    void validateCouponCode(appliedCouponCode, true)
+  }, [appliedCouponCode, cartKey, couponBusy, session, validatedCartKey, validateCouponCode])
+
+  const removeCoupon = () => {
+    setAppliedCouponCode('')
+    setCouponCodeInput('')
+    setCouponQuote(null)
+    setValidatedCartKey('')
+    setCouponError('')
+    setCouponMessage('')
+  }
+
+  const updateReminderConsent = async (consent: boolean) => {
+    if (!session || consentSaving) return
+    setConsentSaving(true)
+    setConsentError('')
+    try {
+      const response = await fetch('/api/cart/recovery-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        body: JSON.stringify({ consent, items: cart }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || 'Could not save your reminder preference.')
+      onRecoveryEmailConsentChange(data.consent === true)
+    } catch (consentSaveError: any) {
+      setConsentError(consentSaveError?.message || 'Could not save your reminder preference.')
+    } finally {
+      setConsentSaving(false)
+    }
+  }
 
   // Prefill from the signed-in account without clobbering anything already typed.
   useEffect(() => {
@@ -3352,6 +3783,10 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
     if (cart.length === 0) return
     if (!session) {
       setError('Please log in to place your order.')
+      return
+    }
+    if (couponBusy || (appliedCouponCode && !effectiveCouponQuote)) {
+      setError('Please wait while your coupon is checked against the current cart.')
       return
     }
     if (placing) return
@@ -3375,6 +3810,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
           whatsapp_opt_in: whatsappOptIn,
           payment_method: paymentMethod,
           payment_status: 'Pending',
+          coupon_code: effectiveCouponQuote ? appliedCouponCode : '',
           idempotency_key: idempotencyKey.current,
           items: cart.map((i: any) => ({
             id: i.product.id,
@@ -3415,6 +3851,7 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
 
       idempotencyKey.current = ''
       setWhatsappOptIn(false)
+      removeCoupon()
       setPlacedOrder(order)
       setShowCheckout(false)
     } catch (err: any) {
@@ -3535,8 +3972,21 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
             <h3>{t('Order Summary')}</h3>
             <div>
               <span>{t('Subtotal')}</span>
-              <strong>₹{subtotal}</strong>
+              <strong>₹{displayedSubtotal}</strong>
             </div>
+            <div className="coupon-checkout-box">
+              <label htmlFor="ajr-coupon-code">Coupon code</label>
+              <div><input id="ajr-coupon-code" value={couponCodeInput} onChange={(event) => setCouponCodeInput(event.target.value.toUpperCase())} placeholder="Enter code" autoComplete="off" />
+                {effectiveCouponQuote
+                  ? <button type="button" className="coupon-remove-button" onClick={removeCoupon}>Remove</button>
+                  : <button type="button" className="coupon-apply-button" onClick={() => void validateCouponCode(couponCodeInput)} disabled={couponBusy || !couponCodeInput.trim()}>{couponBusy ? 'Checking…' : 'Apply'}</button>}
+              </div>
+              {couponError && <small className="coupon-customer-error" role="alert">{couponError}</small>}
+              {couponMessage && <small className="coupon-customer-success" role="status">{couponMessage}</small>}
+              {appliedCouponCode && !effectiveCouponQuote && !couponBusy && <small className="coupon-customer-error" role="status">Recheck the coupon before placing your order.</small>}
+            </div>
+            {effectiveCouponQuote && Number(effectiveCouponQuote.discount) > 0 && <div className="coupon-discount-line"><span>{appliedCouponCode} discount</span><strong>−{formatCurrency(Number(effectiveCouponQuote.discount))}</strong></div>}
+            {effectiveCouponQuote && Number(effectiveCouponQuote.shippingDiscount) > 0 && <div className="coupon-discount-line"><span>{appliedCouponCode} shipping discount</span><strong>−{formatCurrency(Number(effectiveCouponQuote.shippingDiscount))}</strong></div>}
             <div>
               <span>{t('Shipping')}</span>
               <span>{shipping === 0 ? t('FREE') : `₹${shipping}`}</span>
@@ -3545,6 +3995,31 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
               <span>{t('Total')}</span>
               <strong>₹{total}</strong>
             </div>
+            <button type="button" className="coupon-available-toggle" onClick={() => setShowAvailableOffers((value) => !value)}>
+              <Gift size={15} /> {showAvailableOffers ? 'Hide available coupons' : 'View available offers'}
+            </button>
+            {showAvailableOffers && <OfferShowcase onApply={(code) => {
+              setCouponCodeInput(code)
+              void validateCouponCode(code)
+            }} />}
+            {session ? (
+              <div className="cart-recovery-consent">
+                <label>
+                  <input type="checkbox" checked={recoveryEmailConsent} disabled={consentSaving} onChange={(event) => void updateReminderConsent(event.target.checked)} />
+                  <span><strong>One cart reminder by email</strong><small>Optional. Only if this bag is left behind, and only to your verified account email. No promotions.</small></span>
+                </label>
+                {consentSaving && <small className="cart-consent-feedback">Saving your preference…</small>}
+                {consentError && <small className="cart-consent-feedback error" role="alert">{consentError}</small>}
+              </div>
+            ) : (
+              <div className="cart-recovery-consent">
+                <label>
+                  <input type="checkbox" checked={guestTrackingConsent} onChange={(event) => onGuestTrackingConsentChange(event.target.checked)} />
+                  <span><strong>Allow anonymous cart tracking</strong><small>Optional. Save this bag to measure abandoned carts on this browser. No name or email is collected; no email is sent.</small></span>
+                </label>
+                {trackingConsentError && <small className="cart-consent-feedback error" role="alert">{trackingConsentError}</small>}
+              </div>
+            )}
             {!showCheckout ? (
               session ? (
                 <button className="button button-dark full" onClick={() => { trackAnalytics('checkout_start', 'cart'); setShowCheckout(true) }}>
@@ -3609,9 +4084,6 @@ function Cart({ cart, setCart, subtotal, go, session }: any) {
                     style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontWeight: 400, background: '#fff' }}
                   >
                     <option value="COD">{t('Cash on delivery')}</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Card">{t('Card')}</option>
-                    <option value="Netbanking">{t('Netbanking')}</option>
                   </select>
                 </label>
                 {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
@@ -3680,7 +4152,7 @@ function Wishlist({ wishlist, toggleWish, setSelected, addToCart, go }: any) {
   )
 }
 
-function Footer({ go }: { go: (v: View) => void }) {
+function Footer({ go, content }: { go: (v: View) => void; content: WebsiteContent['footer'] }) {
   const { t } = useLanguage()
   return (
     <footer aria-label="AJR site footer">
@@ -3689,11 +4161,8 @@ function Footer({ go }: { go: (v: View) => void }) {
           <button className="footer-brand" onClick={() => go('home')}>
             <img src={logo} alt="AJR — Always Just Royal" width={1254} height={1254} />
           </button>
-          <p>
-            {t('Essence of nature.')}
-            <br />
-            {t('Pure dry fruits, nuts, and handcrafted hampers made for everyday living.')}
-          </p>
+          <p>{t(content.description)}</p>
+          {content.address && <p>{t(content.address)}</p>}
         </div>
         <div className="footer-links">
           <div>
@@ -3704,7 +4173,16 @@ function Footer({ go }: { go: (v: View) => void }) {
           <div>
             <p className="eyebrow">{t('Connect')}</p>
             <button onClick={() => go('contact')}>{t('Contact Us')}</button>
+            {content.email && <a href={`mailto:${content.email}`}>{content.email}</a>}
+            {content.phone && <a href={`tel:${content.phone}`}>{content.phone}</a>}
+            {content.businessHours && <p>{t(content.businessHours)}</p>}
           </div>
+          {(content.instagram || content.facebook || content.whatsapp) && <div>
+            <p className="eyebrow">{t('Follow AJR')}</p>
+            {content.instagram && <a href={content.instagram} target="_blank" rel="noreferrer">{t('Instagram')}</a>}
+            {content.facebook && <a href={content.facebook} target="_blank" rel="noreferrer">{t('Facebook')}</a>}
+            {content.whatsapp && <a href={content.whatsapp} target="_blank" rel="noreferrer">{t('WhatsApp')}</a>}
+          </div>}
           <div>
             <p className="eyebrow">{t('Newsletter')}</p>
             <p>{t('Join the table for private harvest releases.')}</p>

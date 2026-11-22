@@ -1,0 +1,49 @@
+.coupon-checkout-box { display: grid; gap: 7px; margin: 13px 0; padding: 13px; border: 1px solid #e0e7d8; border-radius: 8px; background: #f8f9f3; }
+.coupon-checkout-box > label { color: #536653; font-size: 12px; font-weight: 650; }
+.coupon-checkout-box > div { display: flex; gap: 7px; }
+.coupon-checkout-box input { width: 100%; min-width: 0; height: 40px; padding: 8px 10px; border: 1px solid #dfe5da; border-radius: 5px; color: #30493a; background: #fffefa; font-size: 13px; text-transform: uppercase; }
+.coupon-apply-button, .coupon-remove-button { flex: 0 0 auto; min-width: 76px; padding: 0 12px; border: 1px solid #315943; border-radius: 5px; color: #fffefa; background: #315943; font-size: 12px; font-weight: 650; cursor: pointer; }
+.coupon-apply-button:disabled { opacity: .55; cursor: not-allowed; }
+.coupon-remove-button { border-color: #d7dfd1; color: #435b48; background: #fffefa; }
+.coupon-customer-error, .coupon-customer-success { font-size: 12px; line-height: 1.45; }
+.coupon-customer-error { color: #9c4939; }
+.coupon-customer-success { color: #2f6948; }
+.coupon-discount-line { display: flex; justify-content: space-between; color: #2d6542; font-size: 13px; font-weight: 650; }
+.coupon-available-toggle { display: flex; width: 100%; justify-content: center; align-items: center; gap: 7px; min-height: 40px; margin: 9px 0; border: 1px solid #dce5d6; border-radius: 6px; color: #355c43; background: #f6f8f0; font-size: 12px; font-weight: 650; cursor: pointer; }
+.offer-showcase { width: 100%; margin: 0; color: #284337; }
+.offer-showcase-compact { padding: 18px 0 6px; }
+.offer-showcase-heading { margin: 0 0 13px; }
+.offer-showcase-heading h2 { margin: 4px 0 0; color: #284337; font: 400 clamp(22px, 2.5vw, 30px)/1.15 'Playfair Display', Georgia, serif; }
+.offer-showcase-heading p { margin: 6px 0 0; color: #68766b; font-size: 13px; }
+.offer-eyebrow { display: inline-flex; align-items: center; gap: 6px; color: #738252; font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+.offer-promo-banner { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 15px 17px; border: 1px solid #d9e3ce; border-radius: 8px; color: #eff3e7; background: #244b3b; }
+.offer-promo-banner > svg { flex: 0 0 auto; color: #dce99a; }
+.offer-promo-banner > div { display: grid; gap: 4px; flex: 1; }
+.offer-promo-banner strong { color: #f7f6eb; font-size: 15px; }
+.offer-promo-banner span { color: #d7e1d4; font-size: 12px; line-height: 1.45; }
+.offer-promo-banner button { display: inline-flex; align-items: center; gap: 6px; padding: 9px 12px; border: 1px solid #ffffff44; border-radius: 5px; color: #fffefa; background: #ffffff10; font-size: 12px; cursor: pointer; }
+.offer-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.offer-card { display: flex; min-width: 0; flex-direction: column; padding: 16px; border: 1px solid #e1e7d9; border-radius: 8px; background: #fffefa; box-shadow: 0 6px 20px #2743320a; }
+.offer-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.offer-discount { color: #315943; font: 500 21px/1.1 'Playfair Display', Georgia, serif; }
+.offer-expiry { color: #7c856f; font-size: 11px; white-space: nowrap; }
+.offer-card h3 { margin: 12px 0 5px; color: #294438; font-size: 15px; }
+.offer-card p { margin: 0; color: #68766b; font-size: 12px; line-height: 1.5; }
+.offer-conditions { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0; }
+.offer-conditions span { padding: 4px 7px; border-radius: 4px; color: #617057; background: #f0f3e8; font-size: 11px; }
+.offer-card-actions { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: auto; padding-top: 10px; }
+.offer-copy-code, .offer-apply-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 7px 9px; border: 1px dashed #bdcbb7; border-radius: 5px; color: #315943; background: #f8f9f3; font-size: 11px; font-weight: 650; cursor: pointer; }
+.offer-copy-code span { color: #244b3b; letter-spacing: .08em; }
+.offer-card .offer-apply-button { border: 1px solid #315943; color: #fffefa; background: #315943; }
+.offer-load-error, .offer-empty { color: #855141; font-size: 12px; }
+
+@media (max-width: 900px) {
+  .offer-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .offer-card-grid { grid-template-columns: 1fr; }
+  .offer-promo-banner { align-items: flex-start; flex-wrap: wrap; }
+  .offer-promo-banner > div { flex-basis: calc(100% - 34px); }
+  .offer-promo-banner button { margin-left: 29px; }
+}

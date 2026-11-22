@@ -34,17 +34,17 @@ export default function SignupPage() {
       const result = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(result.message || 'Unable to create account.')
 
-      const token = result.session?.access_token
-      if (!token) {
-        setMessage(t(result.needsConfirmation
-          ? 'Account created. Confirm your email using the link we sent, then log in.'
-          : 'Account created, but sign-in is not available yet. Please log in.'))
+      if (result.session?.access_token) {
+        setMessage(t('Email OTP verification is not enabled for this project. Please contact support before signing in.'))
         return
       }
 
-      localStorage.setItem('ajr-access-token', token)
-      localStorage.setItem('adminAccessEmail', String(result.user?.email || payload.email).toLowerCase())
-      window.location.href = '/'
+      if (!result.needsConfirmation) {
+        setMessage(t('We could not start email verification. Please try again or log in if you already have an account.'))
+        return
+      }
+
+      window.location.href = `/verify-email?email=${encodeURIComponent(payload.email)}`
     } catch (error) {
       setMessage(t(error instanceof Error ? error.message : 'Signup failed. Please try again.'))
     } finally {

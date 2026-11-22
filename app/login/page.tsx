@@ -4,16 +4,19 @@ import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
 import { isAdminEmail } from '@/lib/supabase'
+import { persistAuthSession } from '@/lib/auth-session-client'
 
 export default function LoginPage() {
   const { t } = useLanguage()
   const [message, setMessage] = useState('')
+  const [unverifiedEmail, setUnverifiedEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
     setMessage('')
+    setUnverifiedEmail('')
 
     const form = event.currentTarget
     const formData = new FormData(form)
@@ -35,16 +38,19 @@ export default function LoginPage() {
         if (/invalid login credentials/i.test(raw)) {
           setMessage(t('Login failed. Please check your email and password.'))
         } else if (/email not confirmed/i.test(raw) || /not confirmed/i.test(raw)) {
-          setMessage(t('This email is not confirmed yet. Check your email for the confirmation link.'))
+          setMessage(t('This email is not verified yet. Enter the code sent to your inbox to continue.'))
+          setUnverifiedEmail(payload.email)
         } else {
           setMessage(t(raw))
         }
       } else {
         const email = String(result.user?.email || payload.email).trim().toLowerCase()
-        try {
-          if (result.session?.access_token) localStorage.setItem('ajr-access-token', result.session.access_token)
-          localStorage.setItem('adminAccessEmail', email)
-        } catch {}
+        const sessionReady = await persistAuthSession(result.session || {})
+        if (!sessionReady) {
+          setMessage(t('Sign-in succeeded, but session renewal could not be initialized. Please try signing in again.'))
+          return
+        }
+        localStorage.setItem('adminAccessEmail', email)
         window.location.href = isAdminEmail(email) ? '/admin' : '/'
       }
     } catch {
@@ -109,6 +115,11 @@ export default function LoginPage() {
             </div>
 
             {message && <div className="auth-message">{message}</div>}
+            {unverifiedEmail && (
+              <Link className="auth-link" href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}>
+                {t('Verify your email')}
+              </Link>
+            )}
 
             <button className="button button-dark auth-submit" type="submit" disabled={loading} suppressHydrationWarning>
               {loading ? t('Please wait...') : t('Login to my account')}

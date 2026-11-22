@@ -3,12 +3,20 @@ import { normalizePackSizes, normalizeVarieties, requireAdmin, supabaseAdmin } f
 
 // Columns added by later migrations. When one is missing we retry the write
 // without it so the product still reaches the shop, and report a warning.
-const OPTIONAL_COLUMNS = ['varieties', 'pack_sizes'] as const
+const OPTIONAL_COLUMNS = ['varieties', 'pack_sizes', 'benefits', 'ingredients', 'seo_title', 'seo_description'] as const
 
 const MIGRATION_HINT: Record<string, string> = {
   varieties: 'varieties were skipped — run supabase/add-varieties.sql in the Supabase SQL editor.',
   pack_sizes: 'pack sizes were skipped — run supabase/seed-prices.sql in the Supabase SQL editor.',
+  benefits: 'product content fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
+  ingredients: 'product content fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
+  seo_title: 'product SEO fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
+  seo_description: 'product SEO fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
 }
+
+const textList = (value: unknown) => Array.isArray(value)
+  ? value.map((item) => String(item ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 160)).filter(Boolean).slice(0, 100)
+  : []
 
 // GET /api/products — public catalogue; admins may request inactive products too.
 export async function GET(request: NextRequest) {
@@ -67,6 +75,10 @@ export async function POST(request: NextRequest) {
       reviews_count: reviewsCount,
       origin: String(body.origin || 'India'),
       nutrients: Array.isArray(body.nutrients) ? body.nutrients.map(String) : [],
+      benefits: textList(body.benefits),
+      ingredients: textList(body.ingredients),
+      seo_title: String(body.seo_title || '').trim().slice(0, 70),
+      seo_description: String(body.seo_description || '').trim().slice(0, 320),
       active: body.active !== false,
     }
 

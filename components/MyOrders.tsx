@@ -12,6 +12,11 @@ export type MyOrderRow = {
   subtotal: number
   shipping: number
   total: number
+  coupon_code?: string | null
+  coupon_name?: string | null
+  coupon_discount_amount?: number | null
+  coupon_shipping_discount?: number | null
+  coupon_original_subtotal?: number | null
   status: string
   payment_status: string
   payment_method: string
@@ -246,7 +251,19 @@ function OrderCard({ order, open, onToggle }: { order: MyOrderRow; open: boolean
           <div>
             <span className="order-detail-label">Summary</span>
             <p>
-              Subtotal ₹{Number(order.subtotal ?? 0)}
+              Original subtotal ₹{Number(order.coupon_original_subtotal ?? order.subtotal ?? 0)}
+              {order.coupon_code && (
+                <>
+                  <br />
+                  Coupon {order.coupon_code}{order.coupon_name ? ` · ${order.coupon_name}` : ''}: −₹{Number(order.coupon_discount_amount ?? 0)}
+                  {Number(order.coupon_shipping_discount ?? 0) > 0 && (
+                    <>
+                      <br />
+                      Shipping discount: −₹{Number(order.coupon_shipping_discount)}
+                    </>
+                  )}
+                </>
+              )}
               <br />
               Shipping {Number(order.shipping ?? 0) === 0 ? 'FREE' : `₹${order.shipping}`}
               <br />

@@ -128,7 +128,7 @@ export async function sendOrderConfirmationEmail(order: OrderForEmail, recipient
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000'
-  const from = process.env.EMAIL_FROM || 'AJR <onboarding@resend.dev>'
+  const from = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'AJR <onboarding@resend.dev>'
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },

@@ -3,14 +3,21 @@ import { normalizePackSizes, normalizeVarieties, requireAdmin, supabaseAdmin } f
 
 // Columns added by later migrations. When one is missing we retry the write
 // without it so the edit still lands, and report a warning.
-const OPTIONAL_COLUMNS = ['varieties', 'pack_sizes'] as const
+const OPTIONAL_COLUMNS = ['varieties', 'pack_sizes', 'benefits', 'ingredients', 'seo_title', 'seo_description'] as const
 
 const MIGRATION_HINT: Record<string, string> = {
   varieties: 'Varieties were skipped — run supabase/add-varieties.sql in the Supabase SQL editor.',
   pack_sizes: 'Pack sizes were skipped — run supabase/seed-prices.sql in the Supabase SQL editor.',
+  benefits: 'Product content fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
+  ingredients: 'Product content fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
+  seo_title: 'Product SEO fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
+  seo_description: 'Product SEO fields were skipped — run supabase/website-content-manager.sql in the Supabase SQL editor.',
 }
 
 const INVENTORY_STATUSES = new Set(['In stock', 'Low stock', 'Out of stock'])
+const textList = (value: unknown) => Array.isArray(value)
+  ? value.map((item) => String(item ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 160)).filter(Boolean).slice(0, 100)
+  : []
 
 // PATCH /api/products/:id — update product incl. stock toggle (admin only)
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -62,6 +69,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
     if (body.origin !== undefined) patch.origin = String(body.origin)
     if (body.nutrients !== undefined) patch.nutrients = Array.isArray(body.nutrients) ? body.nutrients.map(String) : []
+    if (body.benefits !== undefined) patch.benefits = textList(body.benefits)
+    if (body.ingredients !== undefined) patch.ingredients = textList(body.ingredients)
+    if (body.seo_title !== undefined) patch.seo_title = String(body.seo_title || '').trim().slice(0, 70)
+    if (body.seo_description !== undefined) patch.seo_description = String(body.seo_description || '').trim().slice(0, 320)
     if (body.active !== undefined) patch.active = Boolean(body.active)
 
     // Gram options offered for this product (empty = shop defaults by category).
