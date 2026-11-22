@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { abandonmentMinutes } from '@/lib/abandoned-carts'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
 
 const mask = (value: string) => {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   if ('response' in gate) return gate.response
   try {
     const admin = supabaseAdmin()
-    const cutoff = new Date(Date.now() - 60 * 60_000).toISOString()
+    const cutoff = new Date(Date.now() - abandonmentMinutes() * 60_000).toISOString()
     const [{ data: events, error }, { count: carts }, { count: recovered }, { count: remindersSent }, { count: remindersFailed }, ...counts] = await Promise.all([
       admin.from('notification_events').select('id,event_type,channel,recipient,status,provider_message_id,error,retry_count,created_at,sent_at,delivered_at').order('created_at', { ascending: false }).limit(150),
       admin.from('abandoned_carts').select('*', { count: 'exact', head: true }).gt('item_count', 0).is('closed_at', null).lte('last_activity_at', cutoff),
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
         scheduler: Boolean(process.env.CRON_SECRET),
         metaWebhook: Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN),
         resendWebhook: Boolean(process.env.RESEND_WEBHOOK_SECRET),
-        cartMinutes: Number(process.env.ABANDONED_CART_MINUTES || 60),
+        cartMinutes: abandonmentMinutes(),
       },
     })
   } catch (error: any) {

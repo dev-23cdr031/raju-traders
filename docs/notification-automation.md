@@ -19,7 +19,7 @@ Set these in the hosting provider only—never in browser variables:
 - `META_WHATSAPP_ORDER_TEMPLATE`: approved Utility template with five body parameters: customer name, order ID, total, product summary, tracking URL.
 - `META_WHATSAPP_ABANDONED_CART_TEMPLATE`: approved Marketing template; send only when separate marketing consent has been recorded.
 - `ADMIN_NOTIFICATION_EMAIL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and `NEXT_PUBLIC_APP_URL`
-- `ABANDONED_CART_MINUTES=60`
+- `ABANDONED_CART_MINUTES=30`
 
 ## Provider webhooks
 
@@ -36,5 +36,5 @@ Both routes reject unsigned requests. Delivery receipts update the event ledger;
 2. Confirm the same idempotency key does not produce a second event.
 3. Create an unpaid online order: no confirmation event should dispatch until the payment provider marks it paid.
 4. Use provider sandbox/test recipients to confirm order email, admin email, and Utility WhatsApp variable order.
-5. Create an opted-in signed-in cart, wait 60 minutes, then verify exactly one recovery event/link. Purchase before the cron runs and confirm no reminder is sent.
+5. Create an opted-in signed-in cart, wait 30 minutes, then verify exactly one recovery event/link after the next Supabase cron run. Purchase before the cron runs and confirm no reminder is sent. Each five-minute run processes at most 20 carts. Follow [the scheduler setup](./abandoned-cart-reminders.md); it is not active until deployed and verified.
 6. Verify signed Resend and Meta webhook callbacks update delivery states; unsigned requests must return 404.

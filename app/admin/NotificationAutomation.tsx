@@ -33,7 +33,7 @@ export default function NotificationAutomation() {
       <div><span className="admin-kicker"><span className="admin-kicker-line" /> Delivery control room</span><h1 id="notification-title">Notification <em>Automation</em></h1><p className="admin-page-description">A single, consent-led ledger for order confirmations and saved-bag recovery.</p></div>
       <button className="button button-light" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''} /> {loading ? 'Refreshing…' : 'Refresh'}</button>
     </header>
-    <div className="notification-health" role="status"><span><Clock3 size={15} /> {data?.settings?.cartMinutes ?? 60} min cart window</span><span>{state(Boolean(data?.settings?.email))} Email</span><span>{state(Boolean(data?.settings?.whatsapp))} WhatsApp</span><span>{state(Boolean(data?.settings?.scheduler))} Scheduler</span></div>
+    <div className="notification-health" role="status"><span><Clock3 size={15} /> {data?.settings?.cartMinutes ?? '—'} min cart window</span><span>{state(Boolean(data?.settings?.email))} Email</span><span>{state(Boolean(data?.settings?.whatsapp))} WhatsApp</span><span>Scheduler key: {data?.settings?.scheduler ? 'Configured' : 'Needs setup'} (job status not checked)</span></div>
     {error && <div className="notification-error" role="alert"><AlertCircle size={17} />{error}</div>}
     <section className="notification-metrics" aria-busy={loading}>
       <article><Mail size={18} /><span>Email sent</span><strong>{metrics?.email?.sent ?? '—'}</strong><small>{metrics?.email?.delivered ?? 0} delivered · {metrics?.email?.failed ?? 0} failed</small></article>

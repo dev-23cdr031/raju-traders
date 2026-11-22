@@ -1,6 +1,6 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
+import { abandonmentMinutes, associatePersistedOrder, isConfirmedCartOrder, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
 import { CartRecoveryEmailRejectedError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
 import { beginCartNotificationEvent, recordNotificationEvent } from '@/lib/notification-automation'
 import { sendAbandonedCartWhatsApp, WhatsAppProviderRejectedError } from '@/lib/order-whatsapp'
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     const attemptAt = String(row.attempt_at || '')
     const userId = String(row.user_id || '')
     const expectedEmail = String(row.customer_email || '').trim().toLowerCase()
-    const emailEvent = await beginCartNotificationEvent(admin, row, 'email').catch((error) => {
+    const emailEvent = await beginCartNotificationEvent(admin, { ...row, recovery_email_consent: true }, 'email').catch((error) => {
       console.error('GET /api/cron/abandoned-carts event creation error:', error)
       return null
     })
@@ -91,6 +91,36 @@ export async function GET(request: NextRequest) {
       : ''
     if (authError || !verifiedEmail || verifiedEmail !== expectedEmail) {
       await markFailed('Verified account email is unavailable or has changed.')
+      await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Verified account email is unavailable or has changed.', failed_at: new Date().toISOString() })
+      summary.blocked += 1
+      continue
+    }
+
+    try {
+      const { data: cart, error: cartError } = await admin.from('abandoned_carts')
+        .select('cart_started_at,cart_items').eq('id', id).maybeSingle()
+      if (cartError || !cart?.cart_started_at) throw cartError || new Error('Cart is unavailable.')
+      const start = new Date(cart.cart_started_at).getTime()
+      if (!Number.isFinite(start)) throw new Error('Cart start time is invalid.')
+      const { data: orders, error: orderError } = await admin.from('orders')
+        .select('id,user_id,status,payment_status,payment_method,created_at,items')
+        .eq('user_id', userId)
+        .gte('created_at', new Date(start - 10 * 60_000).toISOString())
+      if (orderError) throw orderError
+      const completedOrder = (orders || []).find((order) =>
+        isConfirmedCartOrder(order) && orderOverlapsCart(cart.cart_items, order.items))
+      if (completedOrder) {
+        if (!await associatePersistedOrder(admin, completedOrder)) {
+          throw new Error('Could not confirm purchased cart state.')
+        }
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'skipped', error: 'Cart already purchased.' })
+        summary.blocked += 1
+        continue
+      }
+    } catch (error) {
+      console.error('GET /api/cron/abandoned-carts purchase verification failed:', error)
+      await markFailed('Could not verify whether the cart was purchased.')
+      await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Could not verify whether the cart was purchased.', failed_at: new Date().toISOString() })
       summary.blocked += 1
       continue
     }

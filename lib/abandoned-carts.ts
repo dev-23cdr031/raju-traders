@@ -73,8 +73,8 @@ export function matchedOrderItemTotal(cartItems: unknown, orderItems: unknown) {
 }
 
 export function abandonmentMinutes() {
-  const value = Number(process.env.ABANDONED_CART_MINUTES || 60)
-  return Number.isInteger(value) && value >= 10 && value <= 1440 ? value : 60
+  const value = Number(process.env.ABANDONED_CART_MINUTES || 30)
+  return Number.isInteger(value) && value >= 10 && value <= 1440 ? value : 30
 }
 
 export function deviceCategory(userAgent: string | null) {
@@ -264,11 +264,15 @@ export async function persistSignedInCartSnapshot({
   return { lines, consent: optedIn }
 }
 
-export async function associatePersistedOrder(admin: any, order: any) {
+export function isConfirmedCartOrder(order: { payment_method?: unknown; payment_status?: unknown; status?: unknown }) {
   const method = String(order?.payment_method || '').trim().toLowerCase()
   const payment = String(order?.payment_status || '').trim().toLowerCase()
-  const confirmed = method === 'cod' || method === 'cash on delivery' || payment === 'paid' || payment === 'confirmed'
-  if (!order?.user_id || String(order.status || '').toLowerCase() === 'cancelled' || !confirmed) return false
+  return String(order.status || '').toLowerCase() !== 'cancelled'
+    && (method === 'cod' || method === 'cash on delivery' || payment === 'paid' || payment === 'confirmed')
+}
+
+export async function associatePersistedOrder(admin: any, order: any) {
+  if (!order?.user_id || !isConfirmedCartOrder(order)) return false
   const { data: cart, error } = await admin
     .from('abandoned_carts')
     .select('id,cart_items,last_activity_at,order_id')
