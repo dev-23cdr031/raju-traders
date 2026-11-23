@@ -9,6 +9,7 @@ Run these SQL files in the Supabase SQL Editor, in order:
 3. `supabase/notification-automation.sql`
 
 The final migration creates the service-role-only event ledger used for idempotency, delivery status, and the Notification Automation admin page.
+Order email dispatch requires this migration: if the ledger or claim function is missing, checkout still succeeds but the email is not sent. Check server logs and the admin notification ledger for errors. Applying the migration does not automatically send confirmations for previously placed orders; verify delivery status before using the admin resend action to avoid duplicates.
 
 ## Environment secrets
 
@@ -20,6 +21,10 @@ Set these in the hosting provider only—never in browser variables:
 - `META_WHATSAPP_ABANDONED_CART_TEMPLATE`: approved Marketing template; send only when separate marketing consent has been recorded.
 - `ADMIN_NOTIFICATION_EMAIL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and `NEXT_PUBLIC_APP_URL`
 - `ABANDONED_CART_MINUTES=30`
+
+Order confirmations use the server's `RESEND_API_KEY` and a sender on a verified Resend domain. Signup OTP messages are sent separately by Supabase Auth using its own SMTP settings. Check the Supabase Auth logs, custom SMTP credentials, sender, and signup email template when OTP delivery fails; configure the template to include `{{ .Token }}` for the six-digit code. Do not copy SMTP credentials into frontend variables or logs.
+
+Set `NEXT_PUBLIC_APP_URL=https://www.rajutraders.in` in Vercel and redeploy so order-email links and relative product images use the publicly accessible website. If it is missing or points to localhost, order emails fall back to the public Raju Traders site and log a warning. Absolute product-image URLs must themselves be publicly accessible over HTTPS; some email clients also block remote images until the recipient permits them.
 
 ## Provider webhooks
 

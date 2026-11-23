@@ -91,9 +91,13 @@ export async function dispatchOrderNotifications(admin: any, order: any) {
       if (!event || event.status !== 'sending') return
       try {
         const result = await sendOrderConfirmationEmail(order)
-        if (result?.skipped) await record(admin, event.id, { status: 'skipped', error: clean(result.reason) })
+        if (result?.skipped) {
+          console.warn('Order email notification skipped:', result.reason)
+          await record(admin, event.id, { status: 'skipped', error: clean(result.reason) })
+        }
         else await record(admin, event.id, { status: 'sent', provider_message_id: result?.id || null, sent_at: new Date().toISOString() })
       } catch (error) {
+        console.error('Order email notification failed; see the notification ledger for details.')
         const known = error instanceof OrderEmailRejectedError
         await record(admin, event.id, { status: known ? 'failed' : 'uncertain', error: clean(error instanceof Error ? error.message : error), failed_at: new Date().toISOString() })
       }
@@ -128,8 +132,16 @@ export async function dispatchOrderNotifications(admin: any, order: any) {
       }
     })())
   }
-  await Promise.allSettled(tasks)
-  return { queued: true }
+  const results = await Promise.allSettled(tasks)
+  let failed = false
+  for (const result of results) {
+    if (result.status !== 'rejected') continue
+    failed = true
+    const code = typeof result.reason?.code === 'string' && /^[A-Z0-9_]{1,32}$/i.test(result.reason.code)
+      ? result.reason.code : 'unknown'
+    console.error(`Order notification could not be recorded or dispatched (code: ${code}). Check the notification database migration and server logs.`)
+  }
+  return { queued: !failed }
 }
 
 export function validMetaSignature(body: string, header: string | null) {

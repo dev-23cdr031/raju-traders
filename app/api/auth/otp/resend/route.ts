@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
     })
     const { error } = await authClient.auth.resend({ type: 'signup', email })
     if (error) {
+      const code = typeof error.code === 'string' && /^[a-z0-9_]{1,64}$/i.test(error.code) ? error.code : 'unknown'
+      console.error(`Supabase signup OTP resend failed (HTTP ${error.status || 'unknown'}, code: ${code}).`)
       if (/rate limit|too many/i.test(error.message)) {
         return NextResponse.json({ message: 'A code was requested recently. Please wait before trying again.' }, { status: 429 })
       }

@@ -39,6 +39,24 @@ const formatMoney = (value: unknown) => new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0,
 }).format(Number(value) || 0)
 
+function orderEmailBaseUrl() {
+  const configured = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL
+  const publicSite = 'https://www.rajutraders.in'
+  if (!configured) {
+    console.warn('Order email website URL is not configured; using the public Raju Traders site.')
+    return publicSite
+  }
+  const url = new URL(configured)
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+    console.warn('Order email website URL points to localhost; using the public Raju Traders site.')
+    return publicSite
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) {
+    throw new Error('Order email website URL must be a public HTTPS URL without credentials.')
+  }
+  return url.origin
+}
+
 const absoluteUrl = (value: string, baseUrl: string) => {
   if (!value) return ''
   if (/^https?:\/\//i.test(value)) return value
@@ -129,7 +147,7 @@ export async function sendOrderConfirmationEmail(order: OrderForEmail, recipient
     return { skipped: true, reason: 'RESEND_API_KEY is missing. Add it to the app .env.local file, then restart the server.' }
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000'
+  const appUrl = orderEmailBaseUrl()
   const from = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'AJR <onboarding@resend.dev>'
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',

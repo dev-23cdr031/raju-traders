@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
     const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
+      const code = typeof data?.code === 'string' && /^[a-z0-9_]{1,64}$/i.test(data.code) ? data.code : 'unknown'
+      console.error(`Supabase signup request failed (HTTP ${response.status}, code: ${code}).`)
       const errorMessage = data?.msg || data?.error_description || 'Unable to create account.'
       if (/already registered|already exists|user already|email_exists|user_already_exists/i.test(errorMessage)) {
         return NextResponse.json({ needsConfirmation: true })
