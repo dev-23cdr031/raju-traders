@@ -43,7 +43,7 @@ import StudioLocation from '@/components/StudioLocation'
 import OfferShowcase from '@/components/OfferShowcase'
 import { PACK_SIZE_OPTIONS, supabase } from '@/lib/supabase'
 import { resolveVarietyImage } from '@/lib/variety-images'
-import { getAnalyticsConsent, trackAnalytics, type AnalyticsPage } from '@/lib/visitor-analytics-client'
+import { getAnalyticsConsent, startScrollTracking, trackAnalytics, type AnalyticsPage } from '@/lib/visitor-analytics-client'
 import { DEFAULT_WEBSITE_CONTENT, mergeWebsiteContent, type WebsiteContent } from '@/lib/website-content'
 
 const logo = '/ajr-logo.png'
@@ -1244,6 +1244,11 @@ export default function Page() {
     return () => window.clearInterval(heartbeat)
   }, [analyticsConsentRevision, view])
 
+  useEffect(() => {
+    if (getAnalyticsConsent() !== 'accepted') return
+    return startScrollTracking(ANALYTICS_PAGE_FOR_VIEW[view])
+  }, [analyticsConsentRevision, pathname, view, selected.id])
+
   // Signed-in customer. null = anonymous visitor.
   const [session, setSession] = useState<{
     id: string
@@ -2442,6 +2447,7 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
                 <Reveal key={p.id} delay={i * 90}>
                   <ProductCard
                     product={p}
+                    analyticsPage="home"
                     onSelect={(next) => {
                       setSelected(next)
                       go('detail')
@@ -2730,6 +2736,7 @@ function Home({ go, setSelected, addToCart, toggleWish, wishlist, products: list
 
 function ProductCard({
   product,
+  analyticsPage,
   onSelect,
   addToCart,
   toggleWish,
@@ -2737,6 +2744,7 @@ function ProductCard({
   outOfStock,
 }: {
   product: Product
+  analyticsPage: AnalyticsPage
   onSelect: (product: Product) => void
   addToCart: (p: Product, qty?: number, origin?: HTMLElement | null) => FlightLaunchResult
   toggleWish: (p: Product, origin?: HTMLElement | null) => void
@@ -2791,7 +2799,11 @@ function ProductCard({
             <select
               value={variety}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event) => setVariety(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value
+                setVariety(value)
+                trackAnalytics('product_selection', analyticsPage, undefined, product.id, { kind: 'variety', value })
+              }}
               aria-label={`${t('Variety')}: ${t(product.name)}`}
             >
               {product.varieties.map((option) => {
@@ -2806,7 +2818,11 @@ function ProductCard({
           <select
             value={weight}
             onClick={(event) => event.stopPropagation()}
-            onChange={(event) => setWeight(event.target.value as Weight)}
+            onChange={(event) => {
+              const value = event.target.value as Weight
+              setWeight(value)
+              trackAnalytics('product_selection', analyticsPage, undefined, product.id, { kind: 'weight', value })
+            }}
             aria-label={`${t('Pack size')}: ${t(product.name)}`}
           >
             {weightsForProduct(product).map((option) => <option key={option} value={option}>{option}</option>)}
@@ -3201,6 +3217,7 @@ function Shop({
               <div className="shop-card-entry" key={p.id} style={{ animationDelay: `${Math.min(index, 9) * 55}ms` }}>
                 <ProductCard
                   product={p}
+                  analyticsPage="shop"
                   onSelect={(next) => {
                     setSelected(next)
                     go('detail')
@@ -3287,7 +3304,11 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
           {product.varieties && product.varieties.length > 1 && (
             <label className="pack-select-label detail-pack-selector">
               <span>{t('Variety')}</span>
-              <select value={variety} onChange={(event) => setVariety(event.target.value)} aria-label={`${t('Variety')}: ${t(product.name)}`}>
+              <select value={variety} onChange={(event) => {
+                const value = event.target.value
+                setVariety(value)
+                trackAnalytics('product_selection', 'product-detail', undefined, product.id, { kind: 'variety', value })
+              }} aria-label={`${t('Variety')}: ${t(product.name)}`}>
                 {product.varieties.map((option: Variety) => {
                   const disabled = option.active === false || (option.stock !== undefined && option.stock <= 0)
                   return <option key={option.id || option.name} value={option.name} disabled={disabled}>{t(option.name)}{disabled ? ` — ${t('Out of stock')}` : ''}</option>
@@ -3297,7 +3318,11 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
           )}
           <label className="pack-select-label detail-pack-selector">
               <span>{t('Pack size')}</span>
-            <select value={weight} onChange={(event) => setWeight(event.target.value as Weight)} aria-label={`${t('Pack size')}: ${t(product.name)}`}>
+            <select value={weight} onChange={(event) => {
+              const value = event.target.value as Weight
+              setWeight(value)
+              trackAnalytics('product_selection', 'product-detail', undefined, product.id, { kind: 'weight', value })
+            }} aria-label={`${t('Pack size')}: ${t(product.name)}`}>
               {weightsForProduct(product).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </label>
@@ -4186,6 +4211,7 @@ function Wishlist({ wishlist, toggleWish, setSelected, addToCart, go }: any) {
             <ProductCard
               key={p.id}
               product={p}
+              analyticsPage="wishlist"
               onSelect={(next) => {
                 setSelected(next)
                 go('detail')

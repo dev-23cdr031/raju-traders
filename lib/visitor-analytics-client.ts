@@ -17,6 +17,8 @@ export type AnalyticsEventName =
   | 'checkout_start'
   | 'purchase'
   | 'heartbeat'
+  | 'product_selection'
+  | 'scroll_duration'
 
 type AnalyticsConsent = 'accepted' | 'declined' | null
 let inMemoryConsent: AnalyticsConsent = null
@@ -147,6 +149,7 @@ export function trackAnalytics(
   page: AnalyticsPage,
   durationMs?: number,
   productId?: number,
+  selection?: { kind: 'variety' | 'weight'; value: string },
 ) {
   if (typeof window === 'undefined' || getAnalyticsConsent() !== 'accepted') return
 
@@ -158,20 +161,56 @@ export function trackAnalytics(
       sessionId,
       eventName,
       page,
-      ...(page === 'product-detail' && typeof productId === 'number' && Number.isSafeInteger(productId) && productId > 0
+      ...((page === 'product-detail' || eventName === 'product_selection') && typeof productId === 'number' && Number.isSafeInteger(productId) && productId > 0
         ? { productId }
         : {}),
-      durationMs: eventName === 'page_duration' ? Math.min(900_000, Math.max(0, Math.round(durationMs || 0))) : null,
+      ...(eventName === 'product_selection' && selection ? { selection } : {}),
+      durationMs: eventName === 'page_duration' || eventName === 'scroll_duration'
+        ? Math.min(900_000, Math.max(0, Math.round(durationMs || 0))) : null,
       ...profile,
     }
     void fetch('/api/analytics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      keepalive: eventName === 'page_duration',
+      keepalive: eventName === 'page_duration' || eventName === 'scroll_duration',
       credentials: 'same-origin',
     }).catch(() => {})
   } catch {
     // Analytics is optional and must never interrupt shopping.
+  }
+}
+
+export function startScrollTracking(page: AnalyticsPage) {
+  if (typeof window === 'undefined' || getAnalyticsConsent() !== 'accepted') return () => {}
+
+  let pendingMs = 0
+  let lastScrollAt: number | null = null
+  const flush = () => {
+    const duration = Math.round(pendingMs)
+    pendingMs = 0
+    lastScrollAt = null
+    if (duration > 0) trackAnalytics('scroll_duration', page, duration)
+  }
+  const onScroll = () => {
+    if (document.visibilityState !== 'visible' || getAnalyticsConsent() !== 'accepted') return
+    const now = performance.now()
+    const gap = lastScrollAt === null ? Infinity : now - lastScrollAt
+    pendingMs += gap >= 0 && gap <= 1000 ? gap : 250
+    lastScrollAt = now
+  }
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') flush()
+  }
+  const timer = window.setInterval(flush, 15_000)
+  window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('pagehide', flush)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  return () => {
+    window.clearInterval(timer)
+    window.removeEventListener('scroll', onScroll)
+    window.removeEventListener('pagehide', flush)
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    flush()
   }
 }

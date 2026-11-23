@@ -3,11 +3,14 @@
 -- URL/query string, customer account id, form data, or order/payment details.
 -- This schema does not install a database scheduler. For a finite event-history
 -- retention period, schedule a monthly DELETE using the created_at index.
+-- Re-run this file in the Supabase SQL editor before deploying the application
+-- to add selection and scrolling tracking. Only activity after deployment is
+-- counted; existing events cannot provide historical selection or scroll data.
 create table if not exists public.visitor_analytics_events (
   id bigint generated always as identity primary key,
   visitor_id uuid not null,
   session_id uuid not null,
-  event_name text not null check (event_name in ('page_view', 'page_duration', 'cart_add', 'checkout_start', 'purchase', 'heartbeat')),
+  event_name text not null check (event_name in ('page_view', 'page_duration', 'cart_add', 'checkout_start', 'purchase', 'heartbeat', 'product_selection', 'scroll_duration')),
   page text not null check (page in ('home', 'about', 'shop', 'contact', 'cart', 'wishlist', 'product-detail', 'orders', 'login', 'signup')),
   product_id bigint check (product_id is null or product_id > 0),
   duration_ms integer check (duration_ms is null or duration_ms between 0 and 900000),
@@ -18,7 +21,14 @@ create table if not exists public.visitor_analytics_events (
 );
 
 alter table public.visitor_analytics_events
-  add column if not exists product_id bigint;
+  add column if not exists product_id bigint,
+  add column if not exists selection_kind text,
+  add column if not exists selection_value text;
+alter table public.visitor_analytics_events
+  drop constraint if exists visitor_analytics_events_event_name_check;
+alter table public.visitor_analytics_events
+  add constraint visitor_analytics_events_event_name_check
+  check (event_name in ('page_view', 'page_duration', 'cart_add', 'checkout_start', 'purchase', 'heartbeat', 'product_selection', 'scroll_duration'));
 do $$
 begin
   if not exists (
@@ -57,7 +67,7 @@ security invoker
 set search_path = public, pg_temp
 as $$
   with period_events as materialized (
-    select visitor_id, session_id, event_name, page, product_id, duration_ms, device_type,
+    select visitor_id, session_id, event_name, page, product_id, selection_kind, selection_value, duration_ms, device_type,
       browser, operating_system, created_at
     from public.visitor_analytics_events
     where created_at >= p_since and created_at < p_until
@@ -89,17 +99,42 @@ as $$
       and events.product_id is not null
     group by events.product_id, products.name
   ),
+  selection_rows as (
+    select events.product_id, coalesce(products.name, 'Product') as name,
+      events.selection_kind, events.selection_value, count(*) as selections,
+      count(distinct events.visitor_id) as unique_visitors
+    from period_events events
+    left join public.products products on products.id = events.product_id
+    where events.event_name = 'product_selection'
+      and events.product_id is not null
+      and events.selection_kind in ('variety', 'weight')
+      and events.selection_value is not null
+    group by events.product_id, products.name, events.selection_kind, events.selection_value
+  ),
   device_rows as (
     select device_type, browser, operating_system, count(distinct session_id) as sessions
     from period_events
     where event_name = 'page_view'
     group by device_type, browser, operating_system
   ),
+  scroll_device_rows as (
+    select device_type, sum(duration_ms)::bigint as duration_ms,
+      count(distinct visitor_id) as visitors
+    from period_events
+    where event_name = 'scroll_duration'
+    group by device_type
+  ),
+  scroll_visitor_rows as (
+    select visitor_id, sum(duration_ms)::bigint as duration_ms
+    from period_events
+    where event_name = 'scroll_duration'
+    group by visitor_id
+  ),
   recent_rows as (
     select visitor_id, session_id, event_name, page, duration_ms, device_type,
       browser, operating_system, created_at
     from period_events
-    where event_name <> 'heartbeat'
+    where event_name not in ('heartbeat', 'scroll_duration')
     order by created_at desc
     limit 200
   ),
@@ -109,7 +144,7 @@ as $$
         visitor_id, session_id, event_name, page, duration_ms, device_type,
         browser, operating_system, created_at
       from period_events
-      where event_name <> 'heartbeat'
+      where event_name not in ('heartbeat', 'scroll_duration')
       order by visitor_id, created_at desc
     ) latest_visitors
     order by created_at desc
@@ -118,7 +153,7 @@ as $$
   visitor_stats as (
     select
       pv.visitor_id,
-      count(*) filter (where pe.event_name <> 'heartbeat') as events,
+      count(*) filter (where pe.event_name not in ('heartbeat', 'scroll_duration')) as events,
       coalesce((
         select sum(page_duration.duration_ms)
         from period_events page_duration
@@ -199,6 +234,17 @@ as $$
       ) order by views desc, name asc)
       from (select * from product_rows order by views desc, name asc limit 10) top_products
     ), '[]'::jsonb),
+    'productSelections', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'productId', product_id,
+        'name', name,
+        'kind', selection_kind,
+        'value', selection_value,
+        'selections', selections,
+        'uniqueVisitors', unique_visitors
+      ) order by selections desc, name asc, selection_kind asc, selection_value asc)
+      from (select * from selection_rows order by selections desc, name asc, selection_kind asc, selection_value asc limit 100) top_selections
+    ), '[]'::jsonb),
     'devices', coalesce((
       select jsonb_agg(jsonb_build_object(
         'device', device_type,
@@ -208,6 +254,14 @@ as $$
       ) order by sessions desc, device_type asc)
       from device_rows
     ), '[]'::jsonb),
+    'scrollDevices', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'device', device_type,
+        'durationMs', duration_ms,
+        'visitors', visitors
+      ) order by device_type)
+      from scroll_device_rows
+    ), '[]'::jsonb),
     'visitors', coalesce((
       select jsonb_agg(jsonb_build_object(
         'visitorId', activity.visitor_id,
@@ -215,6 +269,7 @@ as $$
         'eventName', activity.event_name,
         'page', activity.page,
         'durationMs', stats.time_spent_ms,
+        'scrollDurationMs', coalesce(scroll.duration_ms, 0),
         'deviceType', activity.device_type,
         'browser', activity.browser,
         'operatingSystem', activity.operating_system,
@@ -225,6 +280,7 @@ as $$
       ) order by activity.created_at desc)
       from visitor_activity_rows activity
       join visitor_stats stats using (visitor_id)
+      left join scroll_visitor_rows scroll on scroll.visitor_id = activity.visitor_id
     ), '[]'::jsonb),
     'activity', coalesce((
       select jsonb_agg(jsonb_build_object(

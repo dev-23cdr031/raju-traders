@@ -57,6 +57,8 @@ export async function GET(request: NextRequest) {
         consentAt: row.recovery_email_consent_at,
         startedAt: row.cart_started_at,
         lastActivityAt: row.last_activity_at,
+        closedAt: row.closed_at,
+        orderId: row.order_id,
         status,
         reminderAttemptAt: row.reminder_attempt_at,
         reminderSentAt: row.reminder_sent_at,

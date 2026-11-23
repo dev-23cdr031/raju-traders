@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   getAnalyticsConsent,
   setAnalyticsConsent,
+  startScrollTracking,
   trackAnalytics,
   type AnalyticsPage,
 } from '@/lib/visitor-analytics-client'
@@ -86,6 +87,11 @@ export default function VisitorAnalyticsClient() {
     return () => window.clearInterval(heartbeat)
   }, [consent, page])
 
+  useEffect(() => {
+    if (consent !== 'accepted' || !page) return
+    return startScrollTracking(page)
+  }, [consent, page])
+
   if (!ready || pathname.startsWith('/admin') || pathname.startsWith('/api') || pathname === '/auth/callback' || pathname === '/reset-password') return null
 
   const showConsent = consent === null || editing
@@ -103,7 +109,7 @@ export default function VisitorAnalyticsClient() {
             <p>
               Optional analytics stays off until you allow it. If enabled, a random first-party
               visitor ID lasts up to 180 days and a session ID expires after 30 minutes idle.
-              We send page/activity times, coarse device, browser, and OS categories, plus anonymous
+              We send page/activity times, estimated scrolling time, coarse device, browser, and OS categories, plus anonymous
               product-detail view counts and numeric product IDs to AJR. Product names shown in the
               admin report come only from the server catalog; names are not sent from your browser.
               We never store IP addresses, names,

@@ -2,6 +2,10 @@
 
 AJR sends one recovery-only email only when a signed-in customer has actively opted in on the cart page and leaves a non-empty cart inactive for the configured threshold (30 minutes by default). The email has no discount or marketing content and includes an unsubscribe link.
 
+## Manual email
+
+In Admin > Abandoned Carts, open **Details / email** for a cart and select **Send recovery email**. The server verifies admin access, the customer's verified email and cart-reminder consent, the inactivity threshold, cart state, and matching confirmed purchases. The branded email includes the saved items and a private recovery link. A previously sent or uncertain reminder is blocked, including when a scheduled attempt has already claimed the cart. Resend must be configured; the action reports provider acceptance, not confirmed inbox delivery.
+
 ## Scheduler setup
 
 The Supabase scheduler calls a small Edge Function every five minutes. That function authenticates the scheduler and calls the existing protected website endpoint; the endpoint retains the existing Resend, order, consent, and duplicate-prevention logic. Nothing needs to remain open in the customer's browser. A cart becomes eligible after 30 minutes and is normally checked within the next five minutes; outages, queues, provider delays, or a backlog can make delivery later. Each run processes at most 20 carts.

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const EVENTS = new Set(['page_view', 'page_duration', 'cart_add', 'checkout_start', 'purchase', 'heartbeat'])
+const EVENTS = new Set(['page_view', 'page_duration', 'cart_add', 'checkout_start', 'purchase', 'heartbeat', 'product_selection', 'scroll_duration'])
 const PAGES = new Set([
   'home',
   'about',
@@ -20,6 +20,8 @@ const BROWSERS = new Set(['Chrome', 'Safari', 'Firefox', 'Edge', 'Other'])
 const OPERATING_SYSTEMS = new Set(['Windows', 'macOS', 'iOS', 'Android', 'Linux', 'Other'])
 const BOT = /bot|crawler|spider|preview|headless|lighthouse|googleother|facebookexternalhit/i
 const SESSION_LIMITS = new Map<string, { startedAt: number; count: number }>()
+const PRODUCT_PAGES = new Set(['home', 'shop', 'wishlist', 'product-detail'])
+const WEIGHTS = new Set(['25 g', '50 g', '100 g', '250 g', '500 g', '1 kg'])
 
 function limitedSession(sessionId: string) {
   const now = Date.now()
@@ -67,15 +69,29 @@ export async function POST(request: NextRequest) {
     (
       !Number.isSafeInteger(productId) ||
       productId <= 0 ||
-      page !== 'product-detail' ||
-      (eventName !== 'page_view' && eventName !== 'page_duration')
+      !(eventName === 'product_selection' && PRODUCT_PAGES.has(page)) &&
+      !(page === 'product-detail' && (eventName === 'page_view' || eventName === 'page_duration'))
     )
   ) {
     return NextResponse.json({ message: 'Invalid product.' }, { status: 400 })
   }
+  const selection = body.selection
+  if (eventName === 'product_selection') {
+    if (
+      productId === undefined || !PRODUCT_PAGES.has(page) ||
+      !selection || typeof selection !== 'object' || Array.isArray(selection) ||
+      (selection.kind !== 'variety' && selection.kind !== 'weight') ||
+      typeof selection.value !== 'string' || selection.value !== selection.value.trim() ||
+      selection.value.length < 1 || selection.value.length > 160 ||
+      /[\u0000-\u001f\u007f]/.test(selection.value) ||
+      (selection.kind === 'weight' && !WEIGHTS.has(selection.value))
+    ) return NextResponse.json({ message: 'Invalid product selection.' }, { status: 400 })
+  } else if (selection !== undefined) {
+    return NextResponse.json({ message: 'Invalid product selection.' }, { status: 400 })
+  }
   if (
-    eventName === 'page_duration' &&
-    (typeof durationMs !== 'number' || !Number.isInteger(durationMs) || durationMs < 0 || durationMs > 900_000)
+    (eventName === 'page_duration' || eventName === 'scroll_duration') &&
+    (typeof durationMs !== 'number' || !Number.isInteger(durationMs) || durationMs < (eventName === 'scroll_duration' ? 1 : 0) || durationMs > 900_000)
   ) {
     return NextResponse.json({ message: 'Invalid event duration.' }, { status: 400 })
   }
@@ -90,7 +106,11 @@ export async function POST(request: NextRequest) {
       event_name: eventName,
       page,
       product_id: productId ?? null,
-      duration_ms: eventName === 'page_duration' ? durationMs : null,
+      ...(eventName === 'product_selection' ? {
+        selection_kind: selection.kind,
+        selection_value: selection.value,
+      } : {}),
+      duration_ms: eventName === 'page_duration' || eventName === 'scroll_duration' ? durationMs : null,
       device_type: DEVICES.has(body.deviceType) ? body.deviceType : 'desktop',
       browser: BROWSERS.has(body.browser) ? body.browser : 'Other',
       operating_system: OPERATING_SYSTEMS.has(body.operatingSystem) ? body.operatingSystem : 'Other',

@@ -366,6 +366,13 @@
   .admin-studio .visitor-device-row:nth-child(2) .visitor-device-track span { background: #b49b5b; }
   .admin-studio .visitor-device-row:nth-child(3) .visitor-device-track span { background: #95a996; }
   .admin-studio .visitor-device-row > small { grid-column: 1 / -1; color: #596b56; font-size: 12px; margin-top: -5px; }
+  .admin-studio .visitor-scroll-summary { margin-top: 16px; padding-top: 16px; border-top: 1px solid #edf0e9; }
+  .admin-studio .visitor-scroll-summary h3 { margin: 0 0 6px; color: #345441; font-size: 14px; }
+  .admin-studio .visitor-scroll-summary p { margin: 0 0 10px; color: #596b56; font-size: 12px; line-height: 1.5; }
+  .admin-studio .visitor-scroll-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; padding: 9px 0; border-bottom: 1px solid #edf0e9; color: #536651; font-size: 12px; }
+  .admin-studio .visitor-scroll-row span { display: flex; align-items: center; gap: 6px; }
+  .admin-studio .visitor-scroll-row strong { color: #345441; }
+  .admin-studio .visitor-scroll-row small { grid-column: 1 / -1; }
   .admin-studio .visitor-breakdown { display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; padding-top: 12px; border-top: 1px solid #e9ede4; color: #667360; font-size: 12px; }
   .admin-studio .visitor-breakdown > span { grid-column: 1 / -1; margin-bottom: 2px; color: #566a55; font-size: 12px; font-weight: 600; }
   .admin-studio .visitor-breakdown strong { color: #3f5944; font-size: 12px; font-weight: 600; }
@@ -409,6 +416,10 @@
   .admin-studio .visitor-product-row > span { overflow: hidden; color: #435647; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
   .admin-studio .visitor-product-row > strong { color: #345441; font-weight: 600; }
   .admin-studio .visitor-product-row > small { grid-column: 1 / -1; color: #596b56; font-size: 12px; }
+  .admin-studio .visitor-selection-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid #edf0e9; }
+  .admin-studio .visitor-selection-section h3 { margin: 0 0 6px; color: #345441; font-size: 14px; }
+  .admin-studio .visitor-selection-section p { margin: 0 0 10px; color: #596b56; font-size: 12px; line-height: 1.5; }
+  .admin-studio .visitor-selection-section .visitor-product-row > span { white-space: normal; overflow-wrap: anywhere; }
   .admin-studio .visitor-empty-state { display: flex; min-height: 198px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; color: #52634f; text-align: center; }
   .admin-studio .visitor-empty-state > svg { color: #79936b; }
   .admin-studio .visitor-empty-state strong { color: #48604a; font-size: 13px; font-weight: 600; }

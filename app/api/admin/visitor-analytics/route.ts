@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         .select('session_id,event_name,page,duration_ms,device_type,browser,operating_system,created_at')
         .eq('visitor_id', visitorId)
         .neq('event_name', 'heartbeat')
+        .neq('event_name', 'scroll_duration')
         .order('created_at', { ascending: false })
         .limit(100)
       if (error) throw error

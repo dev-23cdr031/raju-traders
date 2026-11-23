@@ -31,6 +31,8 @@ type CartRow = {
   consentAt: string | null
   startedAt: string
   lastActivityAt: string
+  closedAt: string | null
+  orderId: string | null
   status: CartStatus
   reminderAttemptAt: string | null
   reminderSentAt: string | null
@@ -256,6 +258,7 @@ export default function AbandonedCarts() {
     if (!row.consent) return 'No purpose-specific cart-reminder consent was recorded.'
     if (!row.customerEmail) return 'The account email was not verified when this cart was saved.'
     if (!metrics?.emailConfigured) return 'Resend is not configured or notifications are disabled.'
+    if (row.closedAt || row.orderId) return 'This cart is closed or associated with an order.'
     if (row.status !== 'Abandoned') return 'This cart has not passed the abandonment threshold.'
     if (row.reminderSentAt) return `Reminder sent ${dateTime(row.reminderSentAt)}.`
     if (row.reminderResult === 'sending') return 'Delivery status is uncertain; another attempt is blocked to prevent a duplicate email.'
@@ -275,7 +278,7 @@ export default function AbandonedCarts() {
         <div>
           <span className="admin-kicker"><span className="admin-kicker-line" /> A quieter kind of follow-through</span>
           <h1 id="abandoned-title">Abandoned <em>Carts</em></h1>
-          <p className="admin-page-description">See saved bags, understand where they pause, and send a single reminder only when a customer asked for one.</p>
+          <p className="admin-page-description">See saved bags and manually email a reminder when a customer has opted in.</p>
         </div>
         <button className="button button-light" onClick={() => void load()} disabled={loading} type="button">
           <RefreshCw size={15} /> {loading ? 'Refreshing…' : 'Refresh'}
@@ -336,7 +339,7 @@ export default function AbandonedCarts() {
                 <td><time dateTime={row.lastActivityAt}>{dateTime(row.lastActivityAt)}</time></td>
                 <td><span className="abandoned-device">{row.device || 'Not recorded'}</span></td>
                 <td>{renderStatus(row.status)}</td>
-                <td><button className="abandoned-open-button" type="button" onClick={(event) => { event.stopPropagation(); openDrawer(row) }}>Details <span aria-hidden="true">→</span></button></td>
+                <td><button className="abandoned-open-button" type="button" onClick={(event) => { event.stopPropagation(); openDrawer(row) }}>Details / email <span aria-hidden="true">→</span></button></td>
               </tr>
             ))}</tbody>
           </table>
@@ -363,7 +366,7 @@ export default function AbandonedCarts() {
               <div className="abandoned-detail-total"><span>{selected.itemCount} items · cart value</span><strong>{money(selected.total)}</strong></div>
             </section>
             <section className="abandoned-detail-section"><h3>Activity timeline</h3><p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p><p><span>Last activity</span><time>{dateTime(selected.lastActivityAt)}</time></p><p><span>Recovery consent</span><time>{selected.consent ? `Opted in · ${dateTime(selected.consentAt)}` : 'Not given'}</time></p></section>
-            <section className="abandoned-detail-section"><h3>Reminder eligibility</h3>
+            <section className="abandoned-detail-section"><h3>Send a recovery email</h3>
               {selected.reminderSentAt ? <p className="abandoned-success"><CheckCircle size={15} /> Sent {dateTime(selected.reminderSentAt)}{selected.reminderResult ? ` · ${selected.reminderResult}` : ''}</p>
                 : reminderReason(selected) ? <p className="abandoned-eligibility"><ShieldCheck size={15} /> {reminderReason(selected)}</p>
                   : <p className="abandoned-success"><ShieldCheck size={15} /> Eligible for one recovery-only email. Sending does not mark the cart recovered.</p>}
@@ -371,12 +374,12 @@ export default function AbandonedCarts() {
               {actionError && <p className="abandoned-error-inline" role="alert">{actionError}</p>}
               {actionMessage && <p className="abandoned-success" role="status"><CheckCircle size={15} /> {actionMessage}</p>}
               {selected.consent && <button className="button button-light abandoned-revoke-button" type="button" onClick={() => void revokeConsent(selected)} disabled={sendingId === selected.id}>
-                <ShieldCheck size={15} /> {sendingId === selected.id ? 'Revoking consent…' : 'Revoke reminder consent'}
+                <ShieldCheck size={15} /> Revoke reminder consent
               </button>}
               <button className="button button-dark abandoned-send-button" type="button" onClick={() => void sendReminder(selected)} disabled={Boolean(reminderReason(selected)) || sendingId === selected.id || Boolean(selected.reminderSentAt)}>
-                <Mail size={15} /> {sendingId === selected.id ? 'Sending one reminder…' : 'Send recovery reminder'}
+                <Mail size={15} /> {sendingId === selected.id ? 'Sending email…' : 'Send recovery email'}
               </button>
-              <small>Only the verified account email is used. Recovery links expire after 14 days and require that customer to sign in.</small>
+              <small>Sent through Resend to the verified account email only. Recovery links expire after 14 days and require that customer to sign in.</small>
             </section>
             {selected.order && selected.order.matchedItems && <section className="abandoned-detail-section abandoned-order-detail"><h3>Associated order</h3><p><span>{selected.order.number}</span><strong>{selected.order.status}</strong></p><p><span>Persisted {dateTime(selected.order.createdAt)}</span><strong>{money(selected.order.total)}</strong></p><small>Linked after order persistence because its items overlap this saved cart.</small></section>}
           </div>

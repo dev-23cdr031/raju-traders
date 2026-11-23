@@ -33,7 +33,8 @@ export async function sendCartRecoveryEmail({
   const productList = productLines.length ? `<ul style="margin:10px 0 0;padding:0 0 0 18px;color:#51675a;font-size:14px;line-height:1.7;">${productLines.map((line) => `<li>${line}</li>`).join('')}</ul>` : ''
   const text = `Hello ${name || 'there'},
 
-Your AJR selection is still saved. Your bag has ${count} ${itemLabel} waiting for you.
+Your Raju Traders selection is still saved. Your bag has ${count} ${itemLabel} waiting for you.
+${items.slice(0, 4).map((line) => `\n- ${String(line?.product?.name || 'AJR selection').replace(/[\r\n]+/g, ' ')} × ${Math.max(1, Number(line?.quantity) || 1)}`).join('')}
 
 Return to my bag: ${recoveryUrl}
 
@@ -54,7 +55,7 @@ Stop cart reminders: ${unsubscribeUrl}${supportEmail ? `\n\nNeed help? ${support
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:#fffef9;border:1px solid #d9dfd3;border-radius:18px;overflow:hidden;">
 <tr><td style="padding:0;background:#123c2a;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="padding:24px 32px 20px;border-bottom:4px solid #cae66c;"><table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
 <td valign="middle" style="padding-right:14px;"><img src="https://rajutraders.in/ajr-logo.png" width="58" height="58" alt="AJR Nature — Always Just Royal" style="display:block;width:58px;height:58px;border:0;border-radius:8px;background:#fffef9;object-fit:contain;" /></td>
-<td valign="middle"><p style="margin:0;color:#fffef9;font-family:Georgia,'Times New Roman',serif;font-size:27px;font-weight:700;line-height:1;letter-spacing:-.4px;">AJR Nature</p><p style="margin:8px 0 0;color:#dceab4;font-size:10px;font-weight:700;letter-spacing:2px;line-height:1.2;text-transform:uppercase;">Always Just Royal</p></td>
+<td valign="middle"><p style="margin:0;color:#fffef9;font-family:Georgia,'Times New Roman',serif;font-size:27px;font-weight:700;line-height:1;letter-spacing:-.4px;">Raju Traders</p><p style="margin:8px 0 0;color:#e3ce94;font-size:10px;font-weight:700;letter-spacing:2px;line-height:1.2;text-transform:uppercase;">Always Just Royal</p></td>
 </tr></table></td></tr></table></td></tr>
 <tr><td style="padding:34px 32px 12px;"><p style="margin:0 0 14px;color:#557159;font-size:12px;font-weight:700;letter-spacing:1.3px;line-height:1.2;text-transform:uppercase;">A small note from AJR</p><h1 class="serif" style="margin:0;color:#163628;font-family:Georgia,'Times New Roman',serif;font-size:34px;font-weight:400;line-height:1.15;letter-spacing:-.8px;">Your AJR selection is still saved.</h1><p style="margin:20px 0 0;color:#344b3d;font-size:16px;line-height:1.65;">Hello ${greeting},</p><p style="margin:10px 0 0;color:#51675a;font-size:16px;line-height:1.65;">Your bag is exactly where you left it. Whenever the moment feels right, return and continue with your selection.</p></td></tr>
 <tr><td style="padding:20px 32px 8px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#edf3e8;border:1px solid #d7e2d1;border-radius:10px;"><tr><td style="padding:18px 20px;border-left:4px solid #9abd58;"><p style="margin:0;color:#426347;font-size:11px;font-weight:700;letter-spacing:1.2px;line-height:1.2;text-transform:uppercase;">Saved in your bag</p><p class="serif" style="margin:8px 0 0;color:#183b2a;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.25;">${count} saved ${itemLabel} in your AJR bag</p>${productList}</td></tr></table></td></tr>
@@ -70,7 +71,7 @@ Stop cart reminders: ${unsubscribeUrl}${supportEmail ? `\n\nNeed help? ${support
     body: JSON.stringify({
       from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'AJR <onboarding@resend.dev>',
       to: [email],
-      subject: 'Your AJR selection is still saved',
+      subject: 'Your Raju Traders cart is waiting for you',
       text,
       html,
     }),

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
+import { abandonmentMinutes, isConfirmedCartOrder, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
 import { CartRecoveryEmailRejectedError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
 
@@ -22,14 +22,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const admin = supabaseAdmin()
   const { data: cart, error } = await admin.from('abandoned_carts')
-    .select('id,user_id,cart_items,item_count,customer_name,customer_email,recovery_email_consent,reminder_attempt_at,reminder_sent_at,reminder_result,last_activity_at,closed_at,order_id')
+    .select('id,user_id,cart_items,item_count,customer_name,customer_email,recovery_email_consent,reminder_attempt_at,reminder_sent_at,reminder_result,cart_started_at,last_activity_at,closed_at,order_id')
     .eq('id', id)
     .maybeSingle()
-  if (error || !cart) return NextResponse.json({ message: 'This cart is no longer available.' }, { status: 404 })
+  if (error) {
+    console.error('Manual cart reminder lookup failed:', error)
+    return NextResponse.json({ message: 'Could not load this cart. No reminder was sent.' }, { status: 503 })
+  }
+  if (!cart) return NextResponse.json({ message: 'This cart is no longer available.' }, { status: 404 })
   if (cart.reminder_result === 'sending') {
     return NextResponse.json({ message: 'A prior delivery attempt has an uncertain result. It is blocked to prevent a duplicate reminder.' }, { status: 409 })
   }
-  if (cart.closed_at && !cart.order_id) return NextResponse.json({ message: 'This cart is closed and is no longer eligible for recovery.' }, { status: 409 })
+  if (cart.closed_at) return NextResponse.json({ message: 'This cart is closed and is no longer eligible for recovery.' }, { status: 409 })
   if (cart.order_id) {
     const { data: order, error: orderError } = await admin.from('orders')
       .select('status')
@@ -62,6 +66,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const attemptedAt = new Date()
   const cooldown = new Date(attemptedAt.getTime() - 15 * 60_000).toISOString()
+  const cutoff = new Date(attemptedAt.getTime() - abandonmentMinutes() * 60_000).toISOString()
   if (cart.reminder_attempt_at && new Date(cart.reminder_attempt_at).getTime() > Date.now() - 15 * 60_000) {
     return NextResponse.json({ message: 'A reminder attempt was made recently. Try again after the 15-minute safety interval.' }, { status: 429 })
   }
@@ -78,8 +83,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       updated_at: attemptedAt.toISOString(),
     })
     .eq('id', id)
+    .eq('user_id', cart.user_id)
+    .eq('customer_email', cart.customer_email)
     .eq('recovery_email_consent', true)
     .is('reminder_sent_at', null)
+    .is('closed_at', null)
+    .is('order_id', null)
+    .eq('last_activity_at', cart.last_activity_at)
+    .lte('last_activity_at', cutoff)
     .or(`and(reminder_attempt_at.is.null,reminder_result.is.null),and(reminder_attempt_at.lt.${cooldown},reminder_result.eq.failed)`)
     .select('id')
     .maybeSingle()
@@ -89,11 +100,55 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   if (!claimed) return NextResponse.json({ message: 'This reminder is no longer eligible or another administrator is handling it.' }, { status: 409 })
 
+  const releaseClaim = async (reason: string) => {
+    const { error: releaseError } = await admin.from('abandoned_carts').update({
+      reminder_result: 'failed',
+      reminder_error: reason,
+      recovery_token_hash: null,
+      recovery_token_expires_at: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id).eq('recovery_token_hash', tokenHash).eq('reminder_result', 'sending')
+    if (releaseError) console.error('Manual cart reminder claim release failed:', releaseError)
+  }
+
+  const startedAt = cart.cart_started_at ? new Date(cart.cart_started_at).getTime() : NaN
+  if (!Number.isFinite(startedAt)) {
+    await releaseClaim('Cart start time is invalid.')
+    return NextResponse.json({ message: 'Could not verify this cart. No reminder was sent.' }, { status: 503 })
+  }
+  const { data: orders, error: orderLookupError } = await admin.from('orders')
+    .select('id,status,payment_status,payment_method,created_at,items')
+    .eq('user_id', cart.user_id)
+    .gte('created_at', new Date(startedAt - 10 * 60_000).toISOString())
+  if (orderLookupError) {
+    console.error('Manual cart reminder purchase verification failed:', orderLookupError)
+    await releaseClaim('Could not verify whether the cart was purchased.')
+    return NextResponse.json({ message: 'Could not verify whether this cart was purchased. No reminder was sent.' }, { status: 503 })
+  }
+  if ((orders || []).some((order) => isConfirmedCartOrder(order) && orderOverlapsCart(cart.cart_items, order.items))) {
+    await releaseClaim('Cart already purchased.')
+    return NextResponse.json({ message: 'The customer has already purchased items from this cart. No reminder was sent.' }, { status: 409 })
+  }
+
+  const { data: eligible, error: eligibilityError } = await admin.from('abandoned_carts')
+    .select('id')
+    .eq('id', id).eq('user_id', cart.user_id).eq('customer_email', cart.customer_email)
+    .eq('recovery_email_consent', true).eq('last_activity_at', cart.last_activity_at)
+    .eq('reminder_result', 'sending').eq('recovery_token_hash', tokenHash)
+    .is('reminder_sent_at', null).is('closed_at', null).is('order_id', null)
+    .maybeSingle()
+  if (eligibilityError || !eligible) {
+    if (eligibilityError) console.error('Manual cart reminder eligibility verification failed:', eligibilityError)
+    await releaseClaim('Cart eligibility changed before sending.')
+    return NextResponse.json({ message: 'Cart eligibility changed or could not be verified. No reminder was sent.' }, { status: 409 })
+  }
+
   try {
     const sent = await sendCartRecoveryEmail({
       email: verifiedEmail,
       name: cart.customer_name || '',
       itemCount: Number(cart.item_count),
+      items: cart.cart_items,
       token,
     })
     const { data: recorded, error: recordError } = await admin.from('abandoned_carts').update({

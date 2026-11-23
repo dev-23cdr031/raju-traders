@@ -42,10 +42,13 @@ type AnalyticsData = {
   }
   pages: { page: string; views: number; uniqueVisitors: number; averageDurationMs: number | null }[]
   products: { name: string; views: number; uniqueVisitors: number }[]
+  productSelections?: { productId: number; name: string; kind: 'variety' | 'weight'; value: string; selections: number; uniqueVisitors: number }[]
   devices: { device: string; browser: string; operatingSystem: string; sessions: number }[]
+  scrollDevices?: { device: string; durationMs: number; visitors: number }[]
   activity: AnalyticsEvent[]
   visitors: (AnalyticsEvent & {
     events: number
+    scrollDurationMs?: number
     visitorType: 'New' | 'Returning'
     status: 'Online' | 'Offline'
   })[]
@@ -85,12 +88,18 @@ function formatDuration(value: number | null | undefined) {
   return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`
 }
 
+function formatScrollDuration(value: number | null | undefined) {
+  if (!value) return '—'
+  return value < 1000 ? '<1s' : `~${formatDuration(value)}`
+}
+
 function eventLabel(event: AnalyticsEvent) {
   if (event.eventName === 'page_view') return `Viewed ${PAGE_LABELS[event.page] || 'a page'}`
   if (event.eventName === 'page_duration') return `Spent ${formatDuration(event.durationMs)} on ${PAGE_LABELS[event.page] || 'a page'}`
   if (event.eventName === 'cart_add') return 'Added an item to cart'
   if (event.eventName === 'checkout_start') return 'Started checkout'
   if (event.eventName === 'purchase') return 'Completed a purchase'
+  if (event.eventName === 'product_selection') return 'Changed a product option'
   return 'Store activity'
 }
 
@@ -187,7 +196,7 @@ export default function VisitorAnalytics() {
         const text = `${row.visitorId} ${PAGE_LABELS[row.page] || row.page} ${row.deviceType} ${row.operatingSystem} ${row.browser} ${row.visitorType} ${row.status} ${visitorActivityLabel(row)}`.toLowerCase()
         if (query && !text.includes(query.toLowerCase())) return false
         if (activityFilter === 'views' && row.eventName !== 'page_view' && row.eventName !== 'page_duration') return false
-        if (activityFilter === 'commerce' && (row.eventName === 'page_view' || row.eventName === 'page_duration')) return false
+        if (activityFilter === 'commerce' && !['cart_add', 'checkout_start', 'purchase'].includes(row.eventName)) return false
         if (deviceFilter !== 'all' && row.deviceType !== deviceFilter) return false
         if (visitorTypeFilter !== 'all' && row.visitorType !== visitorTypeFilter) return false
         if (statusFilter !== 'all' && row.status !== statusFilter) return false
@@ -447,6 +456,28 @@ export default function VisitorAnalytics() {
               <div key={browser.name}><span>{browser.name}</span><strong>{browser.sessions}</strong></div>
             ))}
             {analyticsAvailable && deviceTotal === 0 && <small>Device details appear with page views.</small>}
+          </div>
+          <div className="visitor-scroll-summary">
+            <h3>Estimated scrolling time</h3>
+            <p>Active scrolling in this date range, not total time on a page. Estimates include browser-driven page scrolling and only consenting visitors.</p>
+            {!Array.isArray(data?.scrollDevices) ? (
+              <p role="alert">Scrolling analytics is not ready. Apply the latest visitor analytics SQL migration.</p>
+            ) : (
+              <>
+                {['desktop', 'tablet', 'mobile'].map((device) => {
+                  const row = data.scrollDevices!.find((item) => item.device === device)
+                  const label = device === 'desktop' ? 'Laptop / desktop' : device === 'mobile' ? 'Phone' : 'Tablet'
+                  return (
+                    <div className="visitor-scroll-row" key={device}>
+                      <span>{deviceIcon(device)} {label}</span>
+                      <strong>{row ? formatScrollDuration(row.durationMs) : '—'}</strong>
+                      <small>{row ? `${row.visitors.toLocaleString()} visitors` : 'No scrolling recorded'}</small>
+                    </div>
+                  )
+                })}
+                <p>Calculated from scroll events with a one-second inactivity gap; earlier activity cannot be recovered.</p>
+              </>
+            )}
           </div></>}
         </section>
       </div>
@@ -480,7 +511,7 @@ export default function VisitorAnalytics() {
           </header>
           <div className="visitor-table-scroll" aria-busy={loading}>
             <table className="visitor-table">
-              <thead><tr><th>Anonymous visitor ID</th><th>Visit time</th><th>Recent activity / page visited</th><th>Device</th><th>Operating system</th><th>Browser</th><th>Latest page time (session)</th><th>Visitor type</th><th>Status</th></tr></thead>
+              <thead><tr><th>Anonymous visitor ID</th><th>Visit time</th><th>Recent activity / page visited</th><th>Device</th><th>Operating system</th><th>Browser</th><th>Latest page time (session)</th><th>Scroll time (range)</th><th>Visitor type</th><th>Status</th></tr></thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.visitorId} onClick={() => void openJourney(row.visitorId)} tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void openJourney(row.visitorId) } }}>
@@ -491,6 +522,7 @@ export default function VisitorAnalytics() {
                     <td>{row.operatingSystem}</td>
                     <td>{row.browser}</td>
                     <td>{row.durationMs ? `~${formatDuration(row.durationMs)}` : '—'}</td>
+                    <td>{formatScrollDuration(row.scrollDurationMs)}</td>
                     <td>{row.visitorType}</td>
                     <td><span className={`visitor-presence visitor-presence-${row.status.toLowerCase()}`}>{row.status}</span></td>
                   </tr>
@@ -560,6 +592,27 @@ export default function VisitorAnalytics() {
             <div className="visitor-empty-state compact"><Eye size={20} /><strong>No product views yet</strong><span>Product interest appears after an opted-in product-detail visit.</span></div>
           ) : (
             <div className="visitor-empty-state visitor-unavailable-state compact"><AlertCircle size={20} /><strong>Product views unavailable</strong><span>Connect to analytics to view product interest.</span></div>
+          )}
+          {analyticsAvailable && (
+            <div className="visitor-selection-section">
+              <h3>Variety &amp; pack-size selections</h3>
+              <p>Explicit changes by consenting visitors; separate from product views. Showing the top 100 for this date range.</p>
+              {!Array.isArray(data?.productSelections) ? (
+                <p role="alert">Selection analytics is not ready. Apply the latest visitor analytics SQL migration.</p>
+              ) : data.productSelections.length ? (
+                <div className="visitor-products-list">
+                  {data.productSelections.map((selection) => (
+                    <div className="visitor-product-row" key={`${selection.productId}-${selection.kind}-${selection.value}`}>
+                      <span>{selection.name} · {selection.kind === 'variety' ? 'Variety' : 'Pack size'}: {selection.value}</span>
+                      <strong>{selection.selections.toLocaleString()} selections</strong>
+                      <small>{selection.uniqueVisitors.toLocaleString()} unique visitors</small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No selections recorded yet. Earlier visits cannot be broken down by option.</p>
+              )}
+            </div>
           )}
         </section>
       </div>
