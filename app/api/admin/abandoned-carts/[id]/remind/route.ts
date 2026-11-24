@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, isConfirmedCartOrder, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
-import { CartRecoveryEmailRejectedError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { abandonmentMinutes, isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
+import { CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { marketingEmailConfigured, MarketingEmailPausedError } from '@/lib/marketing-email'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
     return NextResponse.json({ message: 'Invalid cart reference.' }, { status: 400 })
   }
-  if (!process.env.RESEND_API_KEY || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
+  if (!marketingEmailConfigured() || (process.env.PRODUCT_REMINDER_TOKEN_SECRET || '').length < 32 || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
     return NextResponse.json({ message: 'Cart reminders are unavailable because Resend is not configured or email notifications are disabled.' }, { status: 503 })
   }
   try {
@@ -143,6 +144,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ message: 'Cart eligibility changed or could not be verified. No reminder was sent.' }, { status: 409 })
   }
 
+  const { data: preference, error: preferenceError } = await admin.from('cart_reminder_preferences')
+    .select('opted_in,suppressed_at').eq('user_id', cart.user_id).maybeSingle()
+  if (preferenceError || (preference && (!preference.opted_in || preference.suppressed_at))) {
+    if (preferenceError) console.error('Manual cart reminder preference recheck failed:', preferenceError)
+    await releaseClaim('Cart email preference changed before sending.')
+    return NextResponse.json({ message: 'Cart email preference changed. No reminder was sent.' }, { status: 409 })
+  }
+
+  const { data: savedCart, error: savedCartError } = await admin.from('carts')
+    .select('items').eq('user_id', cart.user_id).maybeSingle()
+  const currentLines = normalizeTrackedLines(savedCart?.items)
+  if (savedCartError || !currentLines.length ||
+    JSON.stringify(currentLines) !== JSON.stringify(normalizeTrackedLines(cart.cart_items))) {
+    if (savedCartError) console.error('Manual cart reminder current cart lookup failed:', savedCartError)
+    await releaseClaim('Saved cart changed before sending.')
+    return NextResponse.json({ message: 'The saved cart changed. No reminder was sent.' }, { status: 409 })
+  }
+
   try {
     const sent = await sendCartRecoveryEmail({
       email: verifiedEmail,
@@ -150,6 +169,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       itemCount: Number(cart.item_count),
       items: cart.cart_items,
       token,
+      cartId: id,
     })
     const { data: recorded, error: recordError } = await admin.from('abandoned_carts').update({
       reminder_sent_at: new Date().toISOString(),
@@ -167,7 +187,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ message: 'One recovery-only reminder was sent to the verified account email.' })
   } catch (sendError: any) {
     const safeMessage = String(sendError?.message || 'Email provider request failed.').slice(0, 300)
-    if (sendError instanceof CartRecoveryEmailRejectedError) {
+    if (sendError instanceof MarketingEmailPausedError) {
+      const { error: deferError } = await admin.rpc('ajr_defer_marketing_email', { p_campaign: 'cart', p_id: id })
+      if (deferError) {
+        console.error('Could not defer paused manual reminder:', deferError)
+        return NextResponse.json({ message: 'Could not save the paused reminder; review its status before retrying.' }, { status: 503 })
+      }
+      return NextResponse.json({ message: 'Marketing reminders are paused or quota could not be verified. No email was sent.' }, { status: 429 })
+    }
+    if (sendError instanceof CartRecoveryEmailRejectedError || sendError instanceof CartRecoveryPreparationError) {
       const { error: failureRecordError } = await admin.from('abandoned_carts').update({
         reminder_result: 'failed',
         reminder_error: safeMessage,

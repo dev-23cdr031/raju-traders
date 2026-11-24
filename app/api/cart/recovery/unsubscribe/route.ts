@@ -11,22 +11,16 @@ export async function POST(request: NextRequest) {
   try {
     const admin = supabaseAdmin()
     const { data, error } = await admin.from('abandoned_carts')
-      .update({
-        recovery_email_consent: false,
-        recovery_email_consent_at: null,
-        recovery_token_hash: null,
-        recovery_token_expires_at: null,
-        recovery_redeemed_at: null,
-        updated_at: new Date().toISOString(),
-      })
+      .select('user_id')
       .eq('recovery_token_hash', sha256(token))
       .eq('recovery_email_consent', true)
       .gt('recovery_token_expires_at', new Date().toISOString())
       .is('recovery_redeemed_at', null)
-      .select('id')
       .maybeSingle()
     if (error) throw error
     if (!data) return NextResponse.json({ message: 'This unsubscribe link is invalid, expired, or already used.' }, { status: 400 })
+    const { error: preferenceError } = await admin.rpc('ajr_unsubscribe_cart_reminders', { p_user_id: data.user_id })
+    if (preferenceError) throw preferenceError
     return NextResponse.json({ ok: true, message: 'Cart reminder consent has been withdrawn. No further reminders will be sent.' })
   } catch (error) {
     console.error('POST /api/cart/recovery/unsubscribe failed:', error)

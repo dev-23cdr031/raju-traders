@@ -1,7 +1,8 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, associatePersistedOrder, isConfirmedCartOrder, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
-import { CartRecoveryEmailRejectedError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { abandonmentMinutes, associatePersistedOrder, isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
+import { CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { marketingEmailConfigured, MarketingEmailPausedError } from '@/lib/marketing-email'
 import { beginCartNotificationEvent, recordNotificationEvent } from '@/lib/notification-automation'
 import { sendAbandonedCartWhatsApp, WhatsAppProviderRejectedError } from '@/lib/order-whatsapp'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -9,14 +10,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const BATCH_SIZE = 20
+const BATCH_SIZE = 5
 const RETRY_AFTER_MS = 30 * 60_000
 
 function hasValidCronAuthorization(request: NextRequest) {
   const expected = process.env.CRON_SECRET || ''
   const supplied = request.headers.get('authorization') || ''
   const expectedHeader = `Bearer ${expected}`
-  if (!expected) return false
+  if (expected.length < 32) return false
   const expectedBuffer = Buffer.from(expectedHeader)
   const suppliedBuffer = Buffer.from(supplied)
   return expectedBuffer.length === suppliedBuffer.length
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   if (!hasValidCronAuthorization(request)) {
     return NextResponse.json({ message: 'Not found.' }, { status: 404 })
   }
-  if (!process.env.RESEND_API_KEY || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
+  if (!marketingEmailConfigured() || (process.env.PRODUCT_REMINDER_TOKEN_SECRET || '').length < 32 || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
     return NextResponse.json({ message: 'Cart reminders are unavailable.' }, { status: 503 })
   }
 
@@ -48,6 +49,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Cart reminders are unavailable.' }, { status: 503 })
   }
 
+  const { data: enabled, error: settingsError } = await admin.rpc('ajr_marketing_campaign_enabled', { p_campaign: 'cart' })
+  if (settingsError || typeof enabled !== 'boolean') {
+    console.error('Cart automation setting unavailable:', settingsError)
+    return NextResponse.json({ message: 'Automation setting unavailable.' }, { status: 503 })
+  }
+  if (!enabled) return NextResponse.json({ ok: true, claimed: 0, paused: true })
   const { data: claimedRows, error: claimError } = await admin.rpc('ajr_claim_cart_recovery_reminders', {
     p_cutoff: cutoff.toISOString(),
     p_stale_before: staleBefore.toISOString(),
@@ -144,17 +151,51 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
     if (prepareError || !prepared) {
       if (prepareError) console.error('GET /api/cron/abandoned-carts token preparation error:', prepareError)
+      await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Cart eligibility changed before sending.', failed_at: new Date().toISOString() })
       summary.blocked += 1
       continue
     }
 
     try {
+      const { data: eligible, error: eligibilityError } = await admin.from('abandoned_carts')
+        .select('id').eq('id', id).eq('user_id', userId).eq('customer_email', expectedEmail)
+        .eq('recovery_email_consent', true).eq('reminder_result', 'sending')
+        .eq('recovery_token_hash', tokenHash).is('closed_at', null).is('order_id', null)
+        .is('reminder_sent_at', null).lte('last_activity_at', cutoff.toISOString()).maybeSingle()
+      if (eligibilityError || !eligible) {
+        if (eligibilityError) console.error('Cart reminder final eligibility check failed:', eligibilityError)
+        await markFailed('Cart eligibility changed before sending.')
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Cart eligibility changed before sending.', failed_at: new Date().toISOString() })
+        summary.blocked += 1
+        continue
+      }
+      const { data: preference, error: preferenceError } = await admin.from('cart_reminder_preferences')
+        .select('opted_in,suppressed_at').eq('user_id', userId).maybeSingle()
+      if (preferenceError || (preference && (!preference.opted_in || preference.suppressed_at))) {
+        if (preferenceError) console.error('Cart reminder preference recheck failed:', preferenceError)
+        await markFailed('Cart email preference changed before sending.')
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Cart email preference changed before sending.', failed_at: new Date().toISOString() })
+        summary.blocked += 1
+        continue
+      }
+      const { data: savedCart, error: savedCartError } = await admin.from('carts')
+        .select('items').eq('user_id', userId).maybeSingle()
+      const currentLines = normalizeTrackedLines(savedCart?.items)
+      if (savedCartError || !currentLines.length ||
+        JSON.stringify(currentLines) !== JSON.stringify(normalizeTrackedLines(row.cart_items))) {
+        if (savedCartError) console.error('Cart reminder current cart lookup failed:', savedCartError)
+        await markFailed('Saved cart changed before sending.')
+        await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Saved cart changed before sending.', failed_at: new Date().toISOString() })
+        summary.blocked += 1
+        continue
+      }
       const sent = await sendCartRecoveryEmail({
         email: verifiedEmail,
         name: String(row.customer_name || ''),
         itemCount: Number(row.item_count || 1),
         items: Array.isArray(row.cart_items) ? row.cart_items : [],
         token,
+        cartId: id,
       })
       const { data: recorded, error: recordError } = await admin.from('abandoned_carts').update({
         reminder_sent_at: new Date().toISOString(),
@@ -194,7 +235,13 @@ export async function GET(request: NextRequest) {
       }
     } catch (error) {
       const message = compactError(error)
-      if (error instanceof CartRecoveryEmailRejectedError) {
+      if (error instanceof MarketingEmailPausedError) {
+        const { error: deferError } = await admin.rpc('ajr_defer_marketing_email', { p_campaign: 'cart', p_id: id, p_event_id: emailEvent.id })
+        if (deferError) {
+          console.error('Could not defer paused cart reminder:', deferError)
+          summary.uncertain += 1
+        } else summary.blocked += 1
+      } else if (error instanceof CartRecoveryEmailRejectedError || error instanceof CartRecoveryPreparationError) {
         await markFailed(message)
         await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: message, failed_at: new Date().toISOString() })
         summary.failed += 1

@@ -1,64 +1,156 @@
-# AJR cart-recovery reminders
+# Shared cart and product reminder deployment
 
-AJR sends one recovery-only email only when a signed-in customer has actively opted in on the cart page and leaves a non-empty cart inactive for the configured threshold (30 minutes by default). The email has no discount or marketing content and includes an unsubscribe link.
+**Not operational until deployed and verified.** This setup starts real sends.
+Do not use the old `abandoned-cart-scheduler.sql` or
+`product-reminder-scheduler.sql`: the shared scheduler replaces both jobs.
+`vercel.json` contains no Vercel Cron; Vercel Pro is not required for scheduling.
 
-## Manual email
+## Customer and delivery safeguards
 
-In Admin > Abandoned Carts, open **Details / email** for a cart and select **Send recovery email**. The server verifies admin access, the customer's verified email and cart-reminder consent, the inactivity threshold, cart state, and matching confirmed purchases. The branded email includes the saved items and a private recovery link. A previously sent or uncertain reminder is blocked, including when a scheduled attempt has already claimed the cart. Resend must be configured; the action reports provider acceptance, not confirmed inbox delivery.
+Only verified signed-in accounts with a valid preference receive marketing.
+The optional registration checkbox is unchecked and covers both campaigns;
+older product-only consent does not authorize cart email. Existing explicit
+cart consent applies only to its original bag. Anonymous visitors do not receive
+email. Product and cart unsubscribe links remain valid across future visits;
+the signed Resend webhook records delivery and suppresses both campaigns after
+bounces, complaints or suppression.
 
-## Scheduler setup
+Cart reminders are eligible after 30 minutes of inactivity, with at most one per
+customer per 24 hours. Cart updates reset the timer; empty or purchased carts
+are excluded. Product reminders are eligible after two hours and are cancelled
+on cart addition or purchase. Open carts and recent sends coordinate the two
+campaigns. The current saved cart opens from the email button; sign-in may be
+needed. Product clicks and cart/order matches are not proof of causal recovery.
+Cart images, prices and values are saved snapshots, not verified order revenue.
+Provider acceptance is not confirmed inbox delivery. A change racing after the
+last eligibility check cannot recall an accepted email; offline changes cannot
+be seen until saved. Unknown delivery outcomes are locked for manual review.
 
-The Supabase scheduler calls a small Edge Function every five minutes. That function authenticates the scheduler and calls the existing protected website endpoint; the endpoint retains the existing Resend, order, consent, and duplicate-prevention logic. Nothing needs to remain open in the customer's browser. A cart becomes eligible after 30 minutes and is normally checked within the next five minutes; outages, queues, provider delays, or a backlog can make delivery later. Each run processes at most 20 carts.
+## Free-tier safeguards
 
-**These files do not activate the job.** Creating the SQL job starts real scheduled requests and can send real emails to eligible customers. Coordinate the cutover and use controlled test accounts.
+The shared function checks Resend's account-wide Usage API before each
+promotional send, reserves a database slot atomically, and fails closed if usage
+cannot be checked. The API requires a **full-access** Resend key; protect it as
+an administrative credential. Default ceilings are 100 emails per rolling
+24 hours and 3,000 per calendar month; 20 daily and 300 monthly are held back
+for transactional mail. These values can be lowered in
+`email_automation_settings` by a trusted database administrator. Do not set
+them above the free-tier ceilings. The admin pages show account usage including
+inbound mail, conservative promotional capacity and both on/off controls.
+Recent sends may be double-counted briefly, intentionally reducing capacity.
+Unknown reservations remain counted until their period expires. The service
+spaces its own Resend API requests; other applications can still use capacity or
+rate limits concurrently. The reserve reduces but cannot eliminate external
+races, and does not guarantee delivery of a burst of transactional mail.
+Verify Resend account limits and billing settings; no upgrade is performed.
 
-1. In the Supabase SQL Editor for the correct project, apply `supabase/customer-features.sql`, `supabase/abandoned-carts.sql`, then `supabase/notification-automation.sql` if they have not already been applied.
-2. In Vercel project settings, set `ABANDONED_CART_MINUTES=30` (an existing explicit value such as `60` overrides the new default). Also configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, server-only `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL=https://www.rajutraders.in`, `RESEND_API_KEY`, verified `RESEND_FROM_EMAIL`, `NOTIFICATIONS_EMAIL_ENABLED=true`, and a strong random `CRON_SECRET` of at least 32 characters. `SUPPORT_EMAIL` is optional. Redeploy after changing environment variables.
-3. Deploy the website changes, including `vercel.json` with no cron entries. Verify the old Vercel cron is absent in Vercel's Cron Jobs settings before enabling the Supabase job; this avoids two schedulers running at once. The endpoint must be reachable at `https://www.rajutraders.in/api/cron/abandoned-carts` without a redirect.
-4. Generate a second, independent random secret of at least 32 characters for the scheduler. In Supabase Dashboard > Edge Functions > Secrets, set:
-   - `AJR_SCHEDULER_SECRET`: the new scheduler secret.
-   - `AJR_CRON_SECRET`: exactly the same value as Vercel's `CRON_SECRET`.
-   - `AJR_SITE_ORIGIN`: `https://www.rajutraders.in` (HTTPS origin only, no path or trailing redirect).
+One shared five-minute job processes up to five carts and five product
+reminders per invocation. Backlogs, service outages, free-project pauses and
+provider rate limits can delay sends. Check actual Supabase and Resend plan
+availability and restrictions before rollout. Vercel Hobby terms restrict
+commercial use; confirm that your current hosting use complies.
 
-   Never paste secrets into source files, commits, tickets, or chat. Save them through the dashboards, not command-line arguments.
-5. From the project root, authenticate the Supabase CLI and deploy the function:
+## Safe cutover
+
+1. Back up the database. Disable any old Supabase jobs named
+   `ajr-abandoned-cart-reminders` and `ajr-product-reminders`, and any old
+   Vercel Cron. Inspect in-flight requests before continuing. In SQL Editor
+   apply, in order:
+   `supabase/customer-features.sql`, `supabase/abandoned-carts.sql`,
+   `supabase/notification-automation.sql`, `supabase/visitor-analytics.sql`,
+   `supabase/product-reminders.sql`, `supabase/cart-recovery-automation.sql`,
+   `supabase/email-automation.sql`. The Auth triggers require permission on
+   `auth.users`; install them before publishing the new signup checkbox.
+   Never infer existing customer consent.
+   To stop those two legacy jobs without affecting other jobs:
+   `select cron.unschedule(jobid) from cron.job where jobname in ('ajr-abandoned-cart-reminders', 'ajr-product-reminders');`
+2. Before deploying, pause both campaigns for a controlled rollout:
+   `update public.email_automation_settings set cart_enabled = false, product_enabled = false where id;`
+   Apply the shared scheduler SQL in step 6 to remove any remaining old
+   Supabase jobs idempotently.
+3. Configure server-only Vercel environment variables:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL=https://www.rajutraders.in`,
+   `CRON_SECRET` (32+ random characters), `PRODUCT_REMINDER_TOKEN_SECRET`
+   (a separate 32+ random characters), `AJR_EMAIL_EDGE_URL` (the shared Edge
+   URL), `AJR_MAIL_SECRET` (another independent 32+ random characters),
+   `RESEND_WEBHOOK_SECRET`, and `NOTIFICATIONS_EMAIL_ENABLED=true`.
+   Keep existing `RESEND_API_KEY` and sender configuration for order
+   confirmations; the transactional code is unchanged. Rotating
+   `PRODUCT_REMINDER_TOKEN_SECRET` invalidates previously signed links.
+4. In Supabase Edge Function secrets set:
+   - `RESEND_API_KEY`: existing Resend key with full access for Usage API.
+   - `RESEND_FROM_EMAIL`: `no-reply@rajutraders.in`.
+   - `APP_URL`: `https://www.rajutraders.in`.
+   - `AJR_SCHEDULER_SECRET`: independent random 32+ character secret.
+   - `AJR_MAIL_SECRET`: exactly the Vercel `AJR_MAIL_SECRET`.
+   - `AJR_CRON_SECRET`: exactly the Vercel `CRON_SECRET`.
+
+   Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge
+   Functions. Store secrets in the respective dashboards, not source control,
+   shell history, screenshots, chat or public client variables. Verify the Resend
+   sender domain and DNS in Resend before proceeding.
+5. From the project directory, authenticate the Supabase CLI and deploy:
 
    ```powershell
-   npx supabase login
-   npx supabase functions deploy abandoned-cart-scheduler --project-ref kaxcerzvwypplynqzspy --no-verify-jwt
+   supabase login
+   supabase functions deploy shared-email-automation --project-ref kaxcerzvwypplynqzspy --no-verify-jwt
    ```
 
-   `--no-verify-jwt` is required because the function authenticates with its own separate `x-ajr-scheduler-secret`, not a user JWT. Do not deploy a version without that authentication check.
-6. In Supabase Dashboard > Database > Vault, create two named secrets:
-   - `ajr_scheduler_edge_url`: `https://kaxcerzvwypplynqzspy.supabase.co/functions/v1/abandoned-cart-scheduler`.
-   - `ajr_scheduler_secret`: the exact value of Edge Function secret `AJR_SCHEDULER_SECRET`.
+   JWT verification is disabled because the function validates its own distinct
+   scheduler and server-to-server secrets. Never expose the mail secret to the
+   browser. Deploy the website and confirm both protected cron endpoints are
+   reachable at the configured origin without redirects.
+6. In Supabase Vault create `ajr_shared_email_edge_url` with the function URL
+   `https://kaxcerzvwypplynqzspy.supabase.co/functions/v1/shared-email-automation`
+   and `ajr_scheduler_secret` with the same value as Edge's
+   `AJR_SCHEDULER_SECRET`. Update existing entries rather than creating duplicate
+   names. Vault protects storage, but pg_net temporarily queues request headers;
+   restrict database and Vault access to trusted administrators.
+   Run `supabase/shared-email-scheduler.sql` in SQL Editor. It validates Vault
+   configuration, removes both old named jobs and creates exactly one named
+   `ajr-shared-email-reminders` every five minutes. Confirm pg_cron and pg_net
+   are supported and enabled on your plan. To stop it:
+   `select cron.unschedule('ajr-shared-email-reminders');`
+7. Configure the signed Resend webhook
+   `https://www.rajutraders.in/api/webhooks/resend` for delivery, failure,
+   bounce, complaint and suppression events available in Resend. Verify
+   signatures and actual receipts. Enable campaigns individually in Admin >
+   Visitor Analytics or Admin > Abandoned Carts only after controlled testing.
 
-   Vault encrypts stored values, but pg_net temporarily puts request headers, including the scheduler secret, in its database queue. Restrict database login and Vault access to trusted administrators; see [Supabase's pg_net security note](https://supabase.com/kb/troubleshooting/database-roles-can-read-request-headers-queued-by-pg_net-ad6357). Do not use the Supabase service-role key as the scheduler secret.
-7. In Supabase > SQL Editor, run `supabase/abandoned-cart-scheduler.sql`. It validates the Vault entries, enables `pg_cron` and `pg_net`, and creates or updates the named five-minute job. Supabase > Integrations > Cron should show `ajr-abandoned-cart-reminders`. To stop it, run `select cron.unschedule('ajr-abandoned-cart-reminders');` in SQL Editor.
-8. Test the function URL without the scheduler secret: it must return 401 and never invoke the website. In Supabase > Edge Functions > abandoned-cart-scheduler > Logs, check for successful invocations and errors. In SQL Editor, inspect job executions with:
+## Verification
 
-   ```sql
-   select jobid, status, return_message, start_time, end_time
-   from cron.job_run_details
-   where jobid = (select jobid from cron.job where jobname = 'ajr-abandoned-cart-reminders')
-   order by start_time desc limit 10;
+Run local tests and the build:
 
-   select status_code, timed_out, error_msg, created
-   from net._http_response
-   order by created desc limit 10;
-   ```
+```powershell
+node --test .\scripts\test-cart-reminder.cjs .\scripts\test-product-reminders.cjs .\scripts\test-visitor-selections.cjs .\scripts\test-shared-email.cjs
+npm run build
+```
 
-   A successful cron SQL execution only means pg_net queued a request; verify the Edge Function logs and HTTP response too. The pg_net list can include other jobs.
-9. With an opted-in test customer and a verified inbox, leave a non-empty cart unchanged for 30 minutes. Confirm one email after a scheduled run, no second email on another run, and no reminder for a completed purchase or revoked consent. Verify the unsubscribe link. Test without a browser open. Do not run these tests against real customer carts. Check Resend delivery logs for the controlled recipient.
+In a controlled environment with verified test inboxes and test accounts only,
+verify unchecked signup and old product-only consent, Google sign-in, OTP,
+checkout, payment, coupons and order confirmation. Opt in once, close the
+browser, and test the 30-minute cart and two-hour product flows, actual images,
+current product offer, links, sender, and signed unsubscribe. Verify cart updates
+reset the timer; an empty cart, add-to-cart, purchase, opt-out or bounce blocks
+the appropriate email; repeated runs and manual sends respect frequency limits.
+Exercise both admin switches, quota thresholds, full-access Usage API failure,
+explicit provider rejection, uncertain timeout, delivery webhook, recovered
+cart and product revisit metrics. Avoid sending to real customers during tests.
 
-Supabase and Resend free tiers have limits, and an inactive free Supabase project can pause; monitor job and delivery failures. Vercel Hobby's terms restrict commercial use, so verify your hosting plan is appropriate for a live store.
+Inspect Supabase Edge logs and admin heartbeat; a stale or failed heartbeat
+does not prove a specific email was sent. Check both SQL job execution and HTTP
+response, since a queued request is not successful delivery:
 
-## Safety controls
+```sql
+select jobid, status, return_message, start_time, end_time
+from cron.job_run_details
+where jobid = (select jobid from cron.job where jobname = 'ajr-shared-email-reminders')
+order by start_time desc limit 10;
 
-- The cron route rejects requests without Authorization: Bearer $CRON_SECRET.
-- Every batch is claimed atomically in Supabase before any email is sent, preventing overlapping runs from sending duplicates.
-- The recipient address is re-checked against the verified Supabase account before dispatch.
-- The endpoint checks for a confirmed matching order before preparing a reminder and fails closed if that check fails. As with any external email delivery, a purchase or opt-out racing after the final check cannot be atomically recalled once the provider accepts the email.
-- Recovery links are single-use, expire after 14 days, and only a SHA-256 hash is stored.
-- A provider rejection can be retried later; an uncertain provider outcome remains locked for review so AJR never risks a duplicate email.
-- No real email is sent unless Resend is configured and the customer has opted in.
+select status_code, timed_out, error_msg, created
+from net._http_response order by created desc limit 10;
+```
+
+Never blindly retry an `uncertain` send. Confirm cron, function, Resend
+acceptance, webhook and real inbox delivery before declaring operation.

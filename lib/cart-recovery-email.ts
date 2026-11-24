@@ -1,84 +1,70 @@
 import 'server-only'
 
 import { safeRecoveryBaseUrl } from '@/lib/abandoned-carts'
+import { cartUnsubscribeSignature } from '@/lib/cart-reminder-token'
+import { MarketingEmailRejectedError, sendMarketingEmail } from '@/lib/marketing-email'
 
 export class CartRecoveryEmailRejectedError extends Error {}
+export class CartRecoveryPreparationError extends Error {}
 
+type EmailLine = { product?: { name?: string; image?: string; price?: number }; quantity?: number }
 const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#039;')
+const money = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 
 export async function sendCartRecoveryEmail({
-  email, name, itemCount, items = [], token,
-}: { email: string; name: string; itemCount: number; items?: Array<{ product?: { name?: string }; quantity?: number }>; token: string }) {
-  if (process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
-    throw new Error('Email notifications are disabled by NOTIFICATIONS_EMAIL_ENABLED.')
-  }
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) throw new Error('RESEND_API_KEY is not configured.')
-
-  const appUrl = safeRecoveryBaseUrl()
-  const recoveryUrl = `${appUrl}/cart/recover?token=${encodeURIComponent(token)}`
-  const unsubscribeUrl = `${recoveryUrl}&action=unsubscribe`
-  const greeting = escapeHtml(name || 'there')
-  const safeRecoveryUrl = escapeHtml(recoveryUrl)
-  const safeUnsubscribeUrl = escapeHtml(unsubscribeUrl)
-  const supportEmail = String(process.env.SUPPORT_EMAIL || '').trim()
-  const supportLine = supportEmail
-    ? `Need help? <a href="mailto:${escapeHtml(supportEmail)}" style="color:#506a55;text-decoration:underline;">Contact AJR support</a>.`
-    : 'Need help? Please reply to this email and our AJR team will be glad to help.'
-  const count = Math.max(1, Math.floor(itemCount))
-  const itemLabel = count === 1 ? 'item' : 'items'
-  const productLines = items.slice(0, 4).map((line) => `${escapeHtml(line?.product?.name || 'AJR selection')} × ${Math.max(1, Number(line?.quantity) || 1)}`)
-  const productList = productLines.length ? `<ul style="margin:10px 0 0;padding:0 0 0 18px;color:#51675a;font-size:14px;line-height:1.7;">${productLines.map((line) => `<li>${line}</li>`).join('')}</ul>` : ''
+  email, name, items = [], cartId,
+}: { email: string; name: string; itemCount: number; items?: EmailLine[]; token: string; cartId: string }) {
+  if (process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') throw new Error('Email notifications are disabled.')
+  const origin = safeRecoveryBaseUrl()
+  const cartUrl = `${origin}/?cart=1`
+  const unsubscribe = `${origin}/api/cart/reminder-unsubscribe?id=${encodeURIComponent(cartId)}&signature=${cartUnsubscribeSignature(cartId)}`
+  if (!items.length) throw new CartRecoveryPreparationError('The saved cart has no items.')
+  const lines = items.map((line) => {
+    const productName = String(line.product?.name || '').trim()
+    const quantity = Number(line.quantity)
+    const price = Number(line.product?.price)
+    const rawImage = String(line.product?.image || '').trim()
+    let image = ''
+    if (rawImage.startsWith('/') && !rawImage.startsWith('//')) image = `${origin}${rawImage}`
+    else {
+      try {
+        const url = new URL(rawImage)
+        if (url.protocol === 'https:' && !url.username && !url.password) image = url.href
+      } catch {}
+    }
+    if (!productName || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(price) || price < 0 ||
+      !image || new URL(image).pathname === '/nut-selection.png') {
+      throw new CartRecoveryPreparationError('A saved cart item has an invalid name, image, price or quantity.')
+    }
+    return { productName, quantity, price, image }
+  })
+  const total = lines.reduce((sum, line) => sum + line.price * line.quantity, 0)
   const text = `Hello ${name || 'there'},
 
-Your Raju Traders selection is still saved. Your bag has ${count} ${itemLabel} waiting for you.
-${items.slice(0, 4).map((line) => `\n- ${String(line?.product?.name || 'AJR selection').replace(/[\r\n]+/g, ' ')} × ${Math.max(1, Number(line?.quantity) || 1)}`).join('')}
+Looks like you left some wonderful products in your shopping cart. Complete your purchase whenever you're ready.
 
-Return to my bag: ${recoveryUrl}
+Your selected products are just a click away!
 
-This is a one-time service reminder you asked us to send. Your private recovery link expires in 14 days and works only after you sign in to this AJR account.
+${lines.map((line) => `${line.productName.replace(/[\r\n]+/g, ' ')} × ${line.quantity} — ${money(line.price)} each`).join('\n')}
+Total cart value: ${money(total)}
 
-Stop cart reminders: ${unsubscribeUrl}${supportEmail ? `\n\nNeed help? ${supportEmail}` : ''}`
+Complete your purchase: ${cartUrl}
+Unsubscribe from cart reminders: ${unsubscribe}
 
-  const html = `<!doctype html>
-<html lang="en"><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="x-apple-disable-message-reformatting" />
-<!--[if mso]><style>table { border-collapse:collapse; }.serif { font-family:Georgia,'Times New Roman',serif!important; }</style><![endif]-->
-</head><body style="margin:0;padding:0;background:#f3f2ea;color:#18362a;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
-<span style="display:none!important;font-size:1px;color:#f3f2ea;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">Your AJR selection is still saved and ready when you are.</span>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#f3f2ea;"><tr><td align="center" style="padding:32px 12px 40px;">
-<!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:#fffef9;border:1px solid #d9dfd3;border-radius:18px;overflow:hidden;">
-<tr><td style="padding:0;background:#123c2a;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="padding:24px 32px 20px;border-bottom:4px solid #cae66c;"><table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
-<td valign="middle" style="padding-right:14px;"><img src="https://rajutraders.in/ajr-logo.png" width="58" height="58" alt="AJR Nature — Always Just Royal" style="display:block;width:58px;height:58px;border:0;border-radius:8px;background:#fffef9;object-fit:contain;" /></td>
-<td valign="middle"><p style="margin:0;color:#fffef9;font-family:Georgia,'Times New Roman',serif;font-size:27px;font-weight:700;line-height:1;letter-spacing:-.4px;">Raju Traders</p><p style="margin:8px 0 0;color:#e3ce94;font-size:10px;font-weight:700;letter-spacing:2px;line-height:1.2;text-transform:uppercase;">Always Just Royal</p></td>
-</tr></table></td></tr></table></td></tr>
-<tr><td style="padding:34px 32px 12px;"><p style="margin:0 0 14px;color:#557159;font-size:12px;font-weight:700;letter-spacing:1.3px;line-height:1.2;text-transform:uppercase;">A small note from AJR</p><h1 class="serif" style="margin:0;color:#163628;font-family:Georgia,'Times New Roman',serif;font-size:34px;font-weight:400;line-height:1.15;letter-spacing:-.8px;">Your AJR selection is still saved.</h1><p style="margin:20px 0 0;color:#344b3d;font-size:16px;line-height:1.65;">Hello ${greeting},</p><p style="margin:10px 0 0;color:#51675a;font-size:16px;line-height:1.65;">Your bag is exactly where you left it. Whenever the moment feels right, return and continue with your selection.</p></td></tr>
-<tr><td style="padding:20px 32px 8px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#edf3e8;border:1px solid #d7e2d1;border-radius:10px;"><tr><td style="padding:18px 20px;border-left:4px solid #9abd58;"><p style="margin:0;color:#426347;font-size:11px;font-weight:700;letter-spacing:1.2px;line-height:1.2;text-transform:uppercase;">Saved in your bag</p><p class="serif" style="margin:8px 0 0;color:#183b2a;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.25;">${count} saved ${itemLabel} in your AJR bag</p>${productList}</td></tr></table></td></tr>
-<tr><td style="padding:24px 32px 8px;"><!--[if mso]><table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr><td style="background:#143d2b;padding:14px 23px;"><a href="${safeRecoveryUrl}" style="color:#fffef9;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;text-decoration:none;">Return to my bag&nbsp;&nbsp;→</a></td></tr></table><![endif]--><!--[if !mso]><!--><a href="${safeRecoveryUrl}" style="display:inline-block;background:#143d2b;border:1px solid #143d2b;border-radius:6px;color:#fffef9;font-size:15px;font-weight:700;line-height:1;padding:15px 23px;text-decoration:none;">Return to my bag&nbsp;&nbsp;→</a><!--<![endif]--></td></tr>
-<tr><td style="padding:12px 32px 32px;"><p style="margin:0;color:#6c7c6d;font-size:13px;line-height:1.65;">For your privacy, this is a private recovery link. It expires in 14 days and works only after you sign in to the AJR account that received this email.</p></td></tr>
-<tr><td style="padding:22px 32px 28px;background:#f7f7f0;border-top:1px solid #e0e5da;"><p style="margin:0 0 8px;color:#4e6654;font-size:12px;line-height:1.65;">You are receiving this one-time service reminder because you chose to receive an email if this AJR bag was left behind. It is not a promotional email.</p><p style="margin:0;color:#4e6654;font-size:12px;line-height:1.65;">${supportLine}</p><p style="margin:16px 0 0;"><a href="${safeUnsubscribeUrl}" style="color:#315941;font-size:12px;font-weight:700;line-height:1.5;text-decoration:underline;">Stop cart reminders</a><span style="color:#9aa59a;font-size:12px;">&nbsp;&nbsp;•&nbsp;&nbsp;AJR Nature</span></p></td></tr>
-</table><!--[if mso]></td></tr></table><![endif]-->
-</td></tr></table></body></html>`
+Raju Traders`
+  const products = lines.map((line) => `<tr><td style="padding:14px 0;border-bottom:1px solid #e8e3d3"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="82" valign="top"><img src="${escapeHtml(line.image)}" alt="${escapeHtml(line.productName)}" width="72" style="display:block;width:72px;height:auto;border:0"></td><td valign="top" style="padding-left:12px;color:#183b2c;font-size:15px;line-height:1.6"><strong>${escapeHtml(line.productName)}</strong><br>Quantity: ${line.quantity}<br>${escapeHtml(money(line.price))} each</td><td valign="top" align="right" style="color:#183b2c;font-size:14px;white-space:nowrap">${escapeHtml(money(line.price * line.quantity))}</td></tr></table></td></tr>`).join('')
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f4f2e9;font-family:Arial,Helvetica,sans-serif;color:#173b2e"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f2e9"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff"><tr><td align="center" style="background:#123d2e;padding:30px;border-bottom:4px solid #c9ab63"><img src="${escapeHtml(origin)}/ajr-logo.png" alt="Raju Traders" width="110" style="display:block;width:110px;height:auto"><p style="color:#e2c880;letter-spacing:3px;font-size:12px;margin:12px 0 0">RAJU TRADERS</p></td></tr><tr><td style="padding:32px 24px"><h1 style="font-family:Georgia,serif;font-weight:normal;font-size:30px;margin:0 0 24px">Your Cart Is Waiting for You!</h1><p>Hello ${escapeHtml(name || 'there')},</p><p style="line-height:1.7">Looks like you left some wonderful products in your shopping cart. Complete your purchase whenever you're ready.</p><p style="line-height:1.7">Your selected products are just a click away!</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${products}<tr><td align="right" style="padding:18px 0;font-weight:bold">Total cart value: ${escapeHtml(money(total))}</td></tr></table><a href="${escapeHtml(cartUrl)}" style="display:inline-block;background:#174c37;color:#fff;text-decoration:none;padding:15px 24px;font-size:12px;letter-spacing:1px">COMPLETE YOUR PURCHASE</a></td></tr><tr><td style="background:#123d2e;color:#f8f6ea;text-align:center;padding:24px;font-size:12px;line-height:1.8">Raju Traders<br><a href="${escapeHtml(origin)}" style="color:#e2c880">${escapeHtml(origin)}</a><br><a href="${escapeHtml(unsubscribe)}" style="color:#e2c880">Unsubscribe from cart reminders</a></td></tr></table></td></tr></table></body></html>`
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'AJR <onboarding@resend.dev>',
-      to: [email],
-      subject: 'Your Raju Traders cart is waiting for you',
-      text,
-      html,
-    }),
-  })
-  const result = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new CartRecoveryEmailRejectedError(String(result?.message || result?.name || `Resend request failed (${response.status})`))
+  try {
+    return await sendMarketingEmail({
+      campaign: 'cart', id: cartId, to: email,
+      subject: 'You Left Something Behind at Raju Traders!',
+      text, html, unsubscribe,
+    })
+  } catch (error) {
+    if (error instanceof MarketingEmailRejectedError) throw new CartRecoveryEmailRejectedError(error.message)
+    throw error
   }
-  return { id: String(result?.id || '') }
 }

@@ -17,32 +17,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const admin = supabaseAdmin()
-    const now = new Date().toISOString()
     const { data, error } = await admin.from('abandoned_carts')
-      .update({
-        recovery_email_consent: false,
-        recovery_email_consent_at: null,
-        recovery_token_hash: null,
-        recovery_token_expires_at: null,
-        recovery_redeemed_at: null,
-        updated_at: now,
-      })
+      .select('id,user_id')
       .eq('id', id)
-      .eq('recovery_email_consent', true)
-      .select('id')
       .maybeSingle()
-
     if (error) throw error
-    if (!data) {
-      const { data: existing, error: lookupError } = await admin.from('abandoned_carts')
-        .select('id')
-        .eq('id', id)
-        .maybeSingle()
-      if (lookupError) throw lookupError
-      if (!existing) return NextResponse.json({ message: 'This cart is no longer available.' }, { status: 404 })
-      return NextResponse.json({ ok: true, message: 'Cart reminder consent is already revoked.' })
-    }
-
+    if (!data) return NextResponse.json({ message: 'This cart is no longer available.' }, { status: 404 })
+    if (!data.user_id) return NextResponse.json({ message: 'Anonymous carts have no email preference.' }, { status: 409 })
+    const { error: preferenceError } = await admin.rpc('ajr_unsubscribe_cart_reminders', { p_user_id: data.user_id })
+    if (preferenceError) throw preferenceError
     return NextResponse.json({ ok: true, message: 'Cart reminder consent revoked. Recovery email capability is disabled.' })
   } catch (error) {
     console.error('POST /api/admin/abandoned-carts/[id]/consent failed:', error)

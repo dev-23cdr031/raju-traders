@@ -7,10 +7,7 @@ export async function POST(request: NextRequest) {
   if ('response' in gate) return gate.response
 
   const body = await request.json().catch(() => ({}))
-  if (typeof body.consent !== 'boolean') {
-    return NextResponse.json({ message: 'Choose whether to receive one cart reminder.' }, { status: 400 })
-  }
-  if (body.whatsappMarketingConsent !== undefined && typeof body.whatsappMarketingConsent !== 'boolean') {
+  if (typeof body.whatsappMarketingConsent !== 'boolean') {
     return NextResponse.json({ message: 'Choose whether to receive WhatsApp cart reminders.' }, { status: 400 })
   }
 
@@ -22,7 +19,6 @@ export async function POST(request: NextRequest) {
       admin,
       user: gate.user,
       items: body.items === undefined ? cart?.items || [] : body.items,
-      consent: body.consent,
       whatsappMarketingConsent: body.whatsappMarketingConsent,
       userAgent: request.headers.get('user-agent'),
     })

@@ -19,9 +19,10 @@ function loadTypeScript(file, dependencies) {
 }
 
 const carts = loadTypeScript('lib/abandoned-carts.ts', { 'server-only': {} })
-const product = { product: { id: 1, selectedWeight: '250 g' }, quantity: 1 }
+const marketing = loadTypeScript('lib/marketing-email.ts', { 'server-only': {} })
+const product = { product: { id: 1, name: 'Nuts', image: '/nuts.png', price: 250, selectedWeight: '250 g' }, quantity: 1 }
 
-function createFixture({ order, orderError } = {}) {
+function createFixture({ order, orderError, currentItems = [product], finalEligible = true, optedOut = false } = {}) {
   const now = Date.now()
   const cart = {
     id: 'cart-1',
@@ -41,7 +42,7 @@ function createFixture({ order, orderError } = {}) {
 
   const admin = {
     auth: { admin: { getUserById: async () => ({ data: { user: { email: cart.customer_email, email_confirmed_at: '2025-01-01' } }, error: null }) } },
-    rpc: async () => ({ data: [cart], error: null }),
+    rpc: async (name) => ({ data: name === 'ajr_marketing_campaign_enabled' ? true : [cart], error: null }),
     from(table) {
       let columns = ''
       let update = null
@@ -50,7 +51,10 @@ function createFixture({ order, orderError } = {}) {
         update(value) { update = value; return this },
         eq() { return this }, is() { return this }, not() { return this }, lte() { return this }, gte() { return this },
         maybeSingle: async () => {
+          if (table === 'cart_reminder_preferences') return { data: optedOut ? { opted_in: false, suppressed_at: null } : null, error: null }
+          if (table === 'carts') return { data: { items: currentItems }, error: null }
           if (update) return { data: { id: cart.id }, error: null }
+          if (columns === 'id') return { data: finalEligible ? { id: cart.id } : null, error: null }
           if (columns.startsWith('id,customer_name')) return { data: null, error: null }
           return { data: cart, error: null }
         },
@@ -66,8 +70,10 @@ function createFixture({ order, orderError } = {}) {
   const route = loadTypeScript('app/api/cron/abandoned-carts/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
     '@/lib/abandoned-carts': carts,
+    '@/lib/marketing-email': marketing,
     '@/lib/cart-recovery-email': {
       CartRecoveryEmailRejectedError: class extends Error {},
+      CartRecoveryPreparationError: class extends Error {},
       sendCartRecoveryEmail: async () => { emails += 1; return { id: 'test-message' } },
     },
     '@/lib/notification-automation': {
@@ -80,12 +86,16 @@ function createFixture({ order, orderError } = {}) {
   return { route, events, getEmails: () => emails, isCartClosed: () => cartClosed, now }
 }
 
-process.env.CRON_SECRET = 'test-secret'
+process.env.CRON_SECRET = 'test-secret-with-more-than-thirty-two-characters'
+process.env.PRODUCT_REMINDER_TOKEN_SECRET = 'test-reminder-secret-at-least-thirty-two-characters'
 process.env.RESEND_API_KEY = 'test-key'
+process.env.AJR_EMAIL_EDGE_URL = 'https://example.invalid/functions/v1/shared-email-automation'
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.invalid'
+process.env.AJR_MAIL_SECRET = 'test-mail-secret-at-least-thirty-two-characters'
 process.env.ABANDONED_CART_MINUTES = '30'
 delete process.env.NOTIFICATIONS_EMAIL_ENABLED
 const authorized = () => new Request('https://example.invalid/api/cron/abandoned-carts', {
-  headers: { Authorization: 'Bearer test-secret' },
+  headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
 })
 
 test('completed matching purchases are closed without sending a reminder', async () => {
@@ -111,11 +121,21 @@ test('an unpaid order does not prevent an eligible reminder', async () => {
   const fixture = createFixture({
     order: { id: 'order-1', user_id: 'user-1', status: 'Pending', payment_method: 'Card', payment_status: 'Pending', created_at: new Date(Date.now() - 20 * 60_000).toISOString(), items: [product] },
   })
+
   const response = await fixture.route.GET(authorized())
   const result = await response.json()
   assert.equal(fixture.getEmails(), 1)
   assert.equal(result.thresholdMinutes, 30)
   assert.equal(result.sent, 1)
+})
+
+test('changed or emptied carts and revoked eligibility prevent a claimed reminder', async () => {
+  for (const options of [{ currentItems: [] }, { currentItems: [{ ...product, quantity: 2 }] }, { finalEligible: false }, { optedOut: true }]) {
+    const fixture = createFixture(options)
+    await fixture.route.GET(authorized())
+    assert.equal(fixture.getEmails(), 0)
+    assert.equal(fixture.events.at(-1).status, 'failed')
+  }
 })
 
 function createManualFixture({ order, orderError, consent = true, claim = true, eligible = true, sent = false } = {}) {
@@ -151,6 +171,8 @@ function createManualFixture({ order, orderError, consent = true, claim = true, 
         lte(key, value) { filters.push([key, value]); return this },
         gte() { return this }, or() { return this },
         maybeSingle: async () => {
+          if (table === 'cart_reminder_preferences') return { data: null, error: null }
+          if (table === 'carts') return { data: { items: cart.cart_items }, error: null }
           if (update) {
             updates += 1
             return { data: updates === 1 && !claim ? null : { id: cart.id }, error: null }
@@ -169,8 +191,10 @@ function createManualFixture({ order, orderError, consent = true, claim = true, 
   const route = loadTypeScript('app/api/admin/abandoned-carts/[id]/remind/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
     '@/lib/abandoned-carts': { ...carts, safeRecoveryBaseUrl: () => 'https://example.invalid' },
+    '@/lib/marketing-email': marketing,
     '@/lib/cart-recovery-email': {
       CartRecoveryEmailRejectedError: class extends Error {},
+      CartRecoveryPreparationError: class extends Error {},
       sendCartRecoveryEmail: async (input) => { email = input; return { id: 'test-message' } },
     },
     '@/lib/supabase': { requireAdmin: async () => ({}), supabaseAdmin: () => admin },
@@ -215,32 +239,75 @@ test('recovery email includes branded logo, escaped items, and private links', a
   const previousUrl = process.env.NEXT_PUBLIC_APP_URL
   process.env.NEXT_PUBLIC_APP_URL = 'https://example.invalid'
   let payload
+  let requestHeaders
   global.fetch = async (_url, options) => {
     payload = JSON.parse(options.body)
+    requestHeaders = options.headers
     return Response.json({ id: 'test-message' })
   }
   try {
     const email = loadTypeScript('lib/cart-recovery-email.ts', {
       'server-only': {},
       '@/lib/abandoned-carts': carts,
+      '@/lib/cart-reminder-token': loadTypeScript('lib/cart-reminder-token.ts', {}),
+      '@/lib/marketing-email': marketing,
     })
     await email.sendCartRecoveryEmail({
       email: 'test@example.invalid',
       name: '<Test>',
       itemCount: 2,
-      items: [{ product: { name: '<Nuts>' }, quantity: 2 }],
+      items: [{ product: { name: '<Nuts>', image: '/nuts.png', price: 250 }, quantity: 2 }],
       token: 'test-token',
+      cartId: '550e8400-e29b-41d4-a716-446655440000',
     })
-    assert.match(payload.subject, /Raju Traders/)
-    assert.match(payload.html, /https:\/\/rajutraders\.in\/ajr-logo\.png/)
+    assert.equal(payload.subject, 'You Left Something Behind at Raju Traders!')
+    assert.match(payload.html, /https:\/\/example\.invalid\/ajr-logo\.png/)
     assert.match(payload.html, /&lt;Nuts&gt;/)
     assert.match(payload.html, /&lt;Test&gt;/)
-    assert.match(payload.html, /cart\/recover\?token=test-token/)
-    assert.match(payload.html, /action=unsubscribe/)
+    assert.match(payload.html, /https:\/\/example\.invalid\/\?cart=1/)
+    assert.match(payload.html, /reminder-unsubscribe/)
+    assert.match(payload.html, /https:\/\/example\.invalid\/nuts\.png/)
+    assert.match(payload.html, /₹500/)
     assert.match(payload.text, /<Nuts>/)
+    assert.equal(payload.id, '550e8400-e29b-41d4-a716-446655440000')
+    assert.equal(payload.campaign, 'cart')
+    assert.equal(requestHeaders['x-ajr-mail-secret'], process.env.AJR_MAIL_SECRET)
+    assert.match(payload.unsubscribe, /reminder-unsubscribe/)
+    await assert.rejects(email.sendCartRecoveryEmail({
+      email: 'test@example.invalid', name: 'Test', itemCount: 1,
+      items: [{ product: { name: 'Nuts', price: 250 }, quantity: 1 }],
+      token: 'test-token', cartId: '550e8400-e29b-41d4-a716-446655440000',
+    }), email.CartRecoveryPreparationError)
   } finally {
     global.fetch = originalFetch
     if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL
     else process.env.NEXT_PUBLIC_APP_URL = previousUrl
   }
+})
+
+test('cart unsubscribe link is signed and withdrawal is durable', async () => {
+  const tokens = loadTypeScript('lib/cart-reminder-token.ts', {})
+  const cartId = '550e8400-e29b-41d4-a716-446655440000'
+  const changes = []
+  class NextResponse extends Response {
+    static json(body, options) { return Response.json(body, options) }
+  }
+  const admin = {
+    from() {
+      return { select() { return this }, eq() { return this }, maybeSingle: async () => ({ data: { user_id: 'user-1' }, error: null }) }
+    },
+    rpc: async (name, args) => { changes.push({ name, args }); return { error: null } },
+  }
+  const route = loadTypeScript('app/api/cart/reminder-unsubscribe/route.ts', {
+    'next/server': { NextResponse },
+    '@/lib/cart-reminder-token': tokens,
+    '@/lib/supabase': { supabaseAdmin: () => admin },
+  })
+  const request = (signature) => ({ nextUrl: new URL(`https://example.invalid/?id=${cartId}&signature=${signature}`) })
+  assert.equal((await route.POST(request('bad'))).status, 400)
+  const signed = request(tokens.cartUnsubscribeSignature(cartId))
+  assert.equal((await route.GET(signed)).status, 200)
+  assert.equal(changes.length, 0)
+  assert.equal((await route.POST(signed)).status, 200)
+  assert.deepEqual(changes, [{ name: 'ajr_unsubscribe_cart_reminders', args: { p_user_id: 'user-1' } }])
 })

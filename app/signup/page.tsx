@@ -22,6 +22,7 @@ export default function SignupPage() {
       email: String(formData.get('email') || '').trim().toLowerCase(),
       password: String(formData.get('password') || ''),
       phone: String(formData.get('phone') || '').trim(),
+      productMarketingConsent: formData.get('productMarketingConsent') === 'on',
     }
 
     try {
@@ -118,6 +119,13 @@ export default function SignupPage() {
                 <span>{t('Phone number')}</span>
               <input type="tel" name="phone" placeholder="+91 98765 43210" required suppressHydrationWarning />
             </label>
+
+            <div className="auth-form-row">
+              <label className="remember-row">
+                <input type="checkbox" name="productMarketingConsent" suppressHydrationWarning />
+                <span>{t('Email me reminders about products I view and items left in my cart. Optional; unsubscribe at any time.')}</span>
+              </label>
+            </div>
 
             <div className="auth-form-row">
               <label className="remember-row">

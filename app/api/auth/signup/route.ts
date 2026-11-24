@@ -13,7 +13,7 @@ function describeSignupError(message: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    let body: { email?: string; password?: string; firstName?: string; lastName?: string; phone?: string }
+    let body: { email?: string; password?: string; firstName?: string; lastName?: string; phone?: string; productMarketingConsent?: boolean }
 
     try {
       body = await request.json()
@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
           first_name: firstName,
           last_name: lastName,
           phone,
+          product_marketing_consent: body.productMarketingConsent === true,
+          cart_marketing_consent: body.productMarketingConsent === true,
         },
       }),
     })

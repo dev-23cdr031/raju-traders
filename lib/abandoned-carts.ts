@@ -10,7 +10,12 @@ const safeText = (value: unknown, length: number) =>
 
 const safeImage = (value: unknown) => {
   const image = safeText(value, 500)
-  return image.startsWith('/') && !image.startsWith('//') ? image : ''
+  if (image.startsWith('/') && !image.startsWith('//')) return image
+  try {
+    const url = new URL(image)
+    if (url.protocol === 'https:' && !url.username && !url.password) return url.href
+  } catch {}
+  return ''
 }
 
 export function normalizeTrackedLines(input: unknown): CartLine[] {
@@ -73,8 +78,7 @@ export function matchedOrderItemTotal(cartItems: unknown, orderItems: unknown) {
 }
 
 export function abandonmentMinutes() {
-  const value = Number(process.env.ABANDONED_CART_MINUTES || 30)
-  return Number.isInteger(value) && value >= 10 && value <= 1440 ? value : 30
+  return 30
 }
 
 export function deviceCategory(userAgent: string | null) {
@@ -117,13 +121,23 @@ export async function persistSignedInCartSnapshot({
   userAgent: string | null
 }) {
   const lines = normalizeTrackedLines(items)
-  const { data: current, error: lookupError } = await admin
+  const { data: currentRow, error: lookupError } = await admin
     .from('abandoned_carts')
     .select('*')
     .eq('user_id', user.id)
     .is('closed_at', null)
     .maybeSingle()
   if (lookupError) throw lookupError
+  let current = currentRow
+  if (current?.reminder_sent_at && lines.length &&
+    JSON.stringify(normalizeTrackedLines(current.cart_items)) !== JSON.stringify(lines)) {
+    const { data: closed, error } = await admin.from('abandoned_carts')
+      .update({ closed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', current.id).eq('reminder_sent_at', current.reminder_sent_at).is('closed_at', null)
+      .select('id').maybeSingle()
+    if (error || !closed) throw error || new Error('Cart activity changed while recording a new recovery cycle.')
+    current = null
+  }
 
   let inherited = current
   if (!inherited) {
@@ -151,12 +165,14 @@ export async function persistSignedInCartSnapshot({
   // overwriting it with stale data.
   const persistExplicitConsent = async (cart: any) => {
     const knownConsent = Boolean(cart?.recovery_email_consent)
-    if (!hasExplicitConsent || !cart?.id || requestedConsent === knownConsent) return knownConsent
+    if (!cart?.id || ((!hasExplicitConsent || requestedConsent === knownConsent) && !hasExplicitWhatsappConsent)) return knownConsent
 
     const preferenceUpdate: Record<string, unknown> = {
-      recovery_email_consent: requestedConsent,
-      recovery_email_consent_at: requestedConsent ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
+    }
+    if (hasExplicitConsent) {
+      preferenceUpdate.recovery_email_consent = requestedConsent
+      preferenceUpdate.recovery_email_consent_at = requestedConsent ? new Date().toISOString() : null
     }
     if (hasExplicitWhatsappConsent) {
       preferenceUpdate.whatsapp_marketing_consent = whatsappMarketingConsent === true
@@ -164,7 +180,7 @@ export async function persistSignedInCartSnapshot({
     }
     // Opting out revokes any unused link. Do not reset reminder fields when
     // opting back in: an old delivery must never become eligible again.
-    if (!requestedConsent) {
+    if (hasExplicitConsent && !requestedConsent) {
       preferenceUpdate.recovery_token_hash = null
       preferenceUpdate.recovery_token_expires_at = null
       preferenceUpdate.recovery_redeemed_at = null
@@ -234,7 +250,7 @@ export async function persistSignedInCartSnapshot({
     cart_items: lines,
     cart_total: trackedCartTotal(lines),
     item_count: lines.reduce((sum, line) => sum + line.quantity, 0),
-    customer_name: safeText(metadata.full_name || metadata.name, 120),
+    customer_name: safeText(metadata.full_name || metadata.name || metadata.first_name, 120),
     customer_email: userEmail,
     customer_phone: safeText(metadata.phone, 40),
     device_category: deviceCategory(userAgent),

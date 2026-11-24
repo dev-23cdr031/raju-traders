@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, matchedOrderItemTotal, orderOverlapsCart, trackedCartTotal } from '@/lib/abandoned-carts'
+import { abandonmentMinutes, isConfirmedCartOrder, matchedOrderItemTotal, orderOverlapsCart, trackedCartTotal } from '@/lib/abandoned-carts'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
+import { marketingEmailConfigured } from '@/lib/marketing-email'
 
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin(request)
@@ -19,18 +20,31 @@ export async function GET(request: NextRequest) {
   try {
     const admin = supabaseAdmin()
     const { data: rows, error } = await admin.from('abandoned_carts')
-      .select('id,user_id,cart_items,cart_total,item_count,customer_name,customer_email,customer_phone,device_category,recovery_email_consent,recovery_email_consent_at,cart_started_at,last_activity_at,closed_at,order_id,reminder_attempt_at,reminder_sent_at,reminder_result,reminder_error,created_at')
+      .select('id,user_id,cart_items,cart_total,item_count,customer_name,customer_email,customer_phone,device_category,recovery_email_consent,recovery_email_consent_at,cart_started_at,last_activity_at,closed_at,order_id,reminder_attempt_at,reminder_sent_at,reminder_result,reminder_error,reminder_provider_id,created_at')
       .gt('item_count', 0)
       .order('last_activity_at', { ascending: false })
       .limit(5000)
     if (error) throw error
 
     const cartRows = rows || []
+    const providerIds = Array.from(new Set(cartRows.map((row: any) => row.reminder_provider_id).filter(Boolean)))
+    const receiptStatuses = new Map<string, Set<string>>()
+    for (let offset = 0; offset < providerIds.length; offset += 400) {
+      const { data: receipts, error: receiptError } = await admin.from('notification_receipts')
+        .select('provider_message_id,status').eq('provider', 'resend')
+        .in('provider_message_id', providerIds.slice(offset, offset + 400))
+      if (receiptError) throw receiptError
+      for (const receipt of receipts || []) {
+        const statuses = receiptStatuses.get(receipt.provider_message_id) || new Set<string>()
+        statuses.add(receipt.status)
+        receiptStatuses.set(receipt.provider_message_id, statuses)
+      }
+    }
     const orderIds = Array.from(new Set(cartRows.map((row: any) => row.order_id).filter(Boolean)))
     const ordersById = new Map<string, any>()
     for (let offset = 0; offset < orderIds.length; offset += 400) {
       const { data: orders, error: orderError } = await admin.from('orders')
-        .select('id,order_number,status,total,created_at,items')
+        .select('id,order_number,status,payment_method,payment_status,total,created_at,items')
         .in('id', orderIds.slice(offset, offset + 400))
       if (orderError) throw orderError
       for (const order of orders || []) ordersById.set(order.id, order)
@@ -38,10 +52,13 @@ export async function GET(request: NextRequest) {
 
     const carts = cartRows.map((row: any) => {
       const order = row.order_id ? ordersById.get(row.order_id) : null
-      const recovered = Boolean(order && String(order.status || '').toLowerCase() !== 'cancelled'
+      const recovered = Boolean(order && isConfirmedCartOrder(order)
         && orderOverlapsCart(row.cart_items, order.items))
       const lastActivity = new Date(row.last_activity_at).getTime()
-      const status = recovered ? 'Recovered' : (lastActivity + thresholdMs > now ? 'Active' : 'Abandoned')
+      const receipts = receiptStatuses.get(row.reminder_provider_id) || new Set<string>()
+      const deliveryStatus = ['email.complained', 'email.bounced', 'email.suppressed', 'email.failed', 'email.delivered']
+        .find((status) => receipts.has(status)) || null
+      const status = recovered ? 'Recovered' : row.closed_at ? 'Closed' : (lastActivity + thresholdMs > now ? 'Active' : 'Abandoned')
       return {
         id: row.id,
         userId: row.user_id,
@@ -64,6 +81,8 @@ export async function GET(request: NextRequest) {
         reminderSentAt: row.reminder_sent_at,
         reminderResult: row.reminder_result,
         reminderError: row.reminder_error,
+        deliveryStatus,
+        scheduledAt: new Date(lastActivity + thresholdMs).toISOString(),
         order: order ? {
           id: order.id,
           number: order.order_number,
@@ -104,10 +123,12 @@ export async function GET(request: NextRequest) {
         periodCartCount: inPeriod.length,
         periodAbandonedCount: abandonmentCount,
         periodRecoveredCount: conversionCount,
+        recoveryConversionRate: conversionCount + abandonmentCount
+          ? Math.round((conversionCount / (conversionCount + abandonmentCount)) * 1000) / 10 : 0,
         thresholdMinutes: abandonmentMinutes(),
         trackedRecords: cartRows.length,
         truncated: cartRows.length === 5000,
-        emailConfigured: Boolean(process.env.RESEND_API_KEY) && process.env.NOTIFICATIONS_EMAIL_ENABLED !== 'false',
+        emailConfigured: marketingEmailConfigured() && process.env.NOTIFICATIONS_EMAIL_ENABLED !== 'false',
       },
     })
   } catch (error: any) {

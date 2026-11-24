@@ -1260,6 +1260,8 @@ export default function Page() {
   // Guards: nothing is written back until the first read has finished, otherwise
   // the empty first render would overwrite a stored cart / wishlist.
   const [sessionLoaded, setSessionLoaded] = useState(false)
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
+  const productLinkOpened = useRef(false)
   const [dataLoaded, setDataLoaded] = useState(false)
   const [cartSyncError, setCartSyncError] = useState(false)
   const [logoutError, setLogoutError] = useState(false)
@@ -1512,12 +1514,49 @@ export default function Page() {
           .map((r: any) => productFromRow(r))
         setCatalog([...merged, ...extra])
         setStockMap(map)
-      } catch {}
+      } catch {} finally {
+        setCatalogLoaded(true)
+      }
     }
     load()
   }, [])
 
   const products = catalog
+  useEffect(() => {
+    let returnToCart = false
+    try {
+      returnToCart = window.sessionStorage.getItem('ajr-return-to-cart') === '1'
+      window.sessionStorage.removeItem('ajr-return-to-cart')
+    } catch {}
+    if (returnToCart || new URLSearchParams(window.location.search).get('cart') === '1') setView('cart')
+  }, [])
+  useEffect(() => {
+    if (!catalogLoaded || productLinkOpened.current) return
+    productLinkOpened.current = true
+    const raw = new URLSearchParams(window.location.search).get('product')
+    if (!raw || !/^[1-9]\d*$/.test(raw)) return
+    const product = catalog.find((item) => item.id === Number(raw))
+    if (product) {
+      setSelected(product)
+      setView('detail')
+    }
+  }, [catalogLoaded, catalog])
+
+  const recordProductActivity = useCallback((productId: number) => {
+    if (!session?.token) return
+    void fetch('/api/product-reminders/visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+      body: JSON.stringify({ productId }),
+      keepalive: true,
+    }).then((response) => {
+      if (!response.ok) console.warn('Product reminder activity could not be recorded.', response.status)
+    }).catch((error) => console.warn('Product reminder activity could not be recorded.', error))
+  }, [session?.token])
+
+  useEffect(() => {
+    if (view === 'detail') recordProductActivity(selected.id)
+  }, [view, selected.id, recordProductActivity])
   const isOutOfStock = (p: Product) => {
     const s = stockMap[p.id]
     if (!s) return false
@@ -1840,6 +1879,7 @@ export default function Page() {
           wished={wishlist.some((p) => p.id === selected.id)}
           go={go}
           outOfStock={isOutOfStock(selected)}
+          onReminderActivity={recordProductActivity}
         />
       )}
       {view === 'contact' && <Contact sent={sent} setSent={setSent} />}
@@ -3244,7 +3284,7 @@ function Shop({
   )
 }
 
-function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished, go, outOfStock }: any) {
+function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished, go, outOfStock, onReminderActivity }: any) {
   const { language, t } = useLanguage()
   const [weight, setWeight] = useState<Weight>(product.selectedWeight || defaultWeightFor(product))
   const [variety, setVariety] = useState<string>(product.selectedVariety && purchasableVarieties(product).some((option) => option.name === product.selectedVariety) ? product.selectedVariety : defaultVarietyName(product))
@@ -3307,6 +3347,7 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
               <select value={variety} onChange={(event) => {
                 const value = event.target.value
                 setVariety(value)
+                onReminderActivity(product.id)
                 trackAnalytics('product_selection', 'product-detail', undefined, product.id, { kind: 'variety', value })
               }} aria-label={`${t('Variety')}: ${t(product.name)}`}>
                 {product.varieties.map((option: Variety) => {
@@ -3321,6 +3362,7 @@ function Detail({ product, quantity, setQuantity, addToCart, toggleWish, wished,
             <select value={weight} onChange={(event) => {
               const value = event.target.value as Weight
               setWeight(value)
+              onReminderActivity(product.id)
               trackAnalytics('product_selection', 'product-detail', undefined, product.id, { kind: 'weight', value })
             }} aria-label={`${t('Pack size')}: ${t(product.name)}`}>
               {weightsForProduct(product).map((option) => <option key={option} value={option}>{option}</option>)}
@@ -3819,7 +3861,7 @@ function Cart({
     setCouponMessage('')
   }
 
-  const updateReminderConsent = async (consent: boolean, whatsappMarketingConsent?: boolean) => {
+  const updateWhatsappConsent = async (whatsappMarketingConsent: boolean) => {
     if (!session || consentSaving) return
     setConsentSaving(true)
     setConsentError('')
@@ -3827,11 +3869,12 @@ function Cart({
       const response = await fetch('/api/cart/recovery-consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
-        body: JSON.stringify({ consent, items: cart, whatsappMarketingConsent }),
+        body: JSON.stringify({ items: cart, whatsappMarketingConsent }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data?.message || 'Could not save your reminder preference.')
       onRecoveryEmailConsentChange(data.consent === true)
+      onWhatsappCartMarketingConsentChange(whatsappMarketingConsent)
     } catch (consentSaveError: any) {
       setConsentError(consentSaveError?.message || 'Could not save your reminder preference.')
     } finally {
@@ -4075,11 +4118,7 @@ function Cart({
             {session ? (
               <div className="cart-recovery-consent">
                 <label>
-                  <input type="checkbox" checked={recoveryEmailConsent} disabled={consentSaving} onChange={(event) => void updateReminderConsent(event.target.checked, whatsappCartMarketingConsent)} />
-                  <span><strong>One cart reminder by email</strong><small>Optional. Only if this bag is left behind, and only to your verified account email. No promotions.</small></span>
-                </label>
-                <label style={{ marginTop: 10 }}>
-                  <input type="checkbox" checked={whatsappCartMarketingConsent} disabled={consentSaving} onChange={(event) => void updateReminderConsent(recoveryEmailConsent, event.target.checked)} />
+                  <input type="checkbox" checked={whatsappCartMarketingConsent} disabled={consentSaving} onChange={(event) => void updateWhatsappConsent(event.target.checked)} />
                   <span><strong>WhatsApp cart reminder</strong><small>Optional marketing message. Sent only if you also leave this bag behind and have enabled the email recovery reminder.</small></span>
                 </label>
                 {consentSaving && <small className="cart-consent-feedback">Saving your preference…</small>}
@@ -4107,6 +4146,9 @@ function Cart({
                   <button
                     className="button button-dark full"
                     onClick={() => {
+                      if (new URLSearchParams(window.location.search).get('cart') === '1') {
+                        try { window.sessionStorage.setItem('ajr-return-to-cart', '1') } catch {}
+                      }
                       window.location.href = '/login'
                     }}
                   >

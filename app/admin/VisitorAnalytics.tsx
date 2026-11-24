@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import ProductReminderAnalytics from './ProductReminderAnalytics'
+import AbandonedCarts from './AbandonedCarts'
 import {
   Activity,
   AlertCircle,
@@ -616,6 +618,9 @@ export default function VisitorAnalytics() {
           )}
         </section>
       </div>
+
+      <ProductReminderAnalytics from={range.from} to={range.to} />
+      <AbandonedCarts showAutomation={false} />
 
       {selectedVisitor && (
         <div className="visitor-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedVisitor(null) }}>

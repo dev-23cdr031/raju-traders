@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import EmailAutomationStatus from './EmailAutomationStatus'
 import {
   AlertCircle,
   ArrowUpDown,
@@ -15,7 +16,7 @@ import {
   X,
 } from 'lucide-react'
 
-type CartStatus = 'Active' | 'Abandoned' | 'Recovered'
+type CartStatus = 'Active' | 'Abandoned' | 'Recovered' | 'Closed'
 type CartRow = {
   id: string
   userId: string | null
@@ -38,6 +39,8 @@ type CartRow = {
   reminderSentAt: string | null
   reminderResult: string | null
   reminderError: string | null
+  deliveryStatus: string | null
+  scheduledAt: string
   order: null | { id: string; number: string; status: string; total: number; createdAt: string; matchedItems: boolean }
 }
 type Metrics = {
@@ -50,6 +53,7 @@ type Metrics = {
   periodCartCount: number
   periodAbandonedCount: number
   periodRecoveredCount: number
+  recoveryConversionRate: number
   thresholdMinutes: number
   trackedRecords: number
   truncated: boolean
@@ -62,7 +66,7 @@ const dateTime = (value?: string | null) => value
   : 'Not recorded'
 const dayStamp = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
-export default function AbandonedCarts() {
+export default function AbandonedCarts({ showAutomation = true }: { showAutomation?: boolean }) {
   const [rows, setRows] = useState<CartRow[]>([])
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -274,11 +278,12 @@ export default function AbandonedCarts() {
 
   return (
     <section className="abandoned-carts-page" aria-labelledby="abandoned-title">
+      {showAutomation && <EmailAutomationStatus />}
       <header className="admin-topbar abandoned-topbar">
         <div>
           <span className="admin-kicker"><span className="admin-kicker-line" /> A quieter kind of follow-through</span>
           <h1 id="abandoned-title">Abandoned <em>Carts</em></h1>
-          <p className="admin-page-description">See saved bags and manually email a reminder when a customer has opted in.</p>
+          <p className="admin-page-description">Monitor automatic reminders for eligible saved bags.</p>
         </div>
         <button className="button button-light" onClick={() => void load()} disabled={loading} type="button">
           <RefreshCw size={15} /> {loading ? 'Refreshing…' : 'Refresh'}
@@ -304,6 +309,7 @@ export default function AbandonedCarts() {
         <article className="abandoned-metric"><span>Abandonment rate</span><strong>{metrics ? `${metrics.abandonmentRate}%` : '—'}</strong><small>{metrics ? `${metrics.periodAbandonedCount} abandoned / ${metrics.periodCartCount} carts in period` : 'Selected activity period'}</small></article>
         <article className="abandoned-metric"><span>Recovered carts</span><strong>{metrics ? metrics.recoveredCount.toLocaleString('en-IN') : '—'}</strong><small>Persisted, matched non-cancelled orders</small></article>
         <article className="abandoned-metric metric-recovered"><span>Recovered revenue</span><strong>{metrics ? money(metrics.recoveredRevenue) : '—'}</strong><small>Matched cart items only · excludes shipping</small></article>
+        <article className="abandoned-metric"><span>Recovery conversion</span><strong>{metrics ? `${metrics.recoveryConversionRate}%` : '—'}</strong><small>Recovered ÷ recovered and abandoned in selected period</small></article>
       </section>
 
       <section className="admin-panel abandoned-panel">
@@ -315,7 +321,7 @@ export default function AbandonedCarts() {
           <label className="abandoned-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer or product" aria-label="Search customer or product" /></label>
           <label><span>From</span><input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} /></label>
           <label><span>To</span><input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} /></label>
-          <label><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>All</option><option>Active</option><option>Abandoned</option><option>Recovered</option></select></label>
+          <label><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>All</option><option>Active</option><option>Abandoned</option><option>Recovered</option><option>Closed</option></select></label>
           <label><span>Device</span><select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)}><option>All</option><option>Mobile</option><option>Tablet</option><option>Desktop</option><option>Not recorded</option></select></label>
           <label><span>Min ₹</span><input type="number" min="0" value={minValue} onChange={(event) => setMinValue(event.target.value)} placeholder="—" /></label>
           <label><span>Max ₹</span><input type="number" min="0" value={maxValue} onChange={(event) => setMaxValue(event.target.value)} placeholder="—" /></label>
@@ -329,7 +335,7 @@ export default function AbandonedCarts() {
 
         {filtered.length > 0 && <div className="abandoned-table-scroll" role="region" aria-label="Abandoned cart results" tabIndex={0}>
           <table className="abandoned-table">
-            <thead><tr><th>Customer</th><th>Products</th><th>Items</th><th>Cart value</th><th>Last activity</th><th>Device</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead>
+            <thead><tr><th>Customer</th><th>Products</th><th>Items</th><th>Cart value</th><th>Last activity</th><th>Scheduled</th><th>Email / delivery</th><th>Device</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead>
             <tbody>{pageRows.map((row) => (
               <tr key={row.id} onClick={() => openDrawer(row)} tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDrawer(row) } }}>
                 <td><strong className="abandoned-customer">{row.guest ? 'Anonymous guest' : row.customerName || 'AJR customer'}</strong><span className="abandoned-customer-contact">{row.guest ? 'No profile recorded' : row.customerEmail || 'Email not available'}</span></td>
@@ -337,6 +343,8 @@ export default function AbandonedCarts() {
                 <td>{row.itemCount}</td>
                 <td><strong>{money(row.total)}</strong></td>
                 <td><time dateTime={row.lastActivityAt}>{dateTime(row.lastActivityAt)}</time></td>
+                <td>{row.consent && !row.closedAt && !row.orderId && !row.reminderSentAt ? dateTime(row.scheduledAt) : '—'}</td>
+                <td>{row.reminderResult || 'Not sent'}{row.deliveryStatus && <small>{row.deliveryStatus}</small>}{row.reminderError && <small>{row.reminderError}</small>}</td>
                 <td><span className="abandoned-device">{row.device || 'Not recorded'}</span></td>
                 <td>{renderStatus(row.status)}</td>
                 <td><button className="abandoned-open-button" type="button" onClick={(event) => { event.stopPropagation(); openDrawer(row) }}>Details / email <span aria-hidden="true">→</span></button></td>
@@ -345,7 +353,7 @@ export default function AbandonedCarts() {
           </table>
         </div>}
         {filtered.length > 0 && <div className="abandoned-pagination"><span>Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of {filtered.length}</span><div><button className="button button-light small-button" type="button" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0}>Previous</button><span>Page {page + 1} of {pageCount}</span><button className="button button-light small-button" type="button" onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))} disabled={page >= pageCount - 1}>Next</button></div></div>}
-        <p className="abandoned-rate-definition"><Leaf size={14} /> Rate = abandoned carts ÷ all non-empty cart snapshots last active in the selected dates. Recovered means an overlapping order was successfully persisted and is not cancelled.</p>
+        <p className="abandoned-rate-definition"><Leaf size={14} /> Recovery is based on overlapping confirmed orders, not necessarily email attribution. Revenue uses recorded item prices before discounts; values may be customer-supplied.</p>
         {!metrics?.emailConfigured && <p className="abandoned-email-note"><Mail size={14} /> Recovery email is unavailable until Resend is configured and notifications are enabled.</p>}
       </section>
 
@@ -365,7 +373,7 @@ export default function AbandonedCarts() {
               </article>)}
               <div className="abandoned-detail-total"><span>{selected.itemCount} items · cart value</span><strong>{money(selected.total)}</strong></div>
             </section>
-            <section className="abandoned-detail-section"><h3>Activity timeline</h3><p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p><p><span>Last activity</span><time>{dateTime(selected.lastActivityAt)}</time></p><p><span>Recovery consent</span><time>{selected.consent ? `Opted in · ${dateTime(selected.consentAt)}` : 'Not given'}</time></p></section>
+            <section className="abandoned-detail-section"><h3>Activity timeline</h3><p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p><p><span>Last activity</span><time>{dateTime(selected.lastActivityAt)}</time></p><p><span>Eligible after</span><time>{dateTime(selected.scheduledAt)}</time></p><p><span>Delivery</span><time>{selected.deliveryStatus || 'Not confirmed'}</time></p><p><span>Recovery consent</span><time>{selected.consent ? `Opted in · ${dateTime(selected.consentAt)}` : 'Not given'}</time></p></section>
             <section className="abandoned-detail-section"><h3>Send a recovery email</h3>
               {selected.reminderSentAt ? <p className="abandoned-success"><CheckCircle size={15} /> Sent {dateTime(selected.reminderSentAt)}{selected.reminderResult ? ` · ${selected.reminderResult}` : ''}</p>
                 : reminderReason(selected) ? <p className="abandoned-eligibility"><ShieldCheck size={15} /> {reminderReason(selected)}</p>
