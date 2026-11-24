@@ -743,6 +743,39 @@
   background: #fbfaf5;
 }
 
+.ajr-assistant-chat-form {
+  display: flex;
+  min-width: 0;
+  gap: 7px;
+}
+
+.ajr-assistant-chat-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #cbd6c7;
+  border-radius: 8px;
+  color: #24352a;
+  background: #fffefa;
+  font-size: 16px;
+}
+
+.ajr-assistant-chat-form button {
+  padding: 8px 13px;
+  border: 1px solid #173b28;
+  border-radius: 8px;
+  color: white;
+  background: #173b28;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ajr-assistant-chat-form button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
 .ajr-assistant-budget {
   display: flex;
   align-items: center;

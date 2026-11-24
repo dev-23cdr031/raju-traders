@@ -8,7 +8,61 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'lib', 'shopping-assis
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 const loaded = { exports: {} }
 new Function('module', 'exports', compiled)(loaded, loaded.exports)
-const { assistantSettings, assistantRouteAllowed, assistantRequestHeaders, validateAssistantQuote, requestAssistantCartAdd, createAssistantRequestScope, isCurrentOrderRequest } = loaded.exports
+const { assistantSettings, assistantRouteAllowed, assistantRequestHeaders, validateAssistantQuote, requestAssistantCartAdd, createAssistantRequestScope, isCurrentOrderRequest, isPersistableAssistantMessage } = loaded.exports
+const chatSource = fs.readFileSync(path.join(__dirname, '..', 'lib', 'shopping-assistant-chat.ts'), 'utf8')
+const chatCompiled = ts.transpileModule(chatSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
+const chatLoaded = { exports: {} }
+new Function('module', 'exports', chatCompiled)(chatLoaded, chatLoaded.exports)
+const { classifyLocalChat } = chatLoaded.exports
+
+const publicFaqs = [{ id: 1, question: 'What are your delivery charges?', answer: 'See the delivery page for current charges.' }]
+const publicCatalog = [
+  { id: 1, name: 'California Almonds', type: 'Nuts' },
+  { id: 2, name: 'Roasted Cashews', type: 'Nuts' },
+]
+
+test('local chat greets in English, Tamil and Tanglish without inventing facts', () => {
+  for (const text of ['hello!', 'வணக்கம்', 'vanakkam']) {
+    assert.deepEqual(classifyLocalChat(text, [], []), { kind: 'greeting' })
+  }
+  assert.deepEqual(classifyLocalChat('நன்றி', [], []), { kind: 'thanks' })
+})
+
+test('local chat answers only a sufficiently matching published FAQ', () => {
+  assert.deepEqual(classifyLocalChat('How much is delivery?', publicFaqs, []), { kind: 'faq', answer: publicFaqs[0].answer })
+  assert.deepEqual(classifyLocalChat('டெலிவரி செலவு என்ன?', publicFaqs, []), { kind: 'faq', answer: publicFaqs[0].answer })
+  assert.deepEqual(classifyLocalChat('What are your delivery charges?', [], []), { kind: 'unknown' })
+  assert.deepEqual(classifyLocalChat('How much is international delivery?', publicFaqs, []), { kind: 'unknown' })
+  assert.deepEqual(classifyLocalChat('How much is my delivery?', publicFaqs, []), { kind: 'unknown' })
+  assert.deepEqual(classifyLocalChat('How much is delivery?', [...publicFaqs, { ...publicFaqs[0], id: 2 }], []), { kind: 'unknown' })
+})
+
+test('local product questions only return identifiers from the live public catalogue', () => {
+  for (const text of ['show almonds', 'பாதாம்', 'badam venum']) {
+    assert.deepEqual(classifyLocalChat(text, [], publicCatalog), { kind: 'products', productIds: [1] })
+  }
+  assert.deepEqual(classifyLocalChat('show almonds', [], []), { kind: 'unknown' })
+  assert.deepEqual(classifyLocalChat('recommend products', [], publicCatalog), { kind: 'intent', intent: 'recommend' })
+  assert.deepEqual(classifyLocalChat('show me offers', [], publicCatalog), { kind: 'intent', intent: 'offers' })
+})
+
+test('unknown, policy, health and private questions never fabricate answers or trigger product actions', () => {
+  for (const text of ['What is the refund policy?', 'Do almonds cure diabetes?', 'order 12345', 'Where is my order 12345?', 'What is your telephone number?']) {
+    assert.deepEqual(classifyLocalChat(text, [], publicCatalog), { kind: 'unknown' })
+  }
+  assert.deepEqual(classifyLocalChat('my orders', [], publicCatalog), { kind: 'orders' })
+  assert.deepEqual(classifyLocalChat('contact us', [], publicCatalog), { kind: 'support' })
+  assert.deepEqual(classifyLocalChat('How can I find products?', [], publicCatalog), { kind: 'catalog' })
+  assert.deepEqual(classifyLocalChat('How do I compare products?', [], publicCatalog), { kind: 'compare' })
+})
+
+test('typed messages, their replies and pending messages are excluded from history', () => {
+  const message = { id: '1', role: 'customer', text: 'private order 123' }
+  assert.equal(isPersistableAssistantMessage({ ...message, transient: true }), false)
+  assert.equal(isPersistableAssistantMessage({ ...message, role: 'assistant', transient: true }), false)
+  assert.equal(isPersistableAssistantMessage({ ...message, pending: true }), false)
+  assert.equal(isPersistableAssistantMessage({ ...message, text: 'Gift guide' }), true)
+})
 
 test('settings fail closed and retain the configured welcome as text', () => {
   assert.deepEqual(assistantSettings(null), { enabled: false, welcome: '' })

@@ -7,6 +7,13 @@ export type AssistantCartQuote = {
 
 export type AssistantCartResult = { ok: true } | { ok: false; message: string }
 
+export function isPersistableAssistantMessage(message: unknown): boolean {
+  if (!message || typeof message !== 'object') return false
+  const value = message as Record<string, unknown>
+  return typeof value.id === 'string' && (value.role === 'assistant' || value.role === 'customer') &&
+    typeof value.text === 'string' && !value.pending && !value.transient
+}
+
 export function assistantSettings(data: unknown): { enabled: boolean; welcome: string } {
   if (!data || typeof data !== 'object') return { enabled: false, welcome: '' }
   const settings = data as Record<string, unknown>

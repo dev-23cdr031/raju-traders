@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { ArrowRight, Check, ChevronDown, Gift, History, MessageCircle, Minus, Package, Plus, Search, ShieldCheck, ShoppingBag, Sparkles, X } from 'lucide-react'
-import { assistantRequestHeaders, assistantRouteAllowed, assistantSettings, createAssistantRequestScope, isCurrentOrderRequest, requestAssistantCartAdd } from '@/lib/shopping-assistant-client'
+import { assistantRequestHeaders, assistantRouteAllowed, assistantSettings, createAssistantRequestScope, isCurrentOrderRequest, isPersistableAssistantMessage, requestAssistantCartAdd } from '@/lib/shopping-assistant-client'
+import { classifyLocalChat } from '@/lib/shopping-assistant-chat'
 import { supabase } from '@/lib/supabase'
 
 type Intent = 'recommend' | 'gift' | 'offers' | 'compare'
@@ -37,6 +38,7 @@ type Message = {
   offers?: PublicOffer[]
   source?: 'ai' | 'fallback'
   pending?: boolean
+  transient?: boolean
 }
 type PublicOffer = {
   id: string
@@ -67,9 +69,7 @@ const readAccessToken = () => {
   try { return window.localStorage.getItem('ajr-access-token') || '' } catch { return '' }
 }
 const historyMessages = (items: unknown): Message[] => Array.isArray(items)
-  ? items.filter((message: any) => message && typeof message === 'object' &&
-    typeof message.id === 'string' && (message.role === 'assistant' || message.role === 'customer') &&
-    typeof message.text === 'string' && !message.pending)
+  ? items.filter(isPersistableAssistantMessage)
     .map((message: any) => ({
       id: message.id,
       role: message.role,
@@ -109,7 +109,7 @@ const words: Record<Language, Record<string, string>> = {
   en: {
     title: 'The AJR guide', subtitle: 'A little help for a thoughtful choice.',
     greeting: 'Hello! I can help you explore AJR’s public catalogue.',
-    privacy: 'Private by design', disclosure: 'Your request sends only a fixed action, language, optional budget, selected product IDs and a random conversation ID. Gemini uses public catalogue names and categories only. Typed search stays on this device; no free-text, account details or order information are sent to Gemini.',
+    privacy: 'Private by design', disclosure: 'Typed messages and search stay on this device and typed messages are not saved to history. Some guides send only a fixed action, language, optional budget, selected product IDs and a random conversation ID to our server. Gemini uses public catalogue names and categories only; no free-text or order details are sent.',
     recommend: 'Find my match', gift: 'Gift guide', offers: 'Explore offers', compare: 'Compare products',
     budget: 'Budget (₹)', search: 'Search the catalogue on this device', searchPlaceholder: 'Try almonds, dates, spices…',
     results: 'Catalogue matches', noResults: 'No matching products found in the public catalogue.',
@@ -128,11 +128,21 @@ const words: Record<Language, Record<string, string>> = {
     language: 'Response language', unread: 'New assistant reply', sourceAI: 'AI-assisted', sourceFallback: 'Catalogue guide',
     selectPrompt: 'Please choose at least two products from local search first.', orderDate: 'Placed',
     signIn: 'Sign in', emptySearch: 'Search is local to this device; it is not sent to Gemini.',
+    chatLabel: 'Ask a question locally', chatPlaceholder: 'Ask about shopping or the site…', send: 'Send',
+    chatNote: 'Messages stay on this device and are not saved in history.',
+    chatGreeting: 'Hello! I can help with published FAQs and products. What would you like to know?',
+    chatThanks: 'You’re welcome!',
+    chatProducts: 'Here are matching products from the public catalogue. Open a product for current details.',
+    chatOrders: 'Use My orders below to view your account orders after signing in.',
+    chatSupport: 'Use Talk to AJR below to contact the team.',
+    chatCatalog: 'Use the catalogue search below or choose Find my match to explore products.',
+    chatCompare: 'Search the catalogue, select two products, then choose Compare selected.',
+    chatUnknown: 'I can only match some questions locally, so I don’t know the answer. Please use Talk to AJR below for help.',
   },
   ta: {
     title: 'AJR வழிகாட்டி', subtitle: 'சரியான தேர்வுக்கு சிறிய உதவி.',
     greeting: 'வணக்கம்! AJR தயாரிப்பு பட்டியலை ஆராய உதவுகிறேன்.',
-    privacy: 'தனியுரிமை முதன்மை', disclosure: 'நிலையான செயல், மொழி, விருப்ப பட்ஜெட், தயாரிப்பு எண்கள் மற்றும் சீரற்ற உரையாடல் எண் மட்டும் அனுப்பப்படும். Gemini பொது பட்டியல் பெயர் மற்றும் வகைகளை மட்டும் பயன்படுத்தும். தேடல் இந்த சாதனத்திலேயே இருக்கும்; செய்தி, கணக்கு அல்லது ஆர்டர் விவரங்கள் Gemini-க்கு அனுப்பப்படாது.',
+    privacy: 'தனியுரிமை முதன்மை', disclosure: 'செய்திகளும் தேடலும் இந்தச் சாதனத்தில் மட்டும் இருக்கும்; தட்டச்சு செய்த செய்திகள் வரலாற்றில் சேமிக்கப்படாது. சில வழிகாட்டிகள் நிலையான செயல், மொழி, விருப்ப பட்ஜெட், தயாரிப்பு எண்கள் மற்றும் சீரற்ற உரையாடல் எண்ணை மட்டும் நம் சேவையகத்திற்கு அனுப்பும். செய்திகள் அல்லது ஆர்டர் விவரங்கள் Gemini-க்கு அனுப்பப்படாது.',
     recommend: 'எனக்கான தேர்வு', gift: 'பரிசு வழிகாட்டி', offers: 'சலுகைகள்', compare: 'தயாரிப்புகளை ஒப்பிடு',
     budget: 'பட்ஜெட் (₹)', search: 'இந்த சாதனத்தில் பட்டியலைத் தேடு', searchPlaceholder: 'பாதாம், பேரீச்சம்…',
     results: 'பட்டியல் முடிவுகள்', noResults: 'பொது பட்டியலில் பொருத்தமான தயாரிப்பு இல்லை.',
@@ -151,11 +161,21 @@ const words: Record<Language, Record<string, string>> = {
     language: 'பதில் மொழி', unread: 'புதிய உதவியாளர் பதில்', sourceAI: 'AI உதவி', sourceFallback: 'பட்டியல் வழிகாட்டி',
     selectPrompt: 'முதலில் உள்ளூர்த் தேடலில் இருந்து இரண்டு தயாரிப்புகளைத் தேர்ந்தெடுக்கவும்.', orderDate: 'தேதி',
     signIn: 'உள்நுழை', emptySearch: 'தேடல் இந்த சாதனத்தில் மட்டும்; Gemini-க்கு அனுப்பப்படாது.',
+    chatLabel: 'உள்ளூரில் கேள்வி கேளுங்கள்', chatPlaceholder: 'தயாரிப்பு அல்லது தளத்தைப் பற்றி கேளுங்கள்…', send: 'அனுப்பு',
+    chatNote: 'செய்திகள் இந்தச் சாதனத்தில் மட்டும்; வரலாற்றில் சேமிக்கப்படாது.',
+    chatGreeting: 'வணக்கம்! வெளியிடப்பட்ட கேள்விகள் மற்றும் தயாரிப்புகளுடன் உதவுகிறேன். என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?',
+    chatThanks: 'மகிழ்ச்சி!',
+    chatProducts: 'பொது பட்டியலில் பொருத்தமான தயாரிப்புகள் இங்கே. தற்போதைய விவரங்களுக்கு தயாரிப்பைத் திறக்கவும்.',
+    chatOrders: 'உள்நுழைந்த பின் உங்கள் ஆர்டர்களைப் பார்க்க கீழே உள்ள என் ஆர்டர்கள் பொத்தானைப் பயன்படுத்தவும்.',
+    chatSupport: 'குழுவைத் தொடர்புகொள்ள கீழே உள்ள AJR-ஐ அணுகு பொத்தானைப் பயன்படுத்தவும்.',
+    chatCatalog: 'தயாரிப்புகளைப் பார்க்க கீழே உள்ள தேடல் அல்லது எனக்கான தேர்வைப் பயன்படுத்தவும்.',
+    chatCompare: 'பட்டியலில் தேடி இரண்டு தயாரிப்புகளைத் தேர்ந்தெடுத்து ஒப்பிடவும்.',
+    chatUnknown: 'சில கேள்விகளுக்கு மட்டுமே உள்ளூரில் பதிலளிக்க முடியும்; இதற்கான பதில் தெரியவில்லை. உதவிக்கு கீழே உள்ள AJR-ஐ அணுகவும்.',
   },
   tanglish: {
     title: 'AJR guide', subtitle: 'Nalla choice edukka konjam help.',
     greeting: 'Vanakkam! AJR public catalogue-la explore panna help panren.',
-    privacy: 'Privacy first', disclosure: 'Fixed action, language, optional budget, selected product IDs, random conversation ID mattum request-la pogum. Gemini public catalogue names and categories mattum use pannum. Typed search indha device-la mattum irukkum; free-text, account details, order details Gemini-kku anuppa maatom.',
+    privacy: 'Privacy first', disclosure: 'Typed messages and search indha device-la mattum irukkum; typed messages history-la save aagadhu. Sila guides fixed action, language, optional budget, product IDs, random conversation ID mattum namma server-kku anuppum. Free-text or order details Gemini-kku anuppa maatom.',
     recommend: 'Enakku match', gift: 'Gift guide', offers: 'Offers paaru', compare: 'Compare products',
     budget: 'Budget (₹)', search: 'Indha device-la catalogue search', searchPlaceholder: 'Almonds, dates…',
     results: 'Catalogue results', noResults: 'Public catalogue-la match kidaikkala.',
@@ -174,6 +194,16 @@ const words: Record<Language, Record<string, string>> = {
     language: 'Reply language', unread: 'Pudhu assistant reply', sourceAI: 'AI-assisted', sourceFallback: 'Catalogue guide',
     selectPrompt: 'Mudhal-la local search-la irundhu rendu products select pannunga.', orderDate: 'Date',
     signIn: 'Sign in', emptySearch: 'Search indha device-la mattum; Gemini-kku anuppa maatom.',
+    chatLabel: 'Local-a kelvi kelunga', chatPlaceholder: 'Shopping or site pathi kelunga…', send: 'Send',
+    chatNote: 'Messages indha device-la mattum; history-la save aagadhu.',
+    chatGreeting: 'Vanakkam! Published FAQs and products pathi help panren. Enna therinjukkanum?',
+    chatThanks: 'Sandhosham!',
+    chatProducts: 'Public catalogue-la match aana products inge irukku. Current details-kku product-a open pannunga.',
+    chatOrders: 'Sign in pannitu keezhe My orders use panni orders paarunga.',
+    chatSupport: 'Team-a contact panna keezhe Talk to AJR use pannunga.',
+    chatCatalog: 'Products paakka keezhe catalogue search illa Enakku match use pannunga.',
+    chatCompare: 'Catalogue-la search panni rendu products select panni compare pannunga.',
+    chatUnknown: 'Sila questions-ku mattum local-a answer panna mudiyum; idhuku enakku answer theriyala. Help-ku keezhe Talk to AJR use pannunga.',
   },
 }
 
@@ -240,6 +270,8 @@ export default function ShoppingAssistant() {
   const [language, setLanguage] = useState<Language>('en')
   const [budgetText, setBudgetText] = useState('')
   const [searchText, setSearchText] = useState('')
+  const [chatText, setChatText] = useState('')
+  const [chatProductIds, setChatProductIds] = useState<number[]>([])
   const [catalog, setCatalog] = useState<Product[]>([])
   const [faqs, setFaqs] = useState<PublicFaq[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
@@ -372,6 +404,9 @@ export default function ShoppingAssistant() {
       setOrders(null)
       setOrderError(false)
       setOrderBusy(false)
+      setChatText('')
+      setChatProductIds([])
+      setMessages((current) => current.filter((message) => !message.transient))
     }
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => clearOrders())
     const onStorage = (event: StorageEvent) => {
@@ -425,23 +460,23 @@ export default function ShoppingAssistant() {
   const productById = useMemo(() => new Map(catalog.map((product) => [product.id, product])), [catalog])
   const filteredCatalog = useMemo(() => {
     const query = searchText.trim().toLocaleLowerCase()
-    if (!query) return []
+    if (!query) return catalog.filter((product) => chatProductIds.includes(product.id))
     return catalog.filter((product) => `${product.name} ${product.type}`.toLocaleLowerCase().includes(query)).slice(0, 8)
-  }, [catalog, searchText])
+  }, [catalog, searchText, chatProductIds])
   const recommendations = useMemo(() => {
     return messages[messages.length - 1]?.products || []
   }, [messages])
   const latestMessage = messages[messages.length - 1]
 
-  const sendIntent = async (intent: Intent, productIds?: number[]) => {
+  const sendIntent = async (intent: Intent, productIds?: number[], fromChat = false) => {
     if (busy) return
     if (intent === 'compare' && (!productIds || productIds.length < 2)) {
-      appendMessage({ id: makeId(), role: 'assistant', text: t.selectPrompt, createdAt: localTimestamp() })
+      appendMessage({ id: makeId(), role: 'assistant', text: t.selectPrompt, createdAt: localTimestamp(), transient: fromChat })
       return
     }
     const budget = budgetText.trim() ? Number(budgetText) : undefined
     if (budgetText.trim() && (!Number.isFinite(budget) || Number(budget) <= 0)) {
-      appendMessage({ id: makeId(), role: 'assistant', text: 'Enter a valid budget greater than zero, or leave it blank.', createdAt: localTimestamp() })
+      appendMessage({ id: makeId(), role: 'assistant', text: 'Enter a valid budget greater than zero, or leave it blank.', createdAt: localTimestamp(), transient: fromChat })
       return
     }
     setBusy(true)
@@ -452,9 +487,10 @@ export default function ShoppingAssistant() {
     setOrderError(false)
     setOrders(null)
     setSearchText('')
+    setChatProductIds([])
     const customerLabel = intent === 'recommend' ? t.recommend : intent === 'gift' ? t.gift : intent === 'offers' ? t.offers : t.compare
-    appendMessage({ id: makeId(), role: 'customer', text: customerLabel, createdAt: localTimestamp() })
-    appendMessage({ id: placeholderId, role: 'assistant', text: t.thinking, createdAt: localTimestamp(), pending: true })
+    if (!fromChat) appendMessage({ id: makeId(), role: 'customer', text: customerLabel, createdAt: localTimestamp() })
+    appendMessage({ id: placeholderId, role: 'assistant', text: t.thinking, createdAt: localTimestamp(), pending: true, transient: fromChat })
     try {
       const body: { intent: Intent; language: Language; budget?: number; productIds?: number[]; conversationId: string } = {
         intent,
@@ -517,12 +553,13 @@ export default function ShoppingAssistant() {
           products: returnedProducts,
           offers,
           source: data.source === 'fallback' ? 'fallback' : 'ai',
+          transient: fromChat,
         } : message
       ) : current)
     } catch (error: any) {
       setMessages((current) => intentScope.current.isCurrent(request) ? current.map((message) =>
         message.id === placeholderId
-          ? { id: makeId(), role: 'assistant', text: error?.message || t.unavailable, createdAt: localTimestamp(), source: 'fallback' }
+          ? { id: makeId(), role: 'assistant', text: error?.message || t.unavailable, createdAt: localTimestamp(), source: 'fallback', transient: fromChat }
           : message
       ) : current)
     } finally {
@@ -576,6 +613,8 @@ export default function ShoppingAssistant() {
     setMessages([makeGreeting(language)])
     setOrders(null)
     setSearchText('')
+    setChatText('')
+    setChatProductIds([])
     setSelectedIds([])
     setPendingProduct(null)
     setAddedProduct(null)
@@ -591,11 +630,47 @@ export default function ShoppingAssistant() {
     setOrders(null)
     setConversationId(conversation.id)
     setMessages(conversation.messages)
+    setChatText('')
+    setChatProductIds([])
+    setSearchText('')
+    setSelectedIds([])
     setHistoryOpen(false)
   }
   const answerFaq = (faq: PublicFaq) => {
     appendMessage({ id: makeId(), role: 'customer', text: faq.question, createdAt: localTimestamp() })
     appendMessage({ id: makeId(), role: 'assistant', text: faq.answer, createdAt: localTimestamp(), source: 'fallback' })
+  }
+
+  const sendChat = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const text = chatText.trim()
+    if (!text || busy) return
+    const result = classifyLocalChat(text, faqs, catalog)
+    setChatText('')
+    setSearchText('')
+    setChatProductIds([])
+    setSelectedIds([])
+    setPendingProduct(null)
+    orderScope.current.invalidate()
+    setOrders(null)
+    setOrderBusy(false)
+    setOrderError(false)
+    appendMessage({ id: makeId(), role: 'customer', text, createdAt: localTimestamp(), transient: true })
+    if (result.kind === 'intent') {
+      void sendIntent(result.intent, undefined, true)
+      return
+    }
+    if (result.kind === 'products') setChatProductIds(result.productIds)
+    const reply = result.kind === 'faq' ? result.answer
+      : result.kind === 'greeting' ? t.chatGreeting
+      : result.kind === 'thanks' ? t.chatThanks
+      : result.kind === 'products' ? t.chatProducts
+      : result.kind === 'orders' ? t.chatOrders
+      : result.kind === 'support' ? t.chatSupport
+      : result.kind === 'catalog' ? t.chatCatalog
+      : result.kind === 'compare' ? t.chatCompare
+      : t.chatUnknown
+    appendMessage({ id: makeId(), role: 'assistant', text: reply, createdAt: localTimestamp(), transient: true })
   }
 
   const openProduct = (productId: number) => {
@@ -766,7 +841,7 @@ export default function ShoppingAssistant() {
                 {orderError && <p className="ajr-assistant-inline-status" role="alert">{t.orderError}</p>}
                 {catalogError && <p className="ajr-assistant-inline-status">{t.unavailable}</p>}
                 {busy && <p className="ajr-assistant-inline-status"><span className="ajr-assistant-spinner" />{t.thinking}</p>}
-                {searchText.trim() && (
+                {(searchText.trim() || chatProductIds.length > 0) && (
                   <div className="ajr-assistant-local-results">
                     <div className="ajr-assistant-local-heading"><strong>{t.results}</strong><span>{t.localOnly}</span></div>
                     {catalogLoading ? <p>{t.thinking}</p> : filteredCatalog.length ? filteredCatalog.map((product) => (
@@ -785,6 +860,12 @@ export default function ShoppingAssistant() {
                 {!busy && messages.length === 1 && !searchText.trim() && <p className="ajr-assistant-empty-hint">{t.empty}</p>}
               </div>
               <div className="ajr-assistant-composer">
+                <form className="ajr-assistant-chat-form" onSubmit={sendChat}>
+                  <input value={chatText} onChange={(event) => setChatText(event.target.value)} maxLength={500}
+                    placeholder={t.chatPlaceholder} aria-label={t.chatLabel} aria-describedby="ajr-assistant-chat-note" />
+                  <button type="submit" disabled={busy || !chatText.trim()}>{t.send}</button>
+                </form>
+                <p id="ajr-assistant-chat-note" className="ajr-assistant-local-note">{t.chatNote}</p>
                 <div className="ajr-assistant-budget">
                   <label htmlFor="ajr-assistant-budget">{t.budget}</label>
                   <span><span aria-hidden="true">₹</span><input id="ajr-assistant-budget" inputMode="numeric" type="number" min="1" value={budgetText} onChange={(event) => setBudgetText(event.target.value)} placeholder="Optional" /></span>
@@ -796,7 +877,7 @@ export default function ShoppingAssistant() {
                 </div>
                 <div className="ajr-assistant-search">
                   <Search size={16} aria-hidden="true" />
-                  <input ref={searchRef} value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder={t.searchPlaceholder} aria-label={t.search} />
+                  <input ref={searchRef} value={searchText} onChange={(event) => { setChatProductIds([]); setSearchText(event.target.value) }} placeholder={t.searchPlaceholder} aria-label={t.search} />
                   {searchText && <button type="button" aria-label="Clear local search" onClick={() => setSearchText('')}><X size={15} /></button>}
                 </div>
                 <p className="ajr-assistant-local-note">{t.emptySearch}</p>

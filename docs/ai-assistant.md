@@ -12,8 +12,11 @@ and selected public catalog product IDs, names, and categories to Gemini.
 It does not send typed customer messages, account identifiers, order details,
 the customer's IP address, or conversation history. Gemini ranks public product
 IDs; the website supplies actual names, images and prices from the catalog.
-Free-text natural-language chat is not sent to Gemini; this is a deliberate
-limitation, not a fully conversational AI. Gemini is not trained on the shop.
+Typed messages are interpreted locally for greetings, supported shopping
+requests, and matching published FAQs. They are not sent to the server or
+saved in conversation history. Matching is limited and unsupported questions
+are directed to human support; it is not a fully conversational AI. Gemini
+is not trained on the shop.
 
 The database stores structured request metadata, keyed hashes of network
 addresses and (for authenticated requests) account IDs, product IDs, statuses,
@@ -63,6 +66,9 @@ Use synthetic requests and test accounts, never real customer data, to verify:
   is displayed, and cart changes require confirmation.
 - Signed-in order requests show only the authenticated customer's orders.
 - Customer-entered text, tokens, emails, and order data never reach Gemini.
+- Typed greetings, supported catalog queries, and published FAQ questions
+  receive appropriate local responses; unsupported questions suggest support
+  without inventing answers. Typed messages do not appear in stored history.
 - Missing keys, rate limits, provider errors, and exhausted configured quotas
   produce a clearly identified fallback without breaking the shop.
 - Publish and unpublish a synthetic FAQ, then verify the public help endpoint
