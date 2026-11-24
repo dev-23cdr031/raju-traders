@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { abandonmentMinutes, isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
 import { CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
-import { marketingEmailConfigured, MarketingEmailPausedError } from '@/lib/marketing-email'
+import { cartRecoveryConfigurationIssues, MarketingEmailPausedError } from '@/lib/marketing-email'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -12,8 +12,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
     return NextResponse.json({ message: 'Invalid cart reference.' }, { status: 400 })
   }
-  if (!marketingEmailConfigured() || (process.env.PRODUCT_REMINDER_TOKEN_SECRET || '').length < 32 || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
-    return NextResponse.json({ message: 'Cart reminders are unavailable because Resend is not configured or email notifications are disabled.' }, { status: 503 })
+  const configurationIssues = cartRecoveryConfigurationIssues()
+  if (configurationIssues.length) {
+    return NextResponse.json({ message: `Cart reminders are unavailable. ${configurationIssues.join(' ')}` }, { status: 503 })
   }
   try {
     safeRecoveryBaseUrl()

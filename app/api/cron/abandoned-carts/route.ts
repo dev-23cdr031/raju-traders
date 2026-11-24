@@ -2,7 +2,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { abandonmentMinutes, associatePersistedOrder, isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
 import { CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
-import { marketingEmailConfigured, MarketingEmailPausedError } from '@/lib/marketing-email'
+import { cartRecoveryConfigurationIssues, MarketingEmailPausedError } from '@/lib/marketing-email'
 import { beginCartNotificationEvent, recordNotificationEvent } from '@/lib/notification-automation'
 import { sendAbandonedCartWhatsApp, WhatsAppProviderRejectedError } from '@/lib/order-whatsapp'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   if (!hasValidCronAuthorization(request)) {
     return NextResponse.json({ message: 'Not found.' }, { status: 404 })
   }
-  if (!marketingEmailConfigured() || (process.env.PRODUCT_REMINDER_TOKEN_SECRET || '').length < 32 || process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
+  if (cartRecoveryConfigurationIssues().length) {
     return NextResponse.json({ message: 'Cart reminders are unavailable.' }, { status: 503 })
   }
 

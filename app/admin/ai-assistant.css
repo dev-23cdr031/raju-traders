@@ -1,0 +1,20 @@
+.ai-admin { display: grid; gap: 1rem; }
+.ai-admin-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.ai-admin-stats, .ai-admin-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: .75rem; }
+.ai-admin-stats > div, .ai-admin-lists > div { background: #f7f7ef; border: 1px solid #dfe5dc; border-radius: .75rem; padding: 1rem; }
+.ai-admin-stats span, .ai-admin-stats strong { display: block; }
+.ai-admin-stats strong { font-size: 1.5rem; color: #173c31; }
+.ai-admin-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; padding: 1rem; border: 1px solid #dfe5dc; border-radius: .75rem; }
+.ai-admin-settings label { display: grid; gap: .35rem; }
+.ai-admin-settings input:not([type="checkbox"]) { width: 100%; padding: .5rem; border: 1px solid #aebeb3; border-radius: .4rem; }
+.ai-admin-settings label:has(input[type="checkbox"]) { display: flex; align-items: center; }
+.ai-admin button { padding: .65rem 1rem; border: 0; border-radius: .4rem; background: #173c31; color: white; cursor: pointer; }
+.ai-admin button:disabled { opacity: .6; cursor: not-allowed; }
+.ai-admin-table { overflow-x: auto; }
+.ai-admin-table table { width: 100%; border-collapse: collapse; }
+.ai-admin-table th, .ai-admin-table td { text-align: left; padding: .6rem; border-bottom: 1px solid #dfe5dc; }
+.ai-admin-faq { display: grid; gap: .7rem; margin: .8rem 0; padding: 1rem; border: 1px solid #dfe5dc; border-radius: .75rem; }
+.ai-admin-faq label { display: grid; gap: .3rem; }
+.ai-admin-faq input:not([type="checkbox"]), .ai-admin-faq textarea { width: 100%; padding: .5rem; border: 1px solid #aebeb3; border-radius: .4rem; }
+.ai-admin-faq textarea { min-height: 5rem; resize: vertical; }
+.ai-admin-faq label:has(input[type="checkbox"]) { display: flex; align-items: center; }

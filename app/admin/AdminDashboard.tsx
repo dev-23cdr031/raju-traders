@@ -11,6 +11,7 @@ import VisitorAnalytics from './VisitorAnalytics'
 import LoginUsers from './LoginUsers'
 import AbandonedCarts from './AbandonedCarts'
 import NotificationAutomation from './NotificationAutomation'
+import AiAssistantAdmin from './AiAssistantAdmin'
 import './style.css'
 import {
   ADMIN_EMAILS,
@@ -411,7 +412,7 @@ const relativeTime = (iso?: string) => {
   return new Date(then).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'login-users' | 'analytics' | 'abandoned-carts' | 'notification-automation' | 'coupons-offers' | 'website-content' | 'settings'
+export type AdminSection = 'overview' | 'orders' | 'products' | 'inventory' | 'messages' | 'login-users' | 'analytics' | 'abandoned-carts' | 'notification-automation' | 'coupons-offers' | 'website-content' | 'ai-assistant' | 'settings'
 
 export default function AdminDashboardPage({ section = 'overview' }: { section?: AdminSection }) {
   const { t } = useLanguage()
@@ -1425,7 +1426,7 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
   const lowStockCount = products.filter((product) => product.status === 'Low stock').length
   const healthyStockPercent = products.length ? Math.round((inStockCount / products.length) * 100) : 0
   const pendingOrders = dashboard?.pending ?? orders.filter((order) => order.status === 'Pending').length
-  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), 'login-users': 'Login Users', analytics: 'Visitor Analytics', 'abandoned-carts': 'Abandoned Carts', 'notification-automation': 'Notification Automation', 'coupons-offers': 'Coupons & Offers', 'website-content': 'Website Content', settings: t('Settings') }
+  const sectionNames: Record<AdminSection, string> = { overview: t('Overview'), orders: t('Orders'), products: t('Products'), inventory: t('Inventory'), messages: t('Messages'), 'login-users': 'Login Users', analytics: 'Visitor Analytics', 'abandoned-carts': 'Abandoned Carts', 'notification-automation': 'Notification Automation', 'coupons-offers': 'Coupons & Offers', 'website-content': 'Website Content', 'ai-assistant': 'AI Assistant', settings: t('Settings') }
   const refreshOverview = () => { void loadOrders(); void loadProducts(); void loadExtras() }
 
   return (
@@ -1475,6 +1476,9 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           </Link>
           <Link className={section === 'analytics' ? 'active' : ''} aria-current={section === 'analytics' ? 'page' : undefined} href="/admin/analytics">
             <BarChart3 size={18} /> Visitor Analytics
+          </Link>
+          <Link className={section === 'ai-assistant' ? 'active' : ''} aria-current={section === 'ai-assistant' ? 'page' : undefined} href="/admin/ai-assistant">
+            <BarChart3 size={18} /> AI Assistant
           </Link>
           <Link className={section === 'website-content' ? 'active' : ''} aria-current={section === 'website-content' ? 'page' : undefined} href="/admin/website-content">
             <Globe2 size={18} /> Website Content
@@ -1893,6 +1897,8 @@ export default function AdminDashboardPage({ section = 'overview' }: { section?:
           <CouponsOffers />
         ) : section === 'website-content' ? (
           <WebsiteContentManager />
+        ) : section === 'ai-assistant' ? (
+          <AiAssistantAdmin />
         ) : (
           <section className="admin-panel settings-page">
             <section className="admin-topbar settings-topbar">

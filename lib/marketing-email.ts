@@ -5,14 +5,37 @@ export class MarketingEmailRejectedError extends Error {
   constructor(message: string, public readonly status: number) { super(message) }
 }
 
-export function marketingEmailConfigured() {
+export function marketingEmailConfigurationIssues() {
+  const issues: string[] = []
   try {
     const url = new URL(process.env.AJR_EMAIL_EDGE_URL || '')
     const project = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
-    return url.protocol === 'https:' && url.pathname === '/functions/v1/shared-email-automation' &&
-      url.origin === project.origin && !url.username && !url.password && !url.search && !url.hash &&
-      (process.env.AJR_MAIL_SECRET || '').length >= 32
-  } catch { return false }
+    if (url.protocol !== 'https:' || url.pathname !== '/functions/v1/shared-email-automation' ||
+      url.origin !== project.origin || url.username || url.password || url.search || url.hash) {
+      issues.push('AJR_EMAIL_EDGE_URL must point to the shared function in the configured Supabase project.')
+    }
+  } catch {
+    issues.push('Set AJR_EMAIL_EDGE_URL and NEXT_PUBLIC_SUPABASE_URL to valid HTTPS URLs.')
+  }
+  if ((process.env.AJR_MAIL_SECRET || '').length < 32) {
+    issues.push('AJR_MAIL_SECRET must contain at least 32 characters.')
+  }
+  return issues
+}
+
+export function marketingEmailConfigured() {
+  return marketingEmailConfigurationIssues().length === 0
+}
+
+export function cartRecoveryConfigurationIssues() {
+  const issues = marketingEmailConfigurationIssues()
+  if ((process.env.PRODUCT_REMINDER_TOKEN_SECRET || '').length < 32) {
+    issues.push('PRODUCT_REMINDER_TOKEN_SECRET must contain at least 32 characters.')
+  }
+  if (process.env.NOTIFICATIONS_EMAIL_ENABLED === 'false') {
+    issues.push('Email notifications are disabled by NOTIFICATIONS_EMAIL_ENABLED.')
+  }
+  return issues
 }
 
 export async function marketingEdgeRequest(payload: Record<string, unknown>) {

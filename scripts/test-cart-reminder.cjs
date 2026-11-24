@@ -98,6 +98,36 @@ const authorized = () => new Request('https://example.invalid/api/cron/abandoned
   headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
 })
 
+test('cart email configuration identifies missing settings without exposing secrets', () => {
+  const keys = ['AJR_EMAIL_EDGE_URL', 'AJR_MAIL_SECRET', 'PRODUCT_REMINDER_TOKEN_SECRET', 'NOTIFICATIONS_EMAIL_ENABLED']
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
+  try {
+    delete process.env.AJR_EMAIL_EDGE_URL
+    process.env.AJR_MAIL_SECRET = 'short-secret'
+    delete process.env.PRODUCT_REMINDER_TOKEN_SECRET
+    process.env.NOTIFICATIONS_EMAIL_ENABLED = 'false'
+    const issues = marketing.cartRecoveryConfigurationIssues()
+    assert.equal(issues.length, 4)
+    assert.match(issues.join(' '), /AJR_EMAIL_EDGE_URL/)
+    assert.match(issues.join(' '), /AJR_MAIL_SECRET/)
+    assert.match(issues.join(' '), /PRODUCT_REMINDER_TOKEN_SECRET/)
+    assert.match(issues.join(' '), /NOTIFICATIONS_EMAIL_ENABLED/)
+    assert.doesNotMatch(issues.join(' '), /short-secret/)
+    process.env.AJR_EMAIL_EDGE_URL = 'https://other.invalid/functions/v1/shared-email-automation'
+    assert.match(marketing.marketingEmailConfigurationIssues().join(' '), /configured Supabase project/)
+    process.env.AJR_EMAIL_EDGE_URL = 'https://example.invalid/functions/v1/shared-email-automation'
+    process.env.AJR_MAIL_SECRET = 'test-mail-secret-at-least-thirty-two-characters'
+    process.env.PRODUCT_REMINDER_TOKEN_SECRET = 'test-reminder-secret-at-least-thirty-two-characters'
+    delete process.env.NOTIFICATIONS_EMAIL_ENABLED
+    assert.deepEqual(marketing.cartRecoveryConfigurationIssues(), [])
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key]
+      else process.env[key] = previous[key]
+    }
+  }
+})
+
 test('completed matching purchases are closed without sending a reminder', async () => {
   const fixture = createFixture({
     order: { id: 'order-1', user_id: 'user-1', status: 'Pending', payment_method: 'COD', created_at: new Date(Date.now() - 20 * 60_000).toISOString(), items: [product] },

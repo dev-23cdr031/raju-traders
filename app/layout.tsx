@@ -3,8 +3,10 @@ import { LanguageProvider } from '@/components/LanguageProvider'
 import RibbonCutIntro from '@/components/RibbonCutIntro'
 import AuthSessionSync from '@/components/AuthSessionSync'
 import VisitorAnalyticsClient from '@/components/VisitorAnalyticsClient'
+import ShoppingAssistant from '@/components/ShoppingAssistant'
 import './globals.css'
 import './coupons.css'
+import '@/components/ShoppingAssistant.css'
 
 export const metadata: Metadata = {
   title: 'AJR Essence of Nature | Premium Dry Fruits & Nuts',
@@ -18,5 +20,5 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className="bg-background"><body className="antialiased"><LanguageProvider><AuthSessionSync /><RibbonCutIntro />{children}<VisitorAnalyticsClient /></LanguageProvider></body></html>
+  return <html lang="en" className="bg-background"><body className="antialiased"><LanguageProvider><AuthSessionSync /><RibbonCutIntro />{children}<ShoppingAssistant /><VisitorAnalyticsClient /></LanguageProvider></body></html>
 }

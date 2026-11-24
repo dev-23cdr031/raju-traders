@@ -58,6 +58,7 @@ type Metrics = {
   trackedRecords: number
   truncated: boolean
   emailConfigured: boolean
+  emailConfigurationIssues: string[]
 }
 
 const money = (value: number) => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
@@ -261,7 +262,7 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
     if (row.guest) return 'Anonymous guest carts have no verified contact address.'
     if (!row.consent) return 'No purpose-specific cart-reminder consent was recorded.'
     if (!row.customerEmail) return 'The account email was not verified when this cart was saved.'
-    if (!metrics?.emailConfigured) return 'Resend is not configured or notifications are disabled.'
+    if (!metrics?.emailConfigured) return metrics?.emailConfigurationIssues?.join(' ') || 'Recovery email configuration is unavailable.'
     if (row.closedAt || row.orderId) return 'This cart is closed or associated with an order.'
     if (row.status !== 'Abandoned') return 'This cart has not passed the abandonment threshold.'
     if (row.reminderSentAt) return `Reminder sent ${dateTime(row.reminderSentAt)}.`
@@ -354,7 +355,7 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
         </div>}
         {filtered.length > 0 && <div className="abandoned-pagination"><span>Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of {filtered.length}</span><div><button className="button button-light small-button" type="button" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0}>Previous</button><span>Page {page + 1} of {pageCount}</span><button className="button button-light small-button" type="button" onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))} disabled={page >= pageCount - 1}>Next</button></div></div>}
         <p className="abandoned-rate-definition"><Leaf size={14} /> Recovery is based on overlapping confirmed orders, not necessarily email attribution. Revenue uses recorded item prices before discounts; values may be customer-supplied.</p>
-        {!metrics?.emailConfigured && <p className="abandoned-email-note"><Mail size={14} /> Recovery email is unavailable until Resend is configured and notifications are enabled.</p>}
+        {metrics && !metrics.emailConfigured && <p className="abandoned-email-note" role="alert"><Mail size={14} /> Recovery email is unavailable. {metrics.emailConfigurationIssues?.join(' ') || 'Check the shared email automation configuration.'}</p>}
       </section>
 
       {selected && <div className="abandoned-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDrawer() }}>

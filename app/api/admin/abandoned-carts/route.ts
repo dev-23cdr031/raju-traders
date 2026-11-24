@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { abandonmentMinutes, isConfirmedCartOrder, matchedOrderItemTotal, orderOverlapsCart, trackedCartTotal } from '@/lib/abandoned-carts'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
-import { marketingEmailConfigured } from '@/lib/marketing-email'
+import { cartRecoveryConfigurationIssues } from '@/lib/marketing-email'
 
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin(request)
@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
     const conversionCount = inPeriod.filter((cart: any) => cart.status === 'Recovered').length
     const abandonmentCount = inPeriod.filter((cart: any) => cart.status === 'Abandoned').length
 
+    const emailConfigurationIssues = cartRecoveryConfigurationIssues()
     return NextResponse.json({
       carts,
       metrics: {
@@ -128,7 +129,8 @@ export async function GET(request: NextRequest) {
         thresholdMinutes: abandonmentMinutes(),
         trackedRecords: cartRows.length,
         truncated: cartRows.length === 5000,
-        emailConfigured: marketingEmailConfigured() && process.env.NOTIFICATIONS_EMAIL_ENABLED !== 'false',
+        emailConfigured: emailConfigurationIssues.length === 0,
+        emailConfigurationIssues,
       },
     })
   } catch (error: any) {

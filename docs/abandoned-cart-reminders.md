@@ -90,13 +90,21 @@ commercial use; confirm that your current hosting use complies.
    Functions. Store secrets in the respective dashboards, not source control,
    shell history, screenshots, chat or public client variables. Verify the Resend
    sender domain and DNS in Resend before proceeding.
-5. From the project directory, authenticate the Supabase CLI and deploy:
+5. The function already exists under
+   `supabase/functions/shared-email-automation`; open the nested `ajr`
+   project folder if it is not visible in VS Code. From that directory,
+   authenticate the Supabase CLI and deploy only the shared function:
 
    ```powershell
-   supabase login
-   supabase functions deploy shared-email-automation --project-ref kaxcerzvwypplynqzspy --no-verify-jwt
+   Set-Location 'C:\Users\sakth\Downloads\ajr-main\ajr-main\ajr'
+   npx --yes supabase login
+   npx --yes supabase functions deploy shared-email-automation --remote=kaxcerzvwypplynqzspy --no-verify-jwt --use-api --yes
+   npx --yes supabase functions list --remote=kaxcerzvwypplynqzspy
    ```
 
+   `--use-api` bundles remotely without Docker. If the CLI reports that the
+   local project is not initialized, run `npx --yes supabase init` from the
+   same directory and retry; do not use `--force` on an existing configuration.
    JWT verification is disabled because the function validates its own distinct
    scheduler and server-to-server secrets. Never expose the mail secret to the
    browser. Deploy the website and confirm both protected cron endpoints are
@@ -119,6 +127,16 @@ commercial use; confirm that your current hosting use complies.
    Visitor Analytics or Admin > Abandoned Carts only after controlled testing.
 
 ## Verification
+
+If the cart dashboard reports that recovery email is unavailable, its listed
+settings are checked in the website's server environment, not the browser.
+For local development set them in the untracked `.env.local` and restart the
+server. For Vercel set them for the deployment environment and redeploy. The
+Edge URL must belong to the same Supabase project, and the website's
+`AJR_MAIL_SECRET` must match the Supabase Edge secret. Setting these values
+only clears the website configuration warning; the function, Resend secrets,
+database migration, scheduler, and webhook must also be deployed and verified.
+Do not post secret values in chat.
 
 Run local tests and the build:
 

@@ -19,3 +19,9 @@ node_modules
 /dev-run*.log
 /dev-server.log
 /build-test.log
+
+# QA screenshots (dev artifacts)
+/assistant-qa-screenshots-*/
+
+# Supabase temp
+/supabase/.temp/

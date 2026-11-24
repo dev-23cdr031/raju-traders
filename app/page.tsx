@@ -45,6 +45,7 @@ import { PACK_SIZE_OPTIONS, supabase } from '@/lib/supabase'
 import { resolveVarietyImage } from '@/lib/variety-images'
 import { getAnalyticsConsent, startScrollTracking, trackAnalytics, type AnalyticsPage } from '@/lib/visitor-analytics-client'
 import { DEFAULT_WEBSITE_CONTENT, mergeWebsiteContent, type WebsiteContent } from '@/lib/website-content'
+import { validateAssistantQuote, type AssistantCartQuote, type AssistantCartResult } from '@/lib/shopping-assistant-client'
 
 const logo = '/ajr-logo.png'
 const announcementForeground = (hex: string) => {
@@ -1130,6 +1131,8 @@ export default function Page() {
   const [analyticsConsentRevision, setAnalyticsConsentRevision] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([])
+  const assistantCartRef = useRef(cart)
+  assistantCartRef.current = cart
   const [recoveryEmailConsent, setRecoveryEmailConsent] = useState(false)
   const [whatsappCartMarketingConsent, setWhatsappCartMarketingConsent] = useState(false)
   const [guestTrackingConsent, setGuestTrackingConsent] = useState(false)
@@ -1264,6 +1267,8 @@ export default function Page() {
   const productLinkOpened = useRef(false)
   const [dataLoaded, setDataLoaded] = useState(false)
   const [cartSyncError, setCartSyncError] = useState(false)
+  const assistantCartReady = useRef(false)
+  assistantCartReady.current = dataLoaded && !cartSyncError
   const [logoutError, setLogoutError] = useState(false)
 
   const authHeaders = (token: string) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` })
@@ -1528,7 +1533,9 @@ export default function Page() {
       returnToCart = window.sessionStorage.getItem('ajr-return-to-cart') === '1'
       window.sessionStorage.removeItem('ajr-return-to-cart')
     } catch {}
-    if (returnToCart || new URLSearchParams(window.location.search).get('cart') === '1') setView('cart')
+    const params = new URLSearchParams(window.location.search)
+    if (returnToCart || params.get('cart') === '1') setView('cart')
+    else if (params.get('contact') === '1') setView('contact')
   }, [])
   useEffect(() => {
     if (!catalogLoaded || productLinkOpened.current) return
@@ -1646,6 +1653,79 @@ export default function Page() {
     })
     return launchFlight(selectedProduct, origin, 'cart')
   }
+
+  useEffect(() => {
+    let active = true
+    const onViewChange = (event: Event) => {
+      const requested = String((event as CustomEvent<{ view?: string }>).detail?.view || '')
+      const supported: View[] = ['home', 'about', 'product', 'contact', 'cart', 'wishlist', 'detail', 'orders']
+      if (supported.includes(requested as View)) setView(requested as View)
+    }
+    const onViewProduct = (event: Event) => {
+      const productId = Number((event as CustomEvent<{ productId?: number }>).detail?.productId)
+      const product = products.find((item) => item.id === productId)
+      if (!product) return
+      setSelected(product)
+      setView('detail')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    const onAddToCart = async (event: Event) => {
+      const detail = (event as CustomEvent<AssistantCartQuote & {
+        respond?: (result: AssistantCartResult) => void
+        isPending?: () => boolean
+      }>).detail
+      if (!detail || typeof detail.respond !== 'function' || typeof detail.isPending !== 'function') return
+      const respond = detail.respond
+      const unavailable: AssistantCartResult = { ok: false, message: 'Could not verify the cart. Please view the product and try again.' }
+      if (!assistantCartReady.current) return respond(unavailable)
+      try {
+        const response = await fetch('/api/products', { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+        if (!response.ok) return respond(unavailable)
+        const data = await response.json()
+        const row = Array.isArray(data.products) ? data.products.find((item: any) => Number(item?.id) === detail.productId) : undefined
+        const product = row ? productFromRow(row) : undefined
+        if (row && Array.isArray(row.varieties) && row.varieties.length) {
+          const currentVariety = row.varieties.find((item: any) => String(item?.name ?? '').trim() === detail.variety)
+          const varietyStock = currentVariety?.stock
+          if (!currentVariety || currentVariety.active === false ||
+              (varietyStock != null && (!Number.isFinite(Number(varietyStock)) || Number(varietyStock) <= 0)) ||
+              !product?.varieties?.length) {
+            return respond({ ok: false, message: 'This selection is unavailable. Please view the product and try again.' })
+          }
+        }
+        const result = validateAssistantQuote(detail, row, product, {
+          packs: weightsForProduct,
+          varieties: purchasableVarieties,
+          price: (item, pack, variety) => priceForWeight({ ...item, selectedVariety: variety || undefined }, pack as Weight),
+        })
+        if (!result.ok) return respond(result)
+        if (!active || !detail.isPending() || !assistantCartReady.current || !product) return respond(unavailable)
+        const selectedProduct = { ...product, selectedVariety: detail.variety || undefined }
+        const selectedAtWeight = productAtWeight(selectedProduct, detail.pack as Weight)
+        const existing = assistantCartRef.current.find((line) => sameVariant(line.product, selectedAtWeight))
+        if (existing && (Math.abs(existing.product.price - selectedAtWeight.price) > 0.001 || existing.quantity >= 99)) {
+          return respond({ ok: false, message: 'Your cart selection needs updating. Please review it before adding this product.' })
+        }
+        addToCart(selectedAtWeight, 1, null)
+        respond({ ok: true })
+      } catch {
+        respond(unavailable)
+      }
+    }
+    window.addEventListener('ajr-store-view-change', onViewChange)
+    window.addEventListener('ajr-assistant-view-product', onViewProduct)
+    window.addEventListener('ajr-assistant-add-to-cart', onAddToCart)
+    return () => {
+      active = false
+      window.removeEventListener('ajr-store-view-change', onViewChange)
+      window.removeEventListener('ajr-assistant-view-product', onViewProduct)
+      window.removeEventListener('ajr-assistant-add-to-cart', onAddToCart)
+    }
+  }, [products, addToCart])
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('ajr-store-view-change', { detail: { view } }))
+  }, [view])
 
   const toggleWish = (product: Product, origin?: HTMLElement | null) => {
     const currentItems = wishlistRef.current
