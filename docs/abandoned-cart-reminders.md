@@ -16,7 +16,8 @@ the signed Resend webhook records delivery and suppresses both campaigns after
 bounces, complaints or suppression.
 
 Cart reminders are eligible after 30 minutes of inactivity, with at most one per
-customer per 24 hours. Cart updates reset the timer; empty or purchased carts
+customer per 24 hours. Changed cart contents reset the timer; saving the same
+contents does not. Empty or purchased carts
 are excluded. Product reminders are eligible after two hours and are cancelled
 on cart addition or purchase. Open carts and recent sends coordinate the two
 campaigns. The current saved cart opens from the email button; sign-in may be
@@ -25,6 +26,11 @@ Cart images, prices and values are saved snapshots, not verified order revenue.
 Provider acceptance is not confirmed inbox delivery. A change racing after the
 last eligibility check cannot recall an accepted email; offline changes cannot
 be seen until saved. Unknown delivery outcomes are locked for manual review.
+The dashboard's Scheduled state is an eligibility estimate, not a guarantee:
+the shared scheduler still checks consent, cooldown, configuration and quota.
+Skipped reflects an actual recorded notification event; delivery states require
+provider receipts. A customer closing the site before a cart save completes can
+prevent that change from reaching the server.
 
 ## Free-tier safeguards
 

@@ -40,6 +40,8 @@ type CartRow = {
   reminderResult: string | null
   reminderError: string | null
   deliveryStatus: string | null
+  emailStatus: string
+  emailEventError: string | null
   scheduledAt: string
   order: null | { id: string; number: string; status: string; total: number; createdAt: string; matchedItems: boolean }
 }
@@ -344,8 +346,8 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
                 <td>{row.itemCount}</td>
                 <td><strong>{money(row.total)}</strong></td>
                 <td><time dateTime={row.lastActivityAt}>{dateTime(row.lastActivityAt)}</time></td>
-                <td>{row.consent && !row.closedAt && !row.orderId && !row.reminderSentAt ? dateTime(row.scheduledAt) : '—'}</td>
-                <td>{row.reminderResult || 'Not sent'}{row.deliveryStatus && <small>{row.deliveryStatus}</small>}{row.reminderError && <small>{row.reminderError}</small>}</td>
+                <td>{row.emailStatus === 'Scheduled' ? dateTime(row.scheduledAt) : '—'}</td>
+                <td>{row.emailStatus}{row.deliveryStatus && <small>{row.deliveryStatus}</small>}{(row.reminderError || row.emailEventError) && <small>{row.reminderError || row.emailEventError}</small>}</td>
                 <td><span className="abandoned-device">{row.device || 'Not recorded'}</span></td>
                 <td>{renderStatus(row.status)}</td>
                 <td><button className="abandoned-open-button" type="button" onClick={(event) => { event.stopPropagation(); openDrawer(row) }}>Details / email <span aria-hidden="true">→</span></button></td>
@@ -374,7 +376,7 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
               </article>)}
               <div className="abandoned-detail-total"><span>{selected.itemCount} items · cart value</span><strong>{money(selected.total)}</strong></div>
             </section>
-            <section className="abandoned-detail-section"><h3>Activity timeline</h3><p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p><p><span>Last activity</span><time>{dateTime(selected.lastActivityAt)}</time></p><p><span>Eligible after</span><time>{dateTime(selected.scheduledAt)}</time></p><p><span>Delivery</span><time>{selected.deliveryStatus || 'Not confirmed'}</time></p><p><span>Recovery consent</span><time>{selected.consent ? `Opted in · ${dateTime(selected.consentAt)}` : 'Not given'}</time></p></section>
+            <section className="abandoned-detail-section"><h3>Activity timeline</h3><p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p><p><span>Last activity</span><time>{dateTime(selected.lastActivityAt)}</time></p><p><span>Eligible after</span><time>{dateTime(selected.scheduledAt)}</time></p><p><span>Email status</span><time>{selected.emailStatus}</time></p><p><span>Delivery</span><time>{selected.deliveryStatus || 'Not confirmed'}</time></p><p><span>Recovery consent</span><time>{selected.consent ? `Opted in · ${dateTime(selected.consentAt)}` : 'Not given'}</time></p></section>
             <section className="abandoned-detail-section"><h3>Send a recovery email</h3>
               {selected.reminderSentAt ? <p className="abandoned-success"><CheckCircle size={15} /> Sent {dateTime(selected.reminderSentAt)}{selected.reminderResult ? ` · ${selected.reminderResult}` : ''}</p>
                 : reminderReason(selected) ? <p className="abandoned-eligibility"><ShieldCheck size={15} /> {reminderReason(selected)}</p>

@@ -241,6 +241,7 @@ export async function persistSignedInCartSnapshot({
     : inherited?.recovery_email_consent_at || null
   const userEmail = user.email_confirmed_at ? safeText(user.email, 254).toLowerCase() : ''
   const metadata = user.user_metadata || {}
+  const cartChanged = !current || JSON.stringify(normalizeTrackedLines(current.cart_items)) !== JSON.stringify(lines)
   // Routine cart activity must never copy reminder/token state from a stale
   // read. The cron owns that state while it is claiming and delivering email.
   const row = {
@@ -255,7 +256,7 @@ export async function persistSignedInCartSnapshot({
     customer_phone: safeText(metadata.phone, 40),
     device_category: deviceCategory(userAgent),
     cart_started_at: current?.cart_started_at || new Date().toISOString(),
-    last_activity_at: new Date().toISOString(),
+    ...(cartChanged ? { last_activity_at: new Date().toISOString() } : {}),
     closed_at: lines.length ? null : new Date().toISOString(),
     guest_token_expires_at: null,
     order_id: current?.order_id || null,

@@ -128,6 +128,74 @@ test('cart email configuration identifies missing settings without exposing secr
   }
 })
 
+test('saving an unchanged cart preserves the inactivity timer; changing it resets the timer', async () => {
+  const updates = []
+  const saved = { id: 'cart-1', user_id: 'user-1', cart_items: [product], cart_started_at: '2025-01-01T00:00:00Z', recovery_email_consent: true }
+  const admin = {
+    from(table) {
+      assert.equal(table, 'abandoned_carts')
+      return {
+        select() { return this }, eq() { return this }, is() { return this },
+        async maybeSingle() { return { data: saved, error: null } },
+        update(values) {
+          updates.push(values)
+          return { async eq() { return { error: null } } }
+        },
+      }
+    },
+  }
+  const user = { id: 'user-1', email: 'test@example.invalid', email_confirmed_at: '2025-01-01', user_metadata: {} }
+  await carts.persistSignedInCartSnapshot({ admin, user, items: [product], userAgent: null })
+  assert.equal(Object.hasOwn(updates[0], 'last_activity_at'), false)
+  await carts.persistSignedInCartSnapshot({ admin, user, items: [{ ...product, quantity: 2 }], userAgent: null })
+  assert.ok(Number.isFinite(Date.parse(updates[1].last_activity_at)))
+})
+
+test('admin dashboard reports scheduled, sent, delivered, bounced, skipped and failed statuses', async () => {
+  const rows = ['skipped', 'bounced', 'delivered', 'sent', 'scheduled', 'failed'].map((id) => ({
+    id, user_id: 'user-1', cart_items: [product], item_count: 1, cart_total: 250,
+    customer_email: 'test@example.invalid', recovery_email_consent: true,
+    last_activity_at: new Date(Date.now() - 31 * 60_000).toISOString(),
+    reminder_provider_id: ['bounced', 'delivered', 'sent', 'failed'].includes(id) ? id : null,
+    reminder_sent_at: ['bounced', 'delivered', 'sent'].includes(id) ? new Date().toISOString() : null,
+    reminder_result: id === 'skipped' ? 'sending' : id === 'failed' ? 'failed' : id === 'scheduled' ? null : 'sent',
+  }))
+  const admin = {
+    from(table) {
+      const builder = {
+        select() { return this }, eq() { return this }, gt() { return this }, order() { return this }, limit() { return this }, in() { return this },
+        then(resolve) {
+          const data = table === 'abandoned_carts' ? rows
+            : table === 'notification_events' ? [
+                { event_key: 'cart:skipped:recovery', status: 'skipped', error: 'Cart already purchased.' },
+                { event_key: 'cart:failed:recovery', status: 'delivered', error: null },
+              ]
+              : table === 'notification_receipts' ? [
+                { provider_message_id: 'bounced', status: 'email.bounced' },
+                { provider_message_id: 'delivered', status: 'email.delivered' },
+                { provider_message_id: 'failed', status: 'email.failed' },
+              ] : []
+          return Promise.resolve({ data, error: null }).then(resolve)
+        },
+      }
+      return builder
+    },
+  }
+  const route = loadTypeScript('app/api/admin/abandoned-carts/route.ts', {
+    'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
+    '@/lib/abandoned-carts': carts,
+    '@/lib/marketing-email': marketing,
+    '@/lib/supabase': { requireAdmin: async () => ({ user: { id: 'admin' } }), supabaseAdmin: () => admin },
+  })
+  const request = new Request('https://example.invalid/api/admin/abandoned-carts')
+  request.nextUrl = new URL(request.url)
+  const response = await route.GET(request)
+  assert.equal(response.status, 200)
+  const result = await response.json()
+  assert.deepEqual(result.carts.map((cart) => cart.emailStatus), ['Skipped', 'Bounced', 'Delivered', 'Sent', 'Scheduled', 'Failed'])
+  assert.equal(result.carts[0].emailEventError, 'Cart already purchased.')
+})
+
 test('completed matching purchases are closed without sending a reminder', async () => {
   const fixture = createFixture({
     order: { id: 'order-1', user_id: 'user-1', status: 'Pending', payment_method: 'COD', created_at: new Date(Date.now() - 20 * 60_000).toISOString(), items: [product] },

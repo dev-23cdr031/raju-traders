@@ -27,6 +27,15 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     const cartRows = rows || []
+    const eventKeys = cartRows.map((row: any) => `cart:${row.id}:recovery`)
+    const emailEvents = new Map<string, { status: string; error: string | null }>()
+    for (let offset = 0; offset < eventKeys.length; offset += 400) {
+      const { data: events, error: eventError } = await admin.from('notification_events')
+        .select('event_key,status,error').eq('event_type', 'abandoned_cart').eq('channel', 'email')
+        .in('event_key', eventKeys.slice(offset, offset + 400))
+      if (eventError) throw eventError
+      for (const event of events || []) emailEvents.set(event.event_key, { status: event.status, error: event.error })
+    }
     const providerIds = Array.from(new Set(cartRows.map((row: any) => row.reminder_provider_id).filter(Boolean)))
     const receiptStatuses = new Map<string, Set<string>>()
     for (let offset = 0; offset < providerIds.length; offset += 400) {
@@ -58,6 +67,17 @@ export async function GET(request: NextRequest) {
       const receipts = receiptStatuses.get(row.reminder_provider_id) || new Set<string>()
       const deliveryStatus = ['email.complained', 'email.bounced', 'email.suppressed', 'email.failed', 'email.delivered']
         .find((status) => receipts.has(status)) || null
+      const emailEvent = emailEvents.get(`cart:${row.id}:recovery`)
+      const emailStatus = deliveryStatus === 'email.bounced' ? 'Bounced'
+        : deliveryStatus === 'email.failed' || deliveryStatus === 'email.suppressed' || deliveryStatus === 'email.complained' ? 'Failed'
+          : deliveryStatus === 'email.delivered' || emailEvent?.status === 'delivered' ? 'Delivered'
+            : emailEvent?.status === 'skipped' ? 'Skipped'
+              : emailEvent?.status === 'uncertain' ? 'Uncertain'
+                : row.reminder_result === 'failed' || emailEvent?.status === 'failed' ? 'Failed'
+                  : row.reminder_sent_at || row.reminder_result === 'sent' || emailEvent?.status === 'sent' ? 'Sent'
+                    : row.reminder_result === 'sending' || emailEvent?.status === 'sending' ? 'Sending'
+                      : row.user_id && row.recovery_email_consent && row.customer_email && !row.closed_at && !row.order_id ? 'Scheduled'
+                        : 'Not eligible'
       const status = recovered ? 'Recovered' : row.closed_at ? 'Closed' : (lastActivity + thresholdMs > now ? 'Active' : 'Abandoned')
       return {
         id: row.id,
@@ -82,6 +102,8 @@ export async function GET(request: NextRequest) {
         reminderResult: row.reminder_result,
         reminderError: row.reminder_error,
         deliveryStatus,
+        emailStatus,
+        emailEventError: emailEvent?.error || null,
         scheduledAt: new Date(lastActivity + thresholdMs).toISOString(),
         order: order ? {
           id: order.id,
