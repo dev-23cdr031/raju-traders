@@ -5,6 +5,78 @@ Do not use the old `abandoned-cart-scheduler.sql` or
 `product-reminder-scheduler.sql`: the shared scheduler replaces both jobs.
 `vercel.json` contains no Vercel Cron; Vercel Pro is not required for scheduling.
 
+## Existing installation: customer cooldown diagnostics
+
+Back up the database, pause cart automation in the existing admin controls,
+and stop manual sends. Wait for in-flight requests to finish; investigate
+prepared or uncertain claims in Resend rather than clearing or retrying them.
+In the existing project, run `supabase/cart-cooldown-diagnostics.sql` after
+`cart-manual-reminder.sql`. For example, from the project directory with a
+logged-in Supabase CLI that supports `db query --file`:
+
+```powershell
+supabase db query --remote=kaxcerzvwypplynqzspy --file .\supabase\cart-cooldown-diagnostics.sql
+```
+
+The migration updates existing claim functions and adds service-role-only
+diagnostics. It does not create a cron job, change customer permissions, or
+send email. During a subsequent claim, an expired **unprepared** prior claim
+can be marked failed; claims with a token, provider ID, or uncertain delivery
+evidence remain blocked for investigation. The 24-hour limit applies across
+the customer's carts, including closed ones. A known rejection does not count
+as a successful send. Product-reminder coordination remains in force.
+
+Deploy the updated website to the existing Vercel project only after applying
+the migration. The shared Edge Function is unchanged; no redeployment is
+required if the installed function already matches the existing shared
+implementation. If deploying the accompanying login-preference changes too,
+also follow the next section and apply its migration first. Restore automation
+only if it was previously enabled. Verify the existing cron's response body
+and heartbeat, then test with a consenting verified account and test inbox.
+Use different customers or wait 24 hours when testing both sends. Confirm
+Resend acceptance and webhook delivery separately. A zero-claim response is
+not proof that an email was sent. The dashboard shows current blockers; it
+does not invent a historical skipped event when the scheduler never claimed a
+cart. A browser timeout is an uncertain outcome, not permission to resend.
+
+## Existing installation: login cart-reminder preference
+
+The existing optional signup checkbox already grants permission for both product
+and cart reminders. Customers can opt in to cart reminders when signing in
+with email or Google. Leaving the login checkbox unchecked does not change an
+existing preference; customers can unsubscribe using their email link. Missing
+permission is not an opt-out; both block delivery unless the customer
+subsequently opts in. A verified email and an explicit choice are required.
+Provider suppressions cannot be overridden by signing in. Existing
+cart-specific permissions remain valid only for their original carts.
+
+On an existing installation with `cart-recovery-automation.sql` and
+`cart-manual-reminder.sql` already applied:
+
+1. Back up the database. Verify the earlier manual-send migration is present:
+
+   ```sql
+   select column_name from information_schema.columns
+   where table_schema = 'public' and table_name = 'abandoned_carts'
+     and column_name in ('reminder_origin', 'reminder_claim_activity_at');
+   ```
+
+   Both rows must exist. If either is missing, follow the manual-send update
+   below before applying the new migration.
+2. Apply the updated `supabase/cart-account-preferences.sql` in the Supabase
+   SQL Editor, even if an earlier version was applied; it updates the consent
+   source for future login choices. It does not backfill consent, alter existing
+   preferences, or create a cron job.
+3. Deploy the updated website to Vercel. No environment variables or secrets
+   need changes. The Edge Function code is unchanged and does not require
+   redeployment if the currently deployed shared function already matches the
+   existing installation.
+4. Use a verified test account to opt in on the login page, add an item and
+   verify manual sending and the automatic 30-minute flow with a test inbox.
+   Then opt out and confirm neither path sends. Also test a suppressed account,
+   an empty cart and a purchase. The five-minute cron cadence can add delay.
+   Provider acceptance is not proof of inbox delivery.
+
 ## Existing installation: manual-send update
 
 These steps are for an installation that already uses the shared scheduler,

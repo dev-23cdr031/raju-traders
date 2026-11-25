@@ -41,7 +41,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (cart.closed_at) return NextResponse.json({ message: 'This cart is closed and is no longer eligible for recovery.' }, { status: 409 })
   if (cart.order_id) return NextResponse.json({ message: 'This cart is associated with an order and cannot receive a reminder.' }, { status: 409 })
   if (!cart.user_id) return NextResponse.json({ message: 'Anonymous carts have no verified contact address and cannot receive email.' }, { status: 409 })
-  if (!cart.recovery_email_consent) return NextResponse.json({ message: 'The customer has not opted in to cart-reminder email.' }, { status: 409 })
+  const { data: initialPreference, error: initialPreferenceError } = await admin.from('cart_reminder_preferences')
+    .select('opted_in,opted_out_at,suppressed_at').eq('user_id', cart.user_id).maybeSingle()
+  if (initialPreferenceError) {
+    console.error('Manual cart reminder preference lookup failed:', initialPreferenceError)
+    return NextResponse.json({ message: 'Could not verify the customer email preference. No reminder was sent.' }, { status: 503 })
+  }
+  if (initialPreference?.suppressed_at) return NextResponse.json({ message: 'Email delivery is suppressed for this customer.' }, { status: 409 })
+  if (initialPreference && !initialPreference.opted_in && initialPreference.opted_out_at) {
+    return NextResponse.json({ message: 'The customer explicitly opted out of cart reminders.' }, { status: 409 })
+  }
+  if (!cart.recovery_email_consent || (initialPreference && !initialPreference.opted_in)) {
+    return NextResponse.json({ message: 'No cart-reminder permission is recorded for this cart.' }, { status: 409 })
+  }
   if (!cart.customer_email) return NextResponse.json({ message: 'A verified account email is not available.' }, { status: 409 })
   if (!Array.isArray(cart.cart_items) || cart.item_count < 1) return NextResponse.json({ message: 'This cart has no recoverable items.' }, { status: 409 })
   if (cart.reminder_sent_at) return NextResponse.json({ message: 'A reminder was already sent for this cart.' }, { status: 409 })
@@ -92,6 +104,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       'The customer has opted out or is suppressed.',
       'Another cart reminder was sent or is processing within the last 24 hours.',
       'A product reminder was sent or is processing within the last 24 hours.',
+      'An earlier reminder has an uncertain delivery outcome and must be reviewed.',
+      'Another cart reminder was sent within the last 24 hours.',
+      'A product reminder was sent within the last 24 hours.',
     ]
     if (reasons.includes(claimError.message)) return NextResponse.json({ message: claimError.message }, { status: 409 })
     return NextResponse.json({ message: 'Could not safely claim this reminder. Try again shortly.' }, { status: 503 })

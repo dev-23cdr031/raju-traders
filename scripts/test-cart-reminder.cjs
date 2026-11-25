@@ -167,6 +167,14 @@ test('admin dashboard reports scheduled, sent, delivered, bounced, skipped and f
     reminder_result: id === 'skipped' ? 'sending' : id === 'failed' ? 'failed' : id === 'scheduled' ? null : 'sent',
   }))
   const admin = {
+    rpc: async (_name, { p_cart_ids }) => ({ data: p_cart_ids.map((cart_id) => ({
+      cart_id, blocker: cart_id === 'scheduled' ? {
+        reason: 'cooldown', campaign: 'cart', status: 'sent',
+        attempted_at: '2026-01-01T00:00:00Z', sent_at: '2026-01-01T00:00:00Z',
+        eligible_at: '2026-01-02T00:00:00Z', delivery_status: 'email.delivered',
+      } : null,
+      previous: null, previous_sent: null,
+    })), error: null }),
     from(table) {
       const builder = {
         select() { return this }, eq() { return this }, gt() { return this }, order() { return this }, limit() { return this }, in() { return this },
@@ -198,10 +206,88 @@ test('admin dashboard reports scheduled, sent, delivered, bounced, skipped and f
   const response = await route.GET(request)
   assert.equal(response.status, 200)
   const result = await response.json()
-  assert.deepEqual(result.carts.map((cart) => cart.emailStatus), ['Skipped', 'Bounced', 'Delivered', 'Sent', 'Scheduled', 'Failed'])
+  assert.deepEqual(result.carts.map((cart) => cart.emailStatus), ['Skipped', 'Bounced', 'Delivered', 'Sent', 'Blocked', 'Failed'])
+  assert.equal(result.carts[4].customerBlocker.delivery_status, 'email.delivered')
   assert.equal(result.carts[0].emailEventError, 'Cart already purchased.')
 })
 
+  test('admin distinguishes missing permission, opt-out, suppression and valid permission', async () => {
+    const rows = ['missing', 'opted_out', 'suppressed', 'valid'].map((id) => ({
+      id, user_id: id, cart_items: [product], item_count: 1, cart_total: 250,
+      customer_email: 'test@example.invalid', recovery_email_consent: id !== 'missing',
+      last_activity_at: new Date().toISOString(),
+    }))
+    const admin = {
+      rpc: async (_name, { p_cart_ids }) => ({ data: p_cart_ids.map((cart_id) => ({
+        cart_id, blocker: null, previous: null, previous_sent: null,
+      })), error: null }),
+      from(table) {
+        return {
+          select() { return this }, eq() { return this }, gt() { return this }, order() { return this }, limit() { return this }, in() { return this },
+          then(resolve) {
+            const data = table === 'abandoned_carts' ? rows : table === 'cart_reminder_preferences' ? [
+              { user_id: 'opted_out', opted_in: false, opted_out_at: new Date().toISOString(), suppressed_at: null },
+              { user_id: 'suppressed', opted_in: false, opted_out_at: null, suppressed_at: new Date().toISOString() },
+              { user_id: 'valid', opted_in: true, opted_out_at: null, suppressed_at: null },
+            ] : []
+            return Promise.resolve({ data, error: null }).then(resolve)
+          },
+        }
+      },
+    }
+    const route = loadTypeScript('app/api/admin/abandoned-carts/route.ts', {
+      'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
+      '@/lib/abandoned-carts': carts,
+      '@/lib/marketing-email': marketing,
+      '@/lib/supabase': { requireAdmin: async () => ({}), supabaseAdmin: () => admin },
+    })
+    const request = new Request('https://example.invalid/api/admin/abandoned-carts')
+    request.nextUrl = new URL(request.url)
+    const result = await (await route.GET(request)).json()
+    assert.deepEqual(result.carts.map((cart) => cart.permissionStatus), ['missing', 'opted_out', 'suppressed', 'valid'])
+    assert.deepEqual(result.carts.map((cart) => cart.emailStatus), ['Not eligible', 'Not eligible', 'Not eligible', 'Scheduled'])
+  })
+
+  test('account reminder preference is scoped to the signed-in verified customer', async () => {
+    const calls = []
+    let user = { id: 'user-1', email: 'test@example.invalid', email_confirmed_at: '2025-01-01' }
+    let authorizedUser = true
+    let preference = null
+    let rpcError = null
+    const route = loadTypeScript('app/api/cart/reminder-preference/route.ts', {
+      'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
+      '@/lib/supabase': {
+        requireUser: async () => authorizedUser ? { user } : { response: Response.json({ message: 'Unauthorized' }, { status: 401 }) },
+        supabaseAdmin: () => ({
+          from: () => ({ select() { return this }, eq() { return this }, maybeSingle: async () => ({ data: preference, error: null }) }),
+          rpc: async (name, args) => { calls.push({ name, args }); return { error: rpcError } },
+        }),
+      },
+    })
+    const get = () => route.GET(new Request('https://example.invalid'))
+    const put = (body) => route.PUT(new Request('https://example.invalid', { method: 'PUT', body: JSON.stringify(body) }))
+    authorizedUser = false
+    assert.equal((await put({ optedIn: true })).status, 401)
+    assert.equal(calls.length, 0)
+    authorizedUser = true
+    assert.equal((await (await get()).json()).state, 'not_set')
+    preference = { opted_in: false, opted_out_at: '2025-01-01', suppressed_at: null }
+    assert.equal((await (await get()).json()).state, 'opted_out')
+    preference.suppressed_at = '2025-01-02'
+    assert.equal((await (await get()).json()).state, 'suppressed')
+    user = { ...user, email_confirmed_at: null }
+    assert.equal((await put({ optedIn: true, userId: 'other' })).status, 403)
+    assert.equal(calls.length, 0)
+    user = { ...user, email_confirmed_at: '2025-01-01' }
+    rpcError = { message: 'Email delivery is suppressed. Please contact support.' }
+    assert.equal((await put({ optedIn: true, userId: 'other' })).status, 403)
+    assert.deepEqual(calls.at(-1), { name: 'ajr_enable_cart_reminders', args: { p_user_id: 'user-1' } })
+    rpcError = null
+    assert.equal((await (await put({ optedIn: true })).json()).state, 'opted_in')
+    assert.deepEqual(calls.at(-1), { name: 'ajr_enable_cart_reminders', args: { p_user_id: 'user-1' } })
+    assert.equal((await (await put({ optedIn: false })).json()).state, 'opted_out')
+    assert.deepEqual(calls.at(-1), { name: 'ajr_unsubscribe_cart_reminders', args: { p_user_id: 'user-1' } })
+  })
 test('completed matching purchases are closed without sending a reminder', async () => {
   const fixture = createFixture({
     order: { id: 'order-1', user_id: 'user-1', status: 'Pending', payment_method: 'COD', created_at: new Date(Date.now() - 20 * 60_000).toISOString(), items: [product] },

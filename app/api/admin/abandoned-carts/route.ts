@@ -3,6 +3,10 @@ import { abandonmentMinutes, isConfirmedCartOrder, matchedOrderItemTotal, orderO
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
 import { cartRecoveryConfigurationIssues } from '@/lib/marketing-email'
 
+type ReminderHistory = { status: string | null; attempted_at: string | null; sent_at: string | null; delivery_status: string | null }
+type ReminderBlocker = ReminderHistory & { reason: 'cooldown' | 'processing' | 'uncertain'; campaign: 'cart' | 'product'; eligible_at: string | null }
+type ReminderDiagnostics = { cart_id: string; blocker: ReminderBlocker | null; previous: ReminderHistory | null; previous_sent: ReminderHistory | null }
+
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin(request)
   if ('response' in gate) return gate.response
@@ -27,6 +31,28 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     const cartRows = rows || []
+    const diagnostics = new Map<string, ReminderDiagnostics>()
+    for (let offset = 0; offset < cartRows.length; offset += 400) {
+      const { data, error: diagnosticError } = await admin.rpc('ajr_cart_customer_diagnostics', {
+        p_cart_ids: cartRows.slice(offset, offset + 400).map((row: { id: string }) => row.id),
+      })
+      if (diagnosticError) {
+        console.error('Cart reminder diagnostics failed:', diagnosticError)
+        throw new Error('Cart reminder diagnostics are unavailable. Apply supabase/cart-cooldown-diagnostics.sql before deploying the website.')
+      }
+      for (const diagnostic of (data || []) as ReminderDiagnostics[]) diagnostics.set(diagnostic.cart_id, diagnostic)
+    }
+    if (diagnostics.size !== cartRows.length) {
+      throw new Error('Cart reminder diagnostics are unavailable. Refresh the dashboard and try again.')
+    }
+    const userIds = Array.from(new Set(cartRows.map((row: any) => row.user_id).filter(Boolean)))
+    const preferences = new Map<string, { opted_in: boolean; opted_out_at: string | null; suppressed_at: string | null }>()
+    for (let offset = 0; offset < userIds.length; offset += 400) {
+      const { data: preferenceRows, error: preferenceError } = await admin.from('cart_reminder_preferences')
+        .select('user_id,opted_in,opted_out_at,suppressed_at').in('user_id', userIds.slice(offset, offset + 400))
+      if (preferenceError) throw preferenceError
+      for (const preference of preferenceRows || []) preferences.set(preference.user_id, preference)
+    }
     const eventKeys = cartRows.map((row: any) => `cart:${row.id}:recovery`)
     const emailEvents = new Map<string, { status: string; error: string | null; provider_message_id: string | null }>()
     for (let offset = 0; offset < eventKeys.length; offset += 400) {
@@ -68,10 +94,18 @@ export async function GET(request: NextRequest) {
       const deliveryStatus = ['email.complained', 'email.bounced', 'email.suppressed', 'email.failed', 'email.delivered']
         .find((status) => receipts.has(status)) || null
       const emailEvent = emailEvents.get(`cart:${row.id}:recovery`)
+      const preference = preferences.get(row.user_id)
+      const diagnostic = diagnostics.get(row.id)
+      const permissionStatus = preference?.suppressed_at ? 'suppressed'
+        : preference && !preference.opted_in && preference.opted_out_at ? 'opted_out'
+          : row.recovery_email_consent && (!preference || preference.opted_in) ? 'valid'
+            : preference?.opted_in ? 'not_enabled_for_cart' : 'missing'
       const recoverableClaim = row.reminder_result === 'sending' && row.reminder_attempt_at &&
         new Date(row.reminder_attempt_at).getTime() <= now - 30 * 60_000 &&
-        !row.recovery_token_hash && !row.reminder_provider_id &&
+        !row.reminder_sent_at && !row.recovery_token_hash && !row.reminder_provider_id &&
         !emailEvent?.provider_message_id && !['sent', 'delivered', 'read', 'uncertain'].includes(emailEvent?.status || '')
+      const eventRequiresReview = row.reminder_result !== 'sending' && !row.reminder_sent_at &&
+        Boolean(emailEvent?.provider_message_id || ['sending', 'sent', 'delivered', 'read', 'uncertain'].includes(emailEvent?.status || ''))
       const emailStatus = deliveryStatus === 'email.bounced' ? 'Bounced'
         : deliveryStatus === 'email.failed' || deliveryStatus === 'email.suppressed' || deliveryStatus === 'email.complained' ? 'Failed'
           : deliveryStatus === 'email.delivered' || emailEvent?.status === 'delivered' ? 'Delivered'
@@ -81,7 +115,8 @@ export async function GET(request: NextRequest) {
                 : row.reminder_result === 'failed' || emailEvent?.status === 'failed' ? 'Failed'
                   : emailEvent?.status === 'sent' ? 'Sent'
                     : row.reminder_result === 'sending' || emailEvent?.status === 'sending' ? 'Sending'
-                      : row.user_id && row.recovery_email_consent && row.customer_email && !row.closed_at && !row.order_id ? 'Scheduled'
+                      : row.user_id && permissionStatus === 'valid' && row.customer_email && !row.closed_at && !row.order_id
+                        ? diagnostic?.blocker ? 'Blocked' : 'Scheduled'
                         : 'Not eligible'
       const status = recovered ? 'Recovered' : row.closed_at ? 'Closed' : (lastActivity + thresholdMs > now ? 'Active' : 'Abandoned')
       return {
@@ -96,6 +131,7 @@ export async function GET(request: NextRequest) {
         guest: !row.user_id,
         device: row.device_category || null,
         consent: Boolean(row.recovery_email_consent),
+        permissionStatus,
         consentAt: row.recovery_email_consent_at,
         startedAt: row.cart_started_at,
         lastActivityAt: row.last_activity_at,
@@ -105,12 +141,16 @@ export async function GET(request: NextRequest) {
         reminderAttemptAt: row.reminder_attempt_at,
         reminderAttempts: row.reminder_attempts,
         recoverableClaim: Boolean(recoverableClaim),
+        eventRequiresReview,
         reminderSentAt: row.reminder_sent_at,
         reminderResult: row.reminder_result,
         reminderError: row.reminder_error,
         deliveryStatus,
         emailStatus,
         emailEventError: emailEvent?.error || null,
+        customerBlocker: diagnostic?.blocker || null,
+        previousReminder: diagnostic?.previous || null,
+        previousSentReminder: diagnostic?.previous_sent || null,
         scheduledAt: new Date(lastActivity + thresholdMs).toISOString(),
         order: order ? {
           id: order.id,
@@ -165,7 +205,9 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('GET /api/admin/abandoned-carts error:', error)
     return NextResponse.json({
-      message: error?.message?.includes('abandoned_carts')
+      message: error?.message?.startsWith('Cart reminder diagnostics are unavailable.')
+        ? error.message
+        : error?.message?.includes('abandoned_carts')
         ? 'Abandoned-cart storage is not set up. Apply supabase/abandoned-carts.sql.'
         : 'Could not load abandoned carts.',
     }, { status: 503 })

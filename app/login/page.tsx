@@ -1,16 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
 import { cleanSupabaseUrl, isAdminEmail, supabase } from '@/lib/supabase'
 import { persistAuthSession } from '@/lib/auth-session-client'
+import { clearPendingCartReminder, saveLoginCartReminderChoice, setPendingCartReminder } from '@/lib/cart-reminder-login'
 
 export default function LoginPage() {
   const { t } = useLanguage()
   const [message, setMessage] = useState('')
   const [unverifiedEmail, setUnverifiedEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cartReminderOptIn, setCartReminderOptIn] = useState(false)
+  const [continueTo, setContinueTo] = useState('')
+
+  useEffect(() => {
+    try { clearPendingCartReminder() } catch { console.error('Could not clear the previous reminder choice.') }
+  }, [])
 
   async function handleGoogleLogin() {
     setLoading(true)
@@ -25,16 +32,27 @@ export default function LoginPage() {
       if (configuration.external?.google !== true) {
         throw new Error('Google provider is not enabled in Supabase Auth.')
       }
+      if (cartReminderOptIn) {
+        try {
+          setPendingCartReminder('google')
+        } catch {
+          setMessage(t('Could not save your reminder choice. Please try again or leave the box unchecked.'))
+          setLoading(false)
+          return
+        }
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       })
       if (error) {
+        try { clearPendingCartReminder() } catch { console.error('Could not clear the reminder choice.') }
         console.error('Google sign-in could not be started:', error.message)
         setMessage(t('Google sign-in could not be started. Please try again or use your email and password.'))
         setLoading(false)
       }
     } catch (error) {
+      try { clearPendingCartReminder() } catch { console.error('Could not clear the reminder choice.') }
       console.error('Google sign-in could not be started:', error)
       setMessage(t('Google sign-in could not be started. Please try again or use your email and password.'))
       setLoading(false)
@@ -46,6 +64,7 @@ export default function LoginPage() {
     setLoading(true)
     setMessage('')
     setUnverifiedEmail('')
+    setContinueTo('')
 
     const form = event.currentTarget
     const formData = new FormData(form)
@@ -80,7 +99,17 @@ export default function LoginPage() {
           return
         }
         localStorage.setItem('adminAccessEmail', email)
-        window.location.href = isAdminEmail(email) ? '/admin' : '/'
+        const destination = isAdminEmail(email) ? '/admin' : '/'
+        try {
+          await saveLoginCartReminderChoice(localStorage.getItem('ajr-access-token') || '', cartReminderOptIn)
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : 'Please try again later.'
+          setMessage(`${t('Sign-in succeeded, but your cart reminder preference could not be saved. You can continue without enabling reminders.')} ${t(reason)}`)
+          console.error('Cart reminder preference could not be saved after sign-in:', error)
+          setContinueTo(destination)
+          return
+        }
+        window.location.href = destination
       }
     } catch {
       setMessage(t('Login failed. Please try again.'))
@@ -143,9 +172,25 @@ export default function LoginPage() {
               <Link className="auth-link" href="/forgot-password">{t('Forgot password?')}</Link>
             </div>
 
+            <div className="auth-form-row">
+              <label className="remember-row">
+                <input type="checkbox" checked={cartReminderOptIn} onChange={(event) => setCartReminderOptIn(event.target.checked)} />
+                <span>{t('Email me reminders about items left in my cart. Optional; unsubscribe at any time.')}</span>
+              </label>
+            </div>
+
             {message && <div className="auth-message">{message}</div>}
+            {continueTo && <Link className="auth-link" href={continueTo}>{t('Continue to your account')}</Link>}
             {unverifiedEmail && (
-              <Link className="auth-link" href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}>
+              <Link className="auth-link" href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+                onClick={(event) => {
+                  try {
+                    if (cartReminderOptIn) setPendingCartReminder('otp', unverifiedEmail)
+                  } catch {
+                    event.preventDefault()
+                    setMessage(t('Could not save your reminder choice for email verification. Please try again.'))
+                  }
+                }}>
                 {t('Verify your email')}
               </Link>
             )}

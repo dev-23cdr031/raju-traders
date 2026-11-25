@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ClipboardEvent, FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { LanguageSwitcher, useLanguage } from '@/components/LanguageProvider'
 import { persistAuthSession } from '@/lib/auth-session-client'
+import { saveLoginCartReminderChoice, takePendingCartReminder } from '@/lib/cart-reminder-login'
 
 const OTP_LENGTH = 6
 
@@ -16,6 +17,7 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [continueToAccount, setContinueToAccount] = useState(false)
   const inputs = useRef<Array<HTMLInputElement | null>>([])
 
   useEffect(() => {
@@ -97,6 +99,16 @@ export default function VerifyEmailPage() {
       const verifiedEmail = String(result.user?.email || email).trim().toLowerCase()
       window.localStorage.setItem('adminAccessEmail', verifiedEmail)
       sessionStorage.removeItem(`otp-resend:${verifiedEmail}`)
+      try {
+        await saveLoginCartReminderChoice(window.localStorage.getItem('ajr-access-token') || '', takePendingCartReminder('otp', verifiedEmail))
+      } catch (preferenceError) {
+        console.error('Cart reminder preference could not be saved after email verification:', preferenceError)
+        setMessageType('error')
+        const reason = preferenceError instanceof Error ? preferenceError.message : 'Please try again later.'
+        setMessage(`${t('Email verification succeeded, but your cart reminder preference could not be saved. You can continue without enabling reminders.')} ${t(reason)}`)
+        setContinueToAccount(true)
+        return
+      }
       setMessageType('success')
       setMessage(t('Email Verified Successfully!'))
       window.setTimeout(() => { window.location.href = '/' }, 650)
@@ -207,6 +219,7 @@ export default function VerifyEmailPage() {
             </div>
 
             {message && <div className={`auth-message otp-message ${messageType}`} role="status">{message}</div>}
+            {continueToAccount && <Link className="auth-link" href="/">{t('Continue to your account')}</Link>}
 
             <button className="button button-dark auth-submit" type="submit" disabled={loading}>
               {loading ? t('Verifying...') : t('Verify email')}

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 
 type CartStatus = 'Active' | 'Abandoned' | 'Recovered' | 'Closed'
+type ReminderHistory = { status: string | null; attempted_at: string | null; sent_at: string | null; delivery_status: string | null; lock_status?: string | null }
+type ReminderBlocker = ReminderHistory & { reason: 'cooldown' | 'processing' | 'uncertain'; campaign: 'cart' | 'product'; eligible_at: string | null }
 type CartRow = {
   id: string
   userId: string | null
@@ -30,6 +32,7 @@ type CartRow = {
   device: string | null
   consent: boolean
   consentAt: string | null
+  permissionStatus: 'valid' | 'missing' | 'opted_out' | 'suppressed' | 'not_enabled_for_cart'
   startedAt: string
   lastActivityAt: string
   closedAt: string | null
@@ -38,12 +41,16 @@ type CartRow = {
   reminderAttemptAt: string | null
   reminderAttempts: number
   recoverableClaim: boolean
+  eventRequiresReview: boolean
   reminderSentAt: string | null
   reminderResult: string | null
   reminderError: string | null
   deliveryStatus: string | null
   emailStatus: string
   emailEventError: string | null
+  customerBlocker: ReminderBlocker | null
+  previousReminder: ReminderHistory | null
+  previousSentReminder: ReminderHistory | null
   scheduledAt: string
   order: null | { id: string; number: string; status: string; total: number; createdAt: string; matchedItems: boolean }
 }
@@ -86,6 +93,7 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
   const [selected, setSelected] = useState<CartRow | null>(null)
   const drawerOpen = selected !== null
   const [sendingId, setSendingId] = useState('')
+  const [unconfirmedSends, setUnconfirmedSends] = useState<string[]>([])
   const [actionMessage, setActionMessage] = useState('')
   const [actionError, setActionError] = useState('')
   const [refreshState, setRefreshState] = useState<'idle' | 'updating' | 'healthy' | 'failure'>('idle')
@@ -222,22 +230,33 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
     setSendingId(row.id)
     setActionMessage('')
     setActionError('')
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 30_000)
+    let responseReceived = false
     try {
       const token = localStorage.getItem('ajr-access-token') || ''
       const response = await fetch(`/api/admin/abandoned-carts/${row.id}/remind`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({}),
+        signal: controller.signal,
       })
+      responseReceived = true
       const data = await response.json().catch(() => ({}))
+      if (controller.signal.aborted) throw new Error('Request timed out.')
       if (!response.ok) throw new Error(data?.message || 'Reminder was not sent.')
       setActionMessage(data.message || 'Reminder sent.')
-      await load(true)
     } catch (sendError: any) {
-      setActionError(sendError?.message || 'Reminder was not sent.')
-      await load(true)
+      if (!responseReceived || controller.signal.aborted) {
+        setUnconfirmedSends((current) => [...current, row.id])
+        setActionError('The request did not return a result. Delivery may have occurred; check Resend and the processing status before retrying.')
+      } else {
+        setActionError(sendError?.message || 'Reminder was not sent.')
+      }
     } finally {
+      window.clearTimeout(timeout)
       setSendingId('')
+      void load(true)
     }
   }
 
@@ -269,14 +288,26 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
   }
 
   const reminderReason = (row: CartRow) => {
+    if (unconfirmedSends.includes(row.id)) return 'The last request did not return a result. Verify its provider outcome before retrying.'
     if (row.guest) return 'Anonymous guest carts have no verified contact address.'
-    if (!row.consent) return 'No purpose-specific cart-reminder consent was recorded.'
+    if (row.permissionStatus === 'suppressed') return 'Email delivery is suppressed for this customer.'
+    if (row.permissionStatus === 'opted_out') return 'The customer explicitly opted out of cart reminders.'
+    if (row.permissionStatus === 'not_enabled_for_cart') return 'Account permission is recorded, but is not enabled for this cart.'
+    if (row.permissionStatus !== 'valid') return 'No cart-reminder permission was recorded.'
     if (!row.customerEmail) return 'The account email was not verified when this cart was saved.'
     if (!metrics?.emailConfigured) return metrics?.emailConfigurationIssues?.join(' ') || 'Recovery email configuration is unavailable.'
     if (row.closedAt || row.orderId) return 'This cart is closed or associated with an order.'
     if (row.reminderSentAt) return `Reminder sent ${dateTime(row.reminderSentAt)}.`
     if (row.reminderAttempts >= 3) return 'The maximum number of reminder attempts has been reached.'
+    if (row.eventRequiresReview) return 'An earlier delivery event may have reached Resend. Verify its outcome before retrying.'
     if (row.reminderResult === 'sending' && !row.recoverableClaim) return 'A reminder is processing or its delivery result is uncertain; review it before retrying.'
+    if (row.customerBlocker) {
+      const blocker = row.customerBlocker
+      const campaign = blocker.campaign === 'cart' ? 'cart' : 'product'
+      if (blocker.reason === 'uncertain') return `An earlier ${campaign} reminder has an uncertain delivery outcome. Verify it with Resend before retrying.`
+      if (blocker.reason === 'processing') return `Another ${campaign} reminder is processing. Review its status before retrying.`
+      return `An earlier ${campaign} reminder is within the 24-hour cooldown${blocker.eligible_at ? `; next eligible ${dateTime(blocker.eligible_at)}` : '; the send time needs review'}.`
+    }
     if (row.reminderResult !== 'sending' && row.reminderAttemptAt && clock - new Date(row.reminderAttemptAt).getTime() < 15 * 60_000) {
       return 'A reminder attempt was made recently; wait for the 15-minute safety interval.'
     }
@@ -397,7 +428,18 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
               <p><span>Email processing</span><time>{selected.emailStatus}</time></p>
               <p><span>Last email sent</span><time>{dateTime(selected.reminderSentAt)}</time></p>
               <p><span>Delivery</span><time>{selected.deliveryStatus || 'Not confirmed'}</time></p>
-              <p><span>Marketing preference</span><time>{selected.consent ? `Recorded · ${dateTime(selected.consentAt)}; final checks required` : 'Not given'}</time></p>
+              <p><span>Previous customer reminder</span><time>{selected.previousReminder?.status || 'Not recorded'}{selected.previousReminder?.attempted_at ? ` · ${dateTime(selected.previousReminder.attempted_at)}` : ''}</time></p>
+              {selected.previousReminder?.lock_status && <p><span>Previous processing lock</span><time>{selected.previousReminder.lock_status}</time></p>}
+              <p><span>Previous customer send</span><time>{dateTime(selected.previousSentReminder?.sent_at || selected.previousSentReminder?.attempted_at)}</time></p>
+              <p><span>Previous delivery</span><time>{selected.previousSentReminder?.delivery_status || 'Not confirmed'}</time></p>
+              <p><span>Customer-level lock</span><time>{selected.customerBlocker ? `${selected.customerBlocker.campaign}: ${selected.customerBlocker.reason}` : 'None detected'}</time></p>
+              {selected.customerBlocker?.eligible_at && <p><span>Next eligible time</span><time>{dateTime(selected.customerBlocker.eligible_at)}</time></p>}
+              <p><span>Marketing preference</span><time>{selected.permissionStatus === 'valid'
+                ? `Permission recorded · ${dateTime(selected.consentAt)}; final checks required`
+                : selected.permissionStatus === 'opted_out' ? 'Explicitly opted out'
+                  : selected.permissionStatus === 'suppressed' ? 'Delivery suppressed'
+                    : selected.permissionStatus === 'not_enabled_for_cart' ? 'Not enabled for this cart'
+                      : 'No permission recorded'}</time></p>
               {selected.emailEventError && <p><span>Last event reason</span><span>{selected.emailEventError}</span></p>}
             </section>
             <section className="abandoned-detail-section"><h3>Send a recovery email</h3>
@@ -407,10 +449,10 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
               {selected.reminderResult === 'failed' && selected.reminderError && <p className="abandoned-error-inline">Last attempt: {selected.reminderError}</p>}
               {actionError && <p className="abandoned-error-inline" role="alert">{actionError}</p>}
               {actionMessage && <p className="abandoned-success" role="status"><CheckCircle size={15} /> {actionMessage}</p>}
-              {selected.consent && <button className="button button-light abandoned-revoke-button" type="button" onClick={() => void revokeConsent(selected)} disabled={sendingId === selected.id}>
+              {selected.consent && <button className="button button-light abandoned-revoke-button" type="button" onClick={() => void revokeConsent(selected)} disabled={Boolean(sendingId)}>
                 <ShieldCheck size={15} /> Revoke reminder consent
               </button>}
-              <button className="button button-dark abandoned-send-button" type="button" onClick={() => void sendReminder(selected)} disabled={Boolean(reminderReason(selected)) || sendingId === selected.id || Boolean(selected.reminderSentAt)}>
+              <button className="button button-dark abandoned-send-button" type="button" onClick={() => void sendReminder(selected)} disabled={Boolean(reminderReason(selected)) || Boolean(sendingId) || Boolean(selected.reminderSentAt)}>
                 <Mail size={15} /> {sendingId === selected.id ? 'Sending email…' : 'Send recovery email'}
               </button>
               <small>Sent through Resend to the verified account email only. Recovery links expire after 14 days and require that customer to sign in.</small>
