@@ -5,6 +5,40 @@ Do not use the old `abandoned-cart-scheduler.sql` or
 `product-reminder-scheduler.sql`: the shared scheduler replaces both jobs.
 `vercel.json` contains no Vercel Cron; Vercel Pro is not required for scheduling.
 
+## Existing installation: manual-send update
+
+These steps are for an installation that already uses the shared scheduler,
+function and webhook. Do not repeat the full setup below, recreate secrets,
+reset preferences, or create another cron job.
+
+1. Back up the database. In Admin > Abandoned Carts, pause cart automation
+   and temporarily stop administrators from sending reminders manually.
+   Wait for in-flight cart scheduler and send requests to finish. Inspect
+   function and website logs and the processing states; a lingering `sending`
+   state may be an uncertain delivery, not a running request. Do not clear it
+   or retry it without investigating the provider outcome.
+2. In the Supabase SQL Editor for the existing project, run only
+   `supabase/cart-manual-reminder.sql`. Its transaction adds claim metadata
+   and updates the existing cart claim and final-eligibility functions. It does
+   not recreate the scheduler, secrets, or customer preferences.
+3. Deploy the updated website to the existing Vercel deployment. The shared
+   Edge Function's code has not changed and does not need redeployment **if**
+   the deployed version already calls `ajr_marketing_email_still_eligible`
+   immediately before sending. Verify the deployed version or its logs;
+   redeploy the existing shared function only if it is missing or outdated.
+4. Re-enable cart automation if it was previously enabled. With an opted-in,
+   verified test account and a test inbox, test an immediate manual send on
+   a new cart, then independently test an automatic send after 30 minutes of
+   inactivity (the existing five-minute scheduler may add delay). Confirm
+   provider acceptance, webhook status, inbox delivery, unsubscribe,
+   purchase/empty-cart cancellation and the 24-hour limit. Never retry an
+   uncertain send without checking Resend and the delivery records.
+
+Manual sends bypass only the inactivity threshold. The campaign switch, consent,
+verified email, purchase, current-cart, frequency, quota and duplicate checks
+still apply. Times are stored as absolute timestamps; the dashboard formats
+them using the viewer's local time zone.
+
 ## Customer and delivery safeguards
 
 Only verified signed-in accounts with a valid preference receive marketing.

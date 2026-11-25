@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { abandonmentMinutes, isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
-import { CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
+import { CartRecoveryEligibilityError, CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
 import { cartRecoveryConfigurationIssues, MarketingEmailPausedError } from '@/lib/marketing-email'
 import { requireAdmin, supabaseAdmin } from '@/lib/supabase'
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const admin = supabaseAdmin()
   const { data: cart, error } = await admin.from('abandoned_carts')
-    .select('id,user_id,cart_items,item_count,customer_name,customer_email,recovery_email_consent,reminder_attempt_at,reminder_sent_at,reminder_result,cart_started_at,last_activity_at,closed_at,order_id')
+    .select('id,user_id,cart_items,item_count,customer_name,customer_email,recovery_email_consent,reminder_attempt_at,reminder_sent_at,reminder_result,reminder_provider_id,recovery_token_hash,cart_started_at,last_activity_at,closed_at,order_id')
     .eq('id', id)
     .maybeSingle()
   if (error) {
@@ -32,30 +32,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ message: 'Could not load this cart. No reminder was sent.' }, { status: 503 })
   }
   if (!cart) return NextResponse.json({ message: 'This cart is no longer available.' }, { status: 404 })
-  if (cart.reminder_result === 'sending') {
-    return NextResponse.json({ message: 'A prior delivery attempt has an uncertain result. It is blocked to prevent a duplicate reminder.' }, { status: 409 })
-  }
+  const staleBefore = new Date(Date.now() - 30 * 60_000).toISOString()
+  const recoverableClaim = cart.reminder_result === 'sending' && cart.reminder_attempt_at &&
+    new Date(cart.reminder_attempt_at).getTime() <= new Date(staleBefore).getTime() &&
+    !cart.recovery_token_hash && !cart.reminder_provider_id
+  if (cart.reminder_result === 'sending' && !recoverableClaim)
+    return NextResponse.json({ message: 'A reminder is processing or its delivery result is uncertain. Review its status before retrying.' }, { status: 409 })
   if (cart.closed_at) return NextResponse.json({ message: 'This cart is closed and is no longer eligible for recovery.' }, { status: 409 })
-  if (cart.order_id) {
-    const { data: order, error: orderError } = await admin.from('orders')
-      .select('status')
-      .eq('id', cart.order_id)
-      .maybeSingle()
-    if (orderError) {
-      console.error('POST /api/admin/abandoned-carts/[id]/remind order lookup failed:', orderError)
-      return NextResponse.json({ message: 'Could not verify the linked order. No reminder was sent.' }, { status: 503 })
-    }
-    if (order && String(order.status || '').toLowerCase() !== 'cancelled') {
-      return NextResponse.json({ message: 'This cart is already associated with a persisted order.' }, { status: 409 })
-    }
-  }
+  if (cart.order_id) return NextResponse.json({ message: 'This cart is associated with an order and cannot receive a reminder.' }, { status: 409 })
   if (!cart.user_id) return NextResponse.json({ message: 'Anonymous carts have no verified contact address and cannot receive email.' }, { status: 409 })
   if (!cart.recovery_email_consent) return NextResponse.json({ message: 'The customer has not opted in to cart-reminder email.' }, { status: 409 })
   if (!cart.customer_email) return NextResponse.json({ message: 'A verified account email is not available.' }, { status: 409 })
   if (!Array.isArray(cart.cart_items) || cart.item_count < 1) return NextResponse.json({ message: 'This cart has no recoverable items.' }, { status: 409 })
-  if (Date.now() - new Date(cart.last_activity_at).getTime() < abandonmentMinutes() * 60_000) {
-    return NextResponse.json({ message: 'This cart is still active; wait until the configured abandonment threshold has passed.' }, { status: 409 })
-  }
   if (cart.reminder_sent_at) return NextResponse.json({ message: 'A reminder was already sent for this cart.' }, { status: 409 })
 
   const { data: authData, error: authError } = await admin.auth.admin.getUserById(cart.user_id)
@@ -68,8 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const attemptedAt = new Date()
   const cooldown = new Date(attemptedAt.getTime() - 15 * 60_000).toISOString()
-  const cutoff = new Date(attemptedAt.getTime() - abandonmentMinutes() * 60_000).toISOString()
-  if (cart.reminder_attempt_at && new Date(cart.reminder_attempt_at).getTime() > Date.now() - 15 * 60_000) {
+  if (!recoverableClaim && cart.reminder_attempt_at && new Date(cart.reminder_attempt_at).getTime() > Date.now() - 15 * 60_000) {
     return NextResponse.json({ message: 'A reminder attempt was made recently. Try again after the 15-minute safety interval.' }, { status: 429 })
   }
   const token = randomBytes(32).toString('base64url')
@@ -78,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .update({
       reminder_attempt_at: attemptedAt.toISOString(),
       reminder_result: 'sending',
+      reminder_origin: 'manual',
       reminder_error: null,
       recovery_token_hash: tokenHash,
       recovery_token_expires_at: new Date(attemptedAt.getTime() + 14 * 86400_000).toISOString(),
@@ -92,15 +80,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .is('closed_at', null)
     .is('order_id', null)
     .eq('last_activity_at', cart.last_activity_at)
-    .lte('last_activity_at', cutoff)
-    .or(`and(reminder_attempt_at.is.null,reminder_result.is.null),and(reminder_attempt_at.lt.${cooldown},reminder_result.eq.failed)`)
+    .or(`and(reminder_attempt_at.is.null,reminder_result.is.null),and(reminder_attempt_at.lt.${cooldown},reminder_result.eq.failed),and(reminder_result.eq.sending,reminder_attempt_at.lte.${staleBefore},recovery_token_hash.is.null,reminder_provider_id.is.null)`)
     .select('id')
     .maybeSingle()
   if (claimError) {
     console.error('POST /api/admin/abandoned-carts/[id]/remind claim failed:', claimError)
+    const reasons = [
+      'Another reminder for this customer is being processed.',
+      'The earlier delivery may have reached the provider and must be reviewed.',
+      'The maximum number of reminder attempts has been reached.',
+      'The customer has opted out or is suppressed.',
+      'Another cart reminder was sent or is processing within the last 24 hours.',
+      'A product reminder was sent or is processing within the last 24 hours.',
+    ]
+    if (reasons.includes(claimError.message)) return NextResponse.json({ message: claimError.message }, { status: 409 })
     return NextResponse.json({ message: 'Could not safely claim this reminder. Try again shortly.' }, { status: 503 })
   }
-  if (!claimed) return NextResponse.json({ message: 'This reminder is no longer eligible or another administrator is handling it.' }, { status: 409 })
+  if (!claimed) {
+    const { data: latest, error: latestError } = await admin.from('abandoned_carts')
+      .select('last_activity_at,closed_at,order_id,recovery_email_consent,reminder_sent_at,reminder_result')
+      .eq('id', id).maybeSingle()
+    if (latestError) {
+      console.error('Manual cart reminder status lookup failed:', latestError)
+      return NextResponse.json({ message: 'Could not recheck this cart. No reminder was sent.' }, { status: 503 })
+    }
+    const reason = !latest ? 'This cart is no longer available.'
+      : latest.closed_at || latest.order_id ? 'This cart was closed or purchased.'
+        : !latest.recovery_email_consent ? 'The customer has opted out of cart reminders.'
+          : latest.reminder_sent_at ? 'A reminder was already sent for this cart.'
+            : latest.last_activity_at !== cart.last_activity_at ? 'The customer changed the cart. Refresh the dashboard before retrying.'
+              : latest.reminder_result === 'sending' ? 'Another reminder attempt is processing or needs review.'
+                : 'The reminder state changed. Refresh the dashboard before retrying.'
+    return NextResponse.json({ message: reason }, { status: 409 })
+  }
 
   const releaseClaim = async (reason: string) => {
     const { error: releaseError } = await admin.from('abandoned_carts').update({
@@ -196,7 +208,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
       return NextResponse.json({ message: 'Marketing reminders are paused or quota could not be verified. No email was sent.' }, { status: 429 })
     }
-    if (sendError instanceof CartRecoveryEmailRejectedError || sendError instanceof CartRecoveryPreparationError) {
+    if (sendError instanceof CartRecoveryEligibilityError) {
+      await releaseClaim('Reminder eligibility changed at the final delivery check.')
+      return NextResponse.json({ message: 'The cart or marketing eligibility changed during the final check. No email was sent; refresh the dashboard.' }, { status: 409 })
+    }
+    if (sendError instanceof CartRecoveryPreparationError) {
+      await releaseClaim(safeMessage)
+      return NextResponse.json({ message: `The reminder could not be prepared. ${safeMessage}` }, { status: 409 })
+    }
+    if (sendError instanceof CartRecoveryEmailRejectedError) {
       const { error: failureRecordError } = await admin.from('abandoned_carts').update({
         reminder_result: 'failed',
         reminder_error: safeMessage,

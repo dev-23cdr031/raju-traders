@@ -22,7 +22,7 @@ const carts = loadTypeScript('lib/abandoned-carts.ts', { 'server-only': {} })
 const marketing = loadTypeScript('lib/marketing-email.ts', { 'server-only': {} })
 const product = { product: { id: 1, name: 'Nuts', image: '/nuts.png', price: 250, selectedWeight: '250 g' }, quantity: 1 }
 
-function createFixture({ order, orderError, currentItems = [product], finalEligible = true, optedOut = false } = {}) {
+function createFixture({ order, orderError, currentItems = [product], finalEligible = true, optedOut = false, edgeIneligible = false } = {}) {
   const now = Date.now()
   const cart = {
     id: 'cart-1',
@@ -67,14 +67,20 @@ function createFixture({ order, orderError, currentItems = [product], finalEligi
       return builder
     },
   }
+  class CartRecoveryEligibilityError extends Error {}
   const route = loadTypeScript('app/api/cron/abandoned-carts/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
     '@/lib/abandoned-carts': carts,
     '@/lib/marketing-email': marketing,
     '@/lib/cart-recovery-email': {
+      CartRecoveryEligibilityError,
       CartRecoveryEmailRejectedError: class extends Error {},
       CartRecoveryPreparationError: class extends Error {},
-      sendCartRecoveryEmail: async () => { emails += 1; return { id: 'test-message' } },
+      sendCartRecoveryEmail: async () => {
+        if (edgeIneligible) throw new CartRecoveryEligibilityError('Reminder eligibility changed before delivery.')
+        emails += 1
+        return { id: 'test-message' }
+      },
     },
     '@/lib/notification-automation': {
       beginCartNotificationEvent: async () => ({ id: 'event-1', status: 'sending' }),
@@ -215,6 +221,16 @@ test('order lookup failures fail closed without sending a reminder', async () =>
   assert.equal(fixture.events[0].status, 'failed')
 })
 
+test('automatic final eligibility rejection is recorded as a known failure, not uncertain delivery', async () => {
+  const fixture = createFixture({ edgeIneligible: true })
+  const response = await fixture.route.GET(authorized())
+  const body = await response.json()
+  assert.equal(fixture.getEmails(), 0)
+  assert.equal(body.failed, 1)
+  assert.equal(body.uncertain, 0)
+  assert.equal(fixture.events.at(-1).status, 'failed')
+})
+
 test('an unpaid order does not prevent an eligible reminder', async () => {
   const fixture = createFixture({
     order: { id: 'order-1', user_id: 'user-1', status: 'Pending', payment_method: 'Card', payment_status: 'Pending', created_at: new Date(Date.now() - 20 * 60_000).toISOString(), items: [product] },
@@ -236,7 +252,7 @@ test('changed or emptied carts and revoked eligibility prevent a claimed reminde
   }
 })
 
-function createManualFixture({ order, orderError, consent = true, claim = true, eligible = true, sent = false } = {}) {
+function createManualFixture({ order, orderError, consent = true, claim = true, claimError, eligible = true, sent = false, ageMinutes = 31, state, finalIneligible = false } = {}) {
   const cart = {
     id: '550e8400-e29b-41d4-a716-446655440000',
     user_id: 'user-1',
@@ -246,14 +262,16 @@ function createManualFixture({ order, orderError, consent = true, claim = true, 
     cart_items: [product],
     recovery_email_consent: consent,
     cart_started_at: new Date(Date.now() - 3600_000).toISOString(),
-    last_activity_at: new Date(Date.now() - 31 * 60_000).toISOString(),
+    last_activity_at: new Date(Date.now() - ageMinutes * 60_000).toISOString(),
     reminder_sent_at: sent ? new Date().toISOString() : null,
     reminder_attempt_at: null,
     reminder_result: null,
     closed_at: null,
     order_id: null,
+    ...state,
   }
   const filters = []
+  const updatesMade = []
   let email
   let updates = 0
   const admin = {
@@ -263,17 +281,17 @@ function createManualFixture({ order, orderError, consent = true, claim = true, 
       let update = null
       const builder = {
         select(value) { columns = value; return this },
-        update(value) { update = value; return this },
+        update(value) { update = value; updatesMade.push(value); return this },
         eq(key, value) { filters.push([key, value]); return this },
         is(key, value) { filters.push([key, value]); return this },
-        lte(key, value) { filters.push([key, value]); return this },
+        lte(key, value) { filters.push([`lte:${key}`, value]); return this },
         gte() { return this }, or() { return this },
         maybeSingle: async () => {
           if (table === 'cart_reminder_preferences') return { data: null, error: null }
           if (table === 'carts') return { data: { items: cart.cart_items }, error: null }
           if (update) {
             updates += 1
-            return { data: updates === 1 && !claim ? null : { id: cart.id }, error: null }
+            return { data: updates === 1 && !claim ? null : { id: cart.id }, error: updates === 1 ? claimError || null : null }
           }
           if (columns === 'id') return { data: eligible ? { id: cart.id } : null, error: null }
           return { data: cart, error: null }
@@ -286,14 +304,21 @@ function createManualFixture({ order, orderError, consent = true, claim = true, 
       return builder
     },
   }
+  class CartRecoveryPreparationError extends Error {}
+  class CartRecoveryEligibilityError extends CartRecoveryPreparationError {}
   const route = loadTypeScript('app/api/admin/abandoned-carts/[id]/remind/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
     '@/lib/abandoned-carts': { ...carts, safeRecoveryBaseUrl: () => 'https://example.invalid' },
     '@/lib/marketing-email': marketing,
     '@/lib/cart-recovery-email': {
       CartRecoveryEmailRejectedError: class extends Error {},
-      CartRecoveryPreparationError: class extends Error {},
-      sendCartRecoveryEmail: async (input) => { email = input; return { id: 'test-message' } },
+      CartRecoveryPreparationError,
+      CartRecoveryEligibilityError,
+      sendCartRecoveryEmail: async (input) => {
+        if (finalIneligible) throw new CartRecoveryEligibilityError('Reminder eligibility changed before delivery.')
+        email = input
+        return { id: 'test-message' }
+      },
     },
     '@/lib/supabase': { requireAdmin: async () => ({}), supabaseAdmin: () => admin },
   })
@@ -301,16 +326,47 @@ function createManualFixture({ order, orderError, consent = true, claim = true, 
     send: () => route.POST(new Request('https://example.invalid', { method: 'POST' }), { params: Promise.resolve({ id: cart.id }) }),
     email: () => email,
     filters,
+    updatesMade,
   }
 }
 
 test('manual reminder sends the saved items to the verified account once', async () => {
-  const fixture = createManualFixture()
+  const fixture = createManualFixture({ ageMinutes: 1 })
   assert.equal((await fixture.send()).status, 200)
   assert.deepEqual(fixture.email().items, [product])
   assert.equal(fixture.email().email, 'test@example.invalid')
   assert.ok(fixture.filters.some(([key, value]) => key === 'closed_at' && value === null))
   assert.ok(fixture.filters.some(([key]) => key === 'last_activity_at'))
+  assert.equal(fixture.updatesMade[0].reminder_origin, 'manual')
+  assert.equal(fixture.filters.some(([key]) => key === 'lte:last_activity_at'), false)
+})
+
+test('manual claims report the specific database frequency and lock reasons', async () => {
+  const reason = 'Another cart reminder was sent or is processing within the last 24 hours.'
+  const fixture = createManualFixture({ claimError: { message: reason } })
+  const response = await fixture.send()
+  assert.equal(response.status, 409)
+  assert.equal((await response.json()).message, reason)
+  assert.equal(fixture.email(), undefined)
+})
+
+test('a final eligibility rejection is not reported as a Resend delivery failure', async () => {
+  const fixture = createManualFixture({ finalIneligible: true })
+  const response = await fixture.send()
+  assert.equal(response.status, 409)
+  assert.match((await response.json()).message, /eligibility changed/)
+  assert.equal(fixture.email(), undefined)
+  assert.equal(fixture.updatesMade.at(-1).reminder_result, 'failed')
+})
+
+test('manual sends block uncertain claims but can reclaim a stale unprepared claim', async () => {
+  const old = new Date(Date.now() - 31 * 60_000).toISOString()
+  const unsafe = createManualFixture({ state: { reminder_result: 'sending', reminder_attempt_at: old, recovery_token_hash: 'prepared' } })
+  assert.equal((await unsafe.send()).status, 409)
+  assert.equal(unsafe.email(), undefined)
+  const safe = createManualFixture({ state: { reminder_result: 'sending', reminder_attempt_at: old, recovery_token_hash: null, reminder_provider_id: null } })
+  assert.equal((await safe.send()).status, 200)
+  assert.equal(safe.updatesMade[0].reminder_origin, 'manual')
 })
 
 test('manual reminder blocks completed purchases and failed order checks', async () => {

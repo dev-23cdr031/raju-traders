@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { abandonmentMinutes, associatePersistedOrder, isConfirmedCartOrder, normalizeTrackedLines, orderOverlapsCart, safeRecoveryBaseUrl, sha256 } from '@/lib/abandoned-carts'
-import { CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
+import { CartRecoveryEligibilityError, CartRecoveryEmailRejectedError, CartRecoveryPreparationError, sendCartRecoveryEmail } from '@/lib/cart-recovery-email'
 import { cartRecoveryConfigurationIssues, MarketingEmailPausedError } from '@/lib/marketing-email'
 import { beginCartNotificationEvent, recordNotificationEvent } from '@/lib/notification-automation'
 import { sendAbandonedCartWhatsApp, WhatsAppProviderRejectedError } from '@/lib/order-whatsapp'
@@ -151,6 +151,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
     if (prepareError || !prepared) {
       if (prepareError) console.error('GET /api/cron/abandoned-carts token preparation error:', prepareError)
+      await markFailed('Cart eligibility changed before sending.')
       await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: 'Cart eligibility changed before sending.', failed_at: new Date().toISOString() })
       summary.blocked += 1
       continue
@@ -241,7 +242,7 @@ export async function GET(request: NextRequest) {
           console.error('Could not defer paused cart reminder:', deferError)
           summary.uncertain += 1
         } else summary.blocked += 1
-      } else if (error instanceof CartRecoveryEmailRejectedError || error instanceof CartRecoveryPreparationError) {
+      } else if (error instanceof CartRecoveryEligibilityError || error instanceof CartRecoveryEmailRejectedError || error instanceof CartRecoveryPreparationError) {
         await markFailed(message)
         await recordNotificationEvent(admin, emailEvent.id, { status: 'failed', error: message, failed_at: new Date().toISOString() })
         summary.failed += 1

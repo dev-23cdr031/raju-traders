@@ -36,6 +36,8 @@ type CartRow = {
   orderId: string | null
   status: CartStatus
   reminderAttemptAt: string | null
+  reminderAttempts: number
+  recoverableClaim: boolean
   reminderSentAt: string | null
   reminderResult: string | null
   reminderError: string | null
@@ -82,10 +84,12 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
   const [sortBy, setSortBy] = useState<'recent' | 'value' | 'oldest'>('recent')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<CartRow | null>(null)
+  const drawerOpen = selected !== null
   const [sendingId, setSendingId] = useState('')
   const [actionMessage, setActionMessage] = useState('')
   const [actionError, setActionError] = useState('')
   const [refreshState, setRefreshState] = useState<'idle' | 'updating' | 'healthy' | 'failure'>('idle')
+  const [clock, setClock] = useState(() => Date.now())
   const drawerRef = useRef<HTMLElement | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
@@ -125,6 +129,10 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
 
   useEffect(() => { void load() }, [load])
   useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+  useEffect(() => {
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void load(true)
     }, 30_000)
@@ -144,7 +152,7 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
   }, [])
 
   useEffect(() => {
-    if (!selected) return
+    if (!drawerOpen) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     window.requestAnimationFrame(() => closeButtonRef.current?.focus())
@@ -180,7 +188,7 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = previousOverflow
     }
-  }, [selected, closeDrawer])
+  }, [drawerOpen, closeDrawer])
 
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase()
@@ -266,10 +274,10 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
     if (!row.customerEmail) return 'The account email was not verified when this cart was saved.'
     if (!metrics?.emailConfigured) return metrics?.emailConfigurationIssues?.join(' ') || 'Recovery email configuration is unavailable.'
     if (row.closedAt || row.orderId) return 'This cart is closed or associated with an order.'
-    if (row.status !== 'Abandoned') return 'This cart has not passed the abandonment threshold.'
     if (row.reminderSentAt) return `Reminder sent ${dateTime(row.reminderSentAt)}.`
-    if (row.reminderResult === 'sending') return 'Delivery status is uncertain; another attempt is blocked to prevent a duplicate email.'
-    if (row.reminderAttemptAt && Date.now() - new Date(row.reminderAttemptAt).getTime() < 15 * 60_000) {
+    if (row.reminderAttempts >= 3) return 'The maximum number of reminder attempts has been reached.'
+    if (row.reminderResult === 'sending' && !row.recoverableClaim) return 'A reminder is processing or its delivery result is uncertain; review it before retrying.'
+    if (row.reminderResult !== 'sending' && row.reminderAttemptAt && clock - new Date(row.reminderAttemptAt).getTime() < 15 * 60_000) {
       return 'A reminder attempt was made recently; wait for the 15-minute safety interval.'
     }
     return ''
@@ -278,6 +286,10 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
   const renderStatus = (status: CartStatus) => (
     <span className={`abandoned-status status-${status.toLowerCase()}`}><i />{status}</span>
   )
+  const elapsed = (milliseconds: number) => {
+    const seconds = Math.max(0, Math.floor(milliseconds / 1000))
+    return `${Math.floor(seconds / 3600)}h ${Math.floor(seconds % 3600 / 60)}m ${seconds % 60}s`
+  }
 
   return (
     <section className="abandoned-carts-page" aria-labelledby="abandoned-title">
@@ -376,11 +388,22 @@ export default function AbandonedCarts({ showAutomation = true }: { showAutomati
               </article>)}
               <div className="abandoned-detail-total"><span>{selected.itemCount} items · cart value</span><strong>{money(selected.total)}</strong></div>
             </section>
-            <section className="abandoned-detail-section"><h3>Activity timeline</h3><p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p><p><span>Last activity</span><time>{dateTime(selected.lastActivityAt)}</time></p><p><span>Eligible after</span><time>{dateTime(selected.scheduledAt)}</time></p><p><span>Email status</span><time>{selected.emailStatus}</time></p><p><span>Delivery</span><time>{selected.deliveryStatus || 'Not confirmed'}</time></p><p><span>Recovery consent</span><time>{selected.consent ? `Opted in · ${dateTime(selected.consentAt)}` : 'Not given'}</time></p></section>
+            <section className="abandoned-detail-section"><h3>Activity timeline</h3>
+              <p><span>Cart first saved</span><time>{dateTime(selected.startedAt)}</time></p>
+              <p><span>Last cart activity</span><time>{dateTime(selected.lastActivityAt)}</time></p>
+              <p><span>Time since activity</span><time>{elapsed(clock - new Date(selected.lastActivityAt).getTime())}</time></p>
+              <p><span>Automatic reminder due</span><time>{dateTime(selected.scheduledAt)}</time></p>
+              <p><span>Automatic countdown</span><time>{clock < new Date(selected.scheduledAt).getTime() ? elapsed(new Date(selected.scheduledAt).getTime() - clock) : 'Due; subject to eligibility checks'}</time></p>
+              <p><span>Email processing</span><time>{selected.emailStatus}</time></p>
+              <p><span>Last email sent</span><time>{dateTime(selected.reminderSentAt)}</time></p>
+              <p><span>Delivery</span><time>{selected.deliveryStatus || 'Not confirmed'}</time></p>
+              <p><span>Marketing preference</span><time>{selected.consent ? `Recorded · ${dateTime(selected.consentAt)}; final checks required` : 'Not given'}</time></p>
+              {selected.emailEventError && <p><span>Last event reason</span><span>{selected.emailEventError}</span></p>}
+            </section>
             <section className="abandoned-detail-section"><h3>Send a recovery email</h3>
               {selected.reminderSentAt ? <p className="abandoned-success"><CheckCircle size={15} /> Sent {dateTime(selected.reminderSentAt)}{selected.reminderResult ? ` · ${selected.reminderResult}` : ''}</p>
                 : reminderReason(selected) ? <p className="abandoned-eligibility"><ShieldCheck size={15} /> {reminderReason(selected)}</p>
-                  : <p className="abandoned-success"><ShieldCheck size={15} /> Eligible for one recovery-only email. Sending does not mark the cart recovered.</p>}
+                  : <p className="abandoned-success"><ShieldCheck size={15} /> Manual sending can be attempted now; final consent, purchase, frequency and quota checks still apply.</p>}
               {selected.reminderResult === 'failed' && selected.reminderError && <p className="abandoned-error-inline">Last attempt: {selected.reminderError}</p>}
               {actionError && <p className="abandoned-error-inline" role="alert">{actionError}</p>}
               {actionMessage && <p className="abandoned-success" role="status"><CheckCircle size={15} /> {actionMessage}</p>}

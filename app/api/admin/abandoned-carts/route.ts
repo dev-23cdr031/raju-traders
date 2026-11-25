@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const admin = supabaseAdmin()
     const { data: rows, error } = await admin.from('abandoned_carts')
-      .select('id,user_id,cart_items,cart_total,item_count,customer_name,customer_email,customer_phone,device_category,recovery_email_consent,recovery_email_consent_at,cart_started_at,last_activity_at,closed_at,order_id,reminder_attempt_at,reminder_sent_at,reminder_result,reminder_error,reminder_provider_id,created_at')
+      .select('id,user_id,cart_items,cart_total,item_count,customer_name,customer_email,customer_phone,device_category,recovery_email_consent,recovery_email_consent_at,cart_started_at,last_activity_at,closed_at,order_id,reminder_attempt_at,reminder_attempts,reminder_sent_at,reminder_result,reminder_error,reminder_provider_id,recovery_token_hash,created_at')
       .gt('item_count', 0)
       .order('last_activity_at', { ascending: false })
       .limit(5000)
@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
 
     const cartRows = rows || []
     const eventKeys = cartRows.map((row: any) => `cart:${row.id}:recovery`)
-    const emailEvents = new Map<string, { status: string; error: string | null }>()
+    const emailEvents = new Map<string, { status: string; error: string | null; provider_message_id: string | null }>()
     for (let offset = 0; offset < eventKeys.length; offset += 400) {
       const { data: events, error: eventError } = await admin.from('notification_events')
-        .select('event_key,status,error').eq('event_type', 'abandoned_cart').eq('channel', 'email')
+        .select('event_key,status,error,provider_message_id').eq('event_type', 'abandoned_cart').eq('channel', 'email')
         .in('event_key', eventKeys.slice(offset, offset + 400))
       if (eventError) throw eventError
-      for (const event of events || []) emailEvents.set(event.event_key, { status: event.status, error: event.error })
+      for (const event of events || []) emailEvents.set(event.event_key, { status: event.status, error: event.error, provider_message_id: event.provider_message_id })
     }
     const providerIds = Array.from(new Set(cartRows.map((row: any) => row.reminder_provider_id).filter(Boolean)))
     const receiptStatuses = new Map<string, Set<string>>()
@@ -68,13 +68,18 @@ export async function GET(request: NextRequest) {
       const deliveryStatus = ['email.complained', 'email.bounced', 'email.suppressed', 'email.failed', 'email.delivered']
         .find((status) => receipts.has(status)) || null
       const emailEvent = emailEvents.get(`cart:${row.id}:recovery`)
+      const recoverableClaim = row.reminder_result === 'sending' && row.reminder_attempt_at &&
+        new Date(row.reminder_attempt_at).getTime() <= now - 30 * 60_000 &&
+        !row.recovery_token_hash && !row.reminder_provider_id &&
+        !emailEvent?.provider_message_id && !['sent', 'delivered', 'read', 'uncertain'].includes(emailEvent?.status || '')
       const emailStatus = deliveryStatus === 'email.bounced' ? 'Bounced'
         : deliveryStatus === 'email.failed' || deliveryStatus === 'email.suppressed' || deliveryStatus === 'email.complained' ? 'Failed'
           : deliveryStatus === 'email.delivered' || emailEvent?.status === 'delivered' ? 'Delivered'
-            : emailEvent?.status === 'skipped' ? 'Skipped'
+            : row.reminder_sent_at || row.reminder_result === 'sent' ? 'Sent'
+              : emailEvent?.status === 'skipped' ? 'Skipped'
               : emailEvent?.status === 'uncertain' ? 'Uncertain'
                 : row.reminder_result === 'failed' || emailEvent?.status === 'failed' ? 'Failed'
-                  : row.reminder_sent_at || row.reminder_result === 'sent' || emailEvent?.status === 'sent' ? 'Sent'
+                  : emailEvent?.status === 'sent' ? 'Sent'
                     : row.reminder_result === 'sending' || emailEvent?.status === 'sending' ? 'Sending'
                       : row.user_id && row.recovery_email_consent && row.customer_email && !row.closed_at && !row.order_id ? 'Scheduled'
                         : 'Not eligible'
@@ -98,6 +103,8 @@ export async function GET(request: NextRequest) {
         orderId: row.order_id,
         status,
         reminderAttemptAt: row.reminder_attempt_at,
+        reminderAttempts: row.reminder_attempts,
+        recoverableClaim: Boolean(recoverableClaim),
         reminderSentAt: row.reminder_sent_at,
         reminderResult: row.reminder_result,
         reminderError: row.reminder_error,

@@ -4,6 +4,7 @@ export class MarketingEmailPausedError extends Error {}
 export class MarketingEmailRejectedError extends Error {
   constructor(message: string, public readonly status: number) { super(message) }
 }
+export class MarketingEmailIneligibleError extends MarketingEmailRejectedError {}
 
 export function marketingEmailConfigurationIssues() {
   const issues: string[] = []
@@ -54,6 +55,7 @@ export async function sendMarketingEmail(payload: {
   const result = await response.json().catch(() => ({}))
   if (!response.ok) {
     if (result.code === 'paused') throw new MarketingEmailPausedError(String(result.error || 'Marketing is paused.'))
+    if (result.code === 'ineligible') throw new MarketingEmailIneligibleError('Reminder eligibility changed before delivery.', response.status)
     if (response.status < 500) throw new MarketingEmailRejectedError(String(result.error || 'Email was rejected.'), response.status)
     throw new Error('Email delivery outcome is uncertain.')
   }

@@ -2,10 +2,11 @@ import 'server-only'
 
 import { safeRecoveryBaseUrl } from '@/lib/abandoned-carts'
 import { cartUnsubscribeSignature } from '@/lib/cart-reminder-token'
-import { MarketingEmailRejectedError, sendMarketingEmail } from '@/lib/marketing-email'
+import { MarketingEmailIneligibleError, MarketingEmailRejectedError, sendMarketingEmail } from '@/lib/marketing-email'
 
 export class CartRecoveryEmailRejectedError extends Error {}
 export class CartRecoveryPreparationError extends Error {}
+export class CartRecoveryEligibilityError extends CartRecoveryPreparationError {}
 
 type EmailLine = { product?: { name?: string; image?: string; price?: number }; quantity?: number }
 const escapeHtml = (value: unknown) => String(value ?? '')
@@ -64,6 +65,7 @@ Raju Traders`
       text, html, unsubscribe,
     })
   } catch (error) {
+    if (error instanceof MarketingEmailIneligibleError) throw new CartRecoveryEligibilityError(error.message)
     if (error instanceof MarketingEmailRejectedError) throw new CartRecoveryEmailRejectedError(error.message)
     throw error
   }
